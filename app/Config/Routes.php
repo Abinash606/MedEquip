@@ -50,10 +50,20 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('scheduling', 'Admin\SchedulingController::index');
     $routes->get('technicians', 'Admin\\TechniciansController::index');
-	
-	$routes->get('inspection-reports', 'Admin\InspectionReportsController::index');
+    $routes->get('technicians/data', 'Admin\\TechniciansController::getData');
+    $routes->get('technicians/(:num)', 'Admin\\TechniciansController::show/$1');
+    $routes->post('technicians/store', 'Admin\\TechniciansController::store');
+    $routes->post('technicians/update/(:num)', 'Admin\\TechniciansController::update/$1');
+    $routes->delete('technicians/delete/(:num)', 'Admin\\TechniciansController::delete/$1');
+
+    $routes->get('inspection-reports', 'Admin\InspectionReportsController::index');
 	$routes->get('inventory', 'Admin\InventoryController::index');
-	$routes->get('financials', 'Admin\FinancialController::index');
+    $routes->get('inventory/data', 'Admin\InventoryController::data');
+    $routes->get('inventory/(:num)', 'Admin\InventoryController::show/$1');
+    $routes->post('inventory/store', 'Admin\InventoryController::store');
+    $routes->post('inventory/update/(:num)', 'Admin\InventoryController::update/$1');
+    $routes->delete('inventory/delete/(:num)', 'Admin\InventoryController::delete/$1');
+    $routes->get('financials', 'Admin\FinancialController::index');
 	$routes->get('data-ops', 'Admin\DataOperationController::index');
 	$routes->get('settings', 'Admin\SettingController::index');
 

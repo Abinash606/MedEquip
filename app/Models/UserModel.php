@@ -22,7 +22,7 @@ class UserModel extends Model
     protected $protectFields    = true;
 
     protected $allowedFields = [
-        'company_id', 'role_id', 'full_name', 'email', 'password_hash',
+        'company_id', 'role_id', 'full_name', 'email','username','password_hash',
         'phone', 'status', 'created_at', 'updated_at', 'deleted_at',
     ];
 
