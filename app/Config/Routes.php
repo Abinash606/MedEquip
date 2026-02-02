@@ -1,0 +1,90 @@
+<?php
+namespace Config;
+
+use CodeIgniter\Config\Services;
+/**
+ * @var RouteCollection $routes
+ */
+// $routes->get('/', 'Home::index');
+/** @var Router $routes */
+// $routes = service('router');
+$routes = Services::routes();
+
+
+// Default route directs to the authentication page
+$routes->get('/', 'AuthController::login');
+
+// Authentication endpoints
+// $routes->match(['GET', 'POST'], 'login', 'AuthController::login');
+// $routes->get('logout', 'AuthController::logout');
+// $routes->match(['GET', 'POST'], 'forgot', 'AuthController::forgot');
+// $routes->match(['GET', 'POST'], 'reset/(:any)', 'AuthController::reset/$1');
+
+$routes->get('login', 'AuthController::login');
+$routes->post('login', 'AuthController::login');
+$routes->get('logout', 'AuthController::logout');
+$routes->get('forgot', 'AuthController::forgot');
+$routes->post('forgot', 'AuthController::forgot');
+$routes->get('reset/(:any)', 'AuthController::reset/$1');
+$routes->post('reset/(:any)', 'AuthController::reset/$1');
+
+$routes->get('debug/testLogin', 'DebugController::testLogin');
+
+
+// Routes for Super Admin (company owner)
+$routes->group('admin', ['filter' => 'role:super_admin'], static function ($routes) {
+    $routes->get('dashboard', 'Admin\\DashboardController::index');
+    $routes->get('customers', 'Admin\\CustomersController::index');
+    // Customer CRUD routes
+
+    // Customers
+    $routes->get('customers', 'Admin\CustomersController::index');
+    $routes->post('customers/add', 'Admin\CustomersController::add');
+    $routes->get('customers/edit/(:num)', 'Admin\CustomersController::getCustomerData/$1');
+    $routes->post('customers/update/(:num)', 'Admin\CustomersController::update/$1');
+    $routes->get('customers/delete/(:num)', 'Admin\CustomersController::delete/$1');
+    $routes->get('customers/view/(:num)', 'Admin\CustomersController::view/$1'); // Optional: for viewing customer details
+	$routes->post('customers/check-email', 'Admin\CustomersController::checkEmail');
+	$routes->get('customers/search', 'Admin\CustomersController::search');
+
+
+    $routes->get('scheduling', 'Admin\SchedulingController::index');
+    $routes->get('technicians', 'Admin\\TechniciansController::index');
+	
+	$routes->get('inspection-reports', 'Admin\InspectionReportsController::index');
+	$routes->get('inventory', 'Admin\InventoryController::index');
+	$routes->get('financials', 'Admin\FinancialController::index');
+	$routes->get('data-ops', 'Admin\DataOperationController::index');
+	$routes->get('settings', 'Admin\SettingController::index');
+
+    // Sites
+    $routes->get('sites', 'Admin\SitesController::index');
+    $routes->post('sites/add', 'Admin\SitesController::add');
+    $routes->post('sites/update/(:num)', 'Admin\SitesController::update/$1');
+    $routes->get('sites/delete/(:num)', 'Admin\SitesController::delete/$1');
+    $routes->get('sites/(:num)', 'Admin\SitesController::view/$1'); // Site detail view with tabs
+
+
+    $routes->get('equipment', 'Admin\\EquipmentController::index');
+    $routes->get('inspections', 'Admin\\InspectionsController::index');
+    $routes->get('work-orders', 'Admin\\WorkOrdersController::index');
+});
+
+// Routes for Customer role
+$routes->group('customer', ['filter' => 'role:customer'], static function ($routes) {
+    $routes->get('dashboard', 'Customer\\DashboardController::index');
+    $routes->get('sites', 'Customer\\SitesController::index');
+    $routes->get('sites/(:num)', 'Customer\\SitesController::show/$1');
+    $routes->get('sites/(:num)/equipment', 'Customer\\EquipmentController::index/$1');
+    $routes->get('sites/(:num)/inspections', 'Customer\\InspectionsController::index/$1');
+    $routes->get('sites/(:num)/work-orders', 'Customer\\WorkOrdersController::index/$1');
+});
+
+// Routes for Technician role
+$routes->group('technician', ['filter' => 'role:technician'], static function ($routes) {
+    $routes->get('dashboard', 'Technician\\DashboardController::index');
+    $routes->get('work-orders', 'Technician\\WorkOrdersController::index');
+    $routes->get('work-orders/(:num)', 'Technician\\WorkOrdersController::show/$1');
+});
+
+// Auto routing is disabled for security. Explicitly define your routes above.
