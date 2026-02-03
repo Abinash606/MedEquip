@@ -1,141 +1,437 @@
 <?= $this->extend('layouts/main') ?>
-
 <?= $this->section('content') ?>
+
 <h3 class="fw-bold mb-4">System Settings</h3>
-        <div class="glass-card">
-            <div class="row">
-                <div class="col-md-3 border-end">
-                    <div class="list-group list-group-flush" id="settings-nav">
-                        <a href="#" class="list-group-item list-group-item-action active" data-target="generalSettings">General</a>
-    <a href="#" class="list-group-item list-group-item-action" data-target="adminSettings">Admins</a>
-                        <a href="#" class="list-group-item list-group-item-action" data-target="notificationSettings">Notifications</a>
-                    </div>
-                </div>
-                <div class="col-md-9 p-4">
-                    <!-- General settings pane -->
-                    <div id="generalSettings" class="settings-pane">
-                        <h5 class="fw-bold mb-3">General Configuration</h5>
-                        <form>
-                            <div class="mb-3">
-                                <label class="form-label">Company Name</label>
-                                <input type="text" class="form-control" value="MedEquip Services Inc.">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Time Zone</label>
-                                <select class="form-select">
-                                    <option>Eastern Standard Time (EST)</option>
-                                    <option>Central Standard Time (CST)</option>
-                                    <option>Pacific Standard Time (PST)</option>
-                                </select>
-                            </div>
-                            <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" id="maintenanceMode" checked>
-                                <label class="form-check-label" for="maintenanceMode">Enable Maintenance Mode</label>
-                            </div>
-                            <button type="button" class="btn btn-primary">Save Changes</button>
-                        </form>
-                    </div>
-                    <!-- Admin settings pane -->
-                    <div id="adminSettings" class="settings-pane d-none">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="fw-bold mb-0">Admins</h5>
-            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#adminModal"><i class="fa-solid fa-user-plus me-2"></i> Add Admin</button>
-        </div>
-        <div class="glass-card">
-            <table id="admins-datatable" class="display" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Email</th>
-                        <th>Role</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-            </table>
-        </div>
-                    </div>
-                    <!-- Notifications pane -->
-                    <div id="notificationSettings" class="settings-pane d-none">
-                        <h5 class="fw-bold mb-3">Notification Preferences</h5>
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
-                            <label class="form-check-label" for="emailNotifications">Email Notifications</label>
-                        </div>
-                        <div class="form-check form-switch mb-2">
-                            <input class="form-check-input" type="checkbox" id="smsNotifications">
-                            <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
-                        </div>
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" id="pushNotifications">
-                            <label class="form-check-label" for="pushNotifications">Push Notifications</label>
-                        </div>
-                        <button type="button" class="btn btn-primary">Save Preferences</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-	
-	
-<!-- Admin Modal -->
-<div class="modal fade" id="adminModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add/Edit Admin</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="mb-3">
-                        <label for="admin-username" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="admin-username">
-                    </div>
-                    <div class="mb-3">
-                        <label for="admin-email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="admin-email">
-                    </div>
-                    <div class="mb-3">
-                        <label for="admin-role" class="form-label">Role</label>
-                        <select class="form-select" id="admin-role">
-                            <option>Super Admin</option>
-                            <option>Admin</option>
-                            <option>Viewer</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Save changes</button>
-            </div>
-        </div>
+
+<div class="glass-card">
+  <div class="row">
+    <div class="col-md-3 border-end">
+      <div class="list-group list-group-flush" id="settings-nav">
+        <a href="#" class="list-group-item list-group-item-action active" data-target="generalSettings">General</a>
+        <a href="#" class="list-group-item list-group-item-action" data-target="adminSettings">Admins</a>
+        <a href="#" class="list-group-item list-group-item-action" data-target="notificationSettings">Notifications</a>
+      </div>
     </div>
+
+    <div class="col-md-9 p-4">
+
+      <!-- General settings pane -->
+      <div id="generalSettings" class="settings-pane">
+        <h5 class="fw-bold mb-3">General Configuration</h5>
+
+        <form id="generalForm">
+          <?= csrf_field() ?>
+
+          <div class="mb-3">
+            <label class="form-label">Company Name</label>
+            <input type="text" name="company_name" class="form-control"
+                   value="<?= esc($settings['company_name'] ?? '') ?>">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Time Zone</label>
+            <select name="time_zone" class="form-select">
+              <?php
+                $tz = $settings['time_zone'] ?? 'Asia/Kolkata';
+                $timezones = [
+                  'Asia/Kolkata',
+                  'America/Chicago',
+                  'America/New_York',
+                  'America/Los_Angeles',
+                  'UTC'
+                ];
+              ?>
+              <?php foreach($timezones as $z): ?>
+                <option value="<?= esc($z) ?>" <?= $tz === $z ? 'selected' : '' ?>>
+                  <?= esc($z) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" id="maintenanceMode"
+                   name="maintenance_mode" value="1"
+                   <?= !empty($settings['maintenance_mode']) ? 'checked' : '' ?>>
+            <label class="form-check-label" for="maintenanceMode">Enable Maintenance Mode</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btnSaveGeneral">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- Admin settings pane -->
+      <div id="adminSettings" class="settings-pane d-none">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Admins</h5>
+          <button class="btn btn-primary shadow-sm" type="button" id="btnAddAdmin"
+                  data-bs-toggle="modal" data-bs-target="#adminModal">
+            <i class="fa-solid fa-user-plus me-2"></i> Add Admin
+          </button>
+        </div>
+
+        <div class="glass-card">
+          <table id="admins-datatable" class="display" style="width:100%">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+
+      <!-- Notifications settings pane -->
+      <div id="notificationSettings" class="settings-pane d-none">
+        <h5 class="fw-bold mb-3">Notification Preferences</h5>
+
+        <form id="notifyForm">
+          <?= csrf_field() ?>
+
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="emailNotifications"
+                   name="email_notifications" value="1"
+                   <?= !empty($settings['email_notifications']) ? 'checked' : '' ?>>
+            <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+          </div>
+
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="smsNotifications"
+                   name="sms_notifications" value="1"
+                   <?= !empty($settings['sms_notifications']) ? 'checked' : '' ?>>
+            <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
+          </div>
+
+          <div class="form-check form-switch mb-4">
+            <input class="form-check-input" type="checkbox" id="pushNotifications"
+                   name="push_notifications" value="1"
+                   <?= !empty($settings['push_notifications']) ? 'checked' : '' ?>>
+            <label class="form-check-label" for="pushNotifications">Push Notifications</label>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="btnSaveNotify">Save Preferences</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
 </div>
 
+
+<!-- Admin Modal -->
+<div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <form id="adminForm">
+        <?= csrf_field() ?>
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="adminModalTitle">Add Admin</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" name="id" id="admin-id">
+
+          <div class="mb-3">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-control" name="full_name" id="admin-username">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-control" name="email" id="admin-email">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Role</label>
+            <select class="form-select" name="role_id" id="admin-role">
+              <option value="1">Super Admin</option>
+              <option value="2">Admin</option>
+              <option value="3">Viewer</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status" id="admin-status">
+              <option value="active">active</option>
+              <option value="inactive">inactive</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              Password <small class="text-muted">(min 6 characters)</small>
+              <br><small class="text-muted">(Leave blank while Edit to keep same password)</small>
+            </label>
+            <input type="password" class="form-control" name="password" id="admin-password">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveAdmin">Save changes</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
 <script>
- // Settings navigation pane switching
-    document.addEventListener('DOMContentLoaded', function() {
-      var settingsLinks = document.querySelectorAll('#settings-nav a');
-      settingsLinks.forEach(function(link) {
-        link.addEventListener('click', function(event) {
-          event.preventDefault();
-          // remove active state from all nav links
-          settingsLinks.forEach(function(l) { l.classList.remove('active'); });
-          // hide all panes
-          document.querySelectorAll('.settings-pane').forEach(function(pane) { pane.classList.add('d-none'); });
-          // activate clicked link
-          this.classList.add('active');
-          // show targeted pane
-          var targetId = this.getAttribute('data-target');
-          if (targetId) {
-            var targetPane = document.getElementById(targetId);
-            if (targetPane) {
-              targetPane.classList.remove('d-none');
-            }
-          }
-        });
+$(function(){
+
+  // ---------------------------------------
+  // SweetAlert helper
+  // ---------------------------------------
+  function swalSuccess(msg) {
+    Swal.fire({ icon:'success', title:'Success', text: msg || 'Done' });
+  }
+  function swalError(msg) {
+    Swal.fire({ icon:'error', title:'Error', text: msg || 'Something went wrong' });
+  }
+
+  // ---------------------------------------
+  // Settings navigation pane switching
+  // ---------------------------------------
+  $('#settings-nav a').on('click', function(e){
+    e.preventDefault();
+    $('#settings-nav a').removeClass('active');
+    $('.settings-pane').addClass('d-none');
+    $(this).addClass('active');
+    const targetId = $(this).data('target');
+    $('#' + targetId).removeClass('d-none');
+  });
+
+  // ---------------------------------------
+  // General Form Validation + Submit
+  // ---------------------------------------
+  $("#generalForm").validate({
+    rules: {
+      company_name: { required: true, minlength: 2 },
+      time_zone: { required: true }
+    },
+    messages: {
+      company_name: { required: "Company name is required" },
+      time_zone: { required: "Please select a time zone" }
+    },
+    errorClass: "text-danger small",
+    submitHandler: function(form) {
+
+      $('#btnSaveGeneral').prop('disabled', true).text('Saving...');
+
+      $.ajax({
+        url: "<?= site_url('admin/settings/update') ?>",
+        type: "POST",
+        data: $(form).serialize(),
+        dataType: "json",
+        success: function(res){
+          swalSuccess(res.message || 'General settings updated');
+        },
+        error: function(xhr){
+          let msg = 'Failed to update settings';
+          if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+          swalError(msg);
+        },
+        complete: function(){
+          $('#btnSaveGeneral').prop('disabled', false).text('Save Changes');
+        }
+      });
+
+      return false;
+    }
+  });
+
+  // ---------------------------------------
+  // Notifications Form Validation + Submit
+  // (No required fields, but we keep structure)
+  // ---------------------------------------
+  $("#notifyForm").validate({
+    submitHandler: function(form) {
+
+      $('#btnSaveNotify').prop('disabled', true).text('Saving...');
+
+      // Merge general + notify (so controller gets all columns)
+      const merged = $("#generalForm").serialize() + '&' + $(form).serialize();
+
+      $.ajax({
+        url: "<?= site_url('admin/settings/update') ?>",
+        type: "POST",
+        data: merged,
+        dataType: "json",
+        success: function(res){
+          swalSuccess(res.message || 'Notification settings updated');
+        },
+        error: function(xhr){
+          let msg = 'Failed to update notifications';
+          if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+          swalError(msg);
+        },
+        complete: function(){
+          $('#btnSaveNotify').prop('disabled', false).text('Save Preferences');
+        }
+      });
+
+      return false;
+    }
+  });
+
+  // ---------------------------------------
+  // Admins DataTable
+  // ---------------------------------------
+  const adminTable = $('#admins-datatable').DataTable({
+    ajax: "<?= site_url('admin/settings/admins/list') ?>",
+    columns: [
+      { data: 'username' },
+      { data: 'email' },
+      { data: 'role' },
+      { data: 'status' },
+      {
+        data: null,
+        orderable: false,
+        render: function(row){
+          return `
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-admin" data-id="${row.id}">Edit</button>
+            <button type="button" class="btn btn-sm btn-outline-danger btn-del-admin" data-id="${row.id}">Delete</button>
+          `;
+        }
+      }
+    ]
+  });
+
+  // ---------------------------------------
+  // Admin Modal: Add
+  // ---------------------------------------
+  $('#btnAddAdmin').on('click', function(){
+    $('#adminModalTitle').text('Add Admin');
+    $('#adminForm')[0].reset();
+    $('#admin-id').val('');
+    $("#adminForm").validate().resetForm();
+    $("#adminForm .is-invalid, #adminForm .is-valid").removeClass("is-invalid is-valid");
+  });
+
+  // ---------------------------------------
+  // Admin Modal: Edit
+  // ---------------------------------------
+  $(document).on('click', '.btn-edit-admin', function(){
+    const id = $(this).data('id');
+
+    $.get("<?= site_url('admin/settings/admins') ?>/" + id, function(res){
+      if(res.status === 'success'){
+        $('#adminModalTitle').text('Edit Admin');
+        $('#admin-id').val(res.data.id);
+        $('#admin-username').val(res.data.full_name);
+        $('#admin-email').val(res.data.email);
+        $('#admin-role').val(res.data.role_id);
+        $('#admin-status').val(res.data.status);
+        $('#admin-password').val('');
+        $("#adminForm").validate().resetForm();
+        $("#adminForm .is-invalid, #adminForm .is-valid").removeClass("is-invalid is-valid");
+        $('#adminModal').modal('show');
+      } else {
+        swalError('Admin not found');
+      }
+    }, 'json').fail(function(){
+      swalError('Failed to load admin details');
+    });
+  });
+
+  // ---------------------------------------
+  // Admin Form Validation + Save (Add/Edit)
+  // - password required only on Add
+  // ---------------------------------------
+  $("#adminForm").validate({
+    rules: {
+      full_name: { required: true, minlength: 2 },
+      email: { required: true, email: true },
+      role_id: { required: true },
+      status: { required: true },
+      password: {
+        minlength: 6,
+        required: function(){
+          return ($("#admin-id").val() === ""); // required only when adding
+        }
+      }
+    },
+    messages: {
+      full_name: { required: "Username is required" },
+      email: { required: "Email is required", email: "Enter valid email" },
+      password: { required: "Password is required for new admin", minlength: "Minimum 6 characters" }
+    },
+    errorClass: "text-danger small",
+    highlight: function(element) { $(element).addClass('is-invalid').removeClass('is-valid'); },
+    unhighlight: function(element) { $(element).removeClass('is-invalid').addClass('is-valid'); },
+
+    submitHandler: function(form) {
+
+      $('#btnSaveAdmin').prop('disabled', true).text('Saving...');
+
+      $.ajax({
+        url: "<?= site_url('admin/settings/admins/save') ?>",
+        type: "POST",
+        data: $(form).serialize(),
+        dataType: "json",
+        success: function(res){
+          $('#adminModal').modal('hide');
+          swalSuccess(res.message || 'Admin saved');
+          adminTable.ajax.reload(null, false);
+        },
+        error: function(xhr){
+          let msg = 'Failed to save admin';
+          if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+          swalError(msg);
+        },
+        complete: function(){
+          $('#btnSaveAdmin').prop('disabled', false).text('Save changes');
+        }
+      });
+
+      return false;
+    }
+  });
+
+  // ---------------------------------------
+  // Delete Admin with SweetAlert confirm
+  // ---------------------------------------
+  $(document).on('click', '.btn-del-admin', function(){
+    const id = $(this).data('id');
+
+    Swal.fire({
+      icon: 'warning',
+      title: 'Delete admin?',
+      text: 'This cannot be undone.',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete',
+      cancelButtonText: 'Cancel'
+    }).then((r) => {
+      if(!r.isConfirmed) return;
+
+      $.ajax({
+        url: "<?= site_url('admin/settings/admins/delete') ?>/" + id,
+        type: "DELETE",
+        dataType: "json",
+        success: function(res){
+          swalSuccess(res.message || 'Admin deleted');
+          adminTable.ajax.reload(null, false);
+        },
+        error: function(xhr){
+          let msg = 'Delete failed';
+          if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+          swalError(msg);
+        }
       });
     });
-</script>	
-<?= $this->endSection() ?>
+  });
 
+});
+</script>
+
+<?= $this->endSection() ?>

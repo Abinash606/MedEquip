@@ -105,7 +105,20 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
                             <label class="form-label" for="customer-state">State</label>
-                            <input type="text" class="form-control" id="customer-state" name="billing_state">
+                            <!-- <input type="text" class="form-control" id="customer-state" name="billing_state"> -->
+                            <select class="form-select" id="customer-state" name="billing_state">
+    <option value="">Select State</option>
+    <?php if (!empty($states)): ?>
+        <?php foreach ($states as $st): ?>
+            <option value="<?= esc($st['code']) ?>">
+                <?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
+            </option>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</select>
+
+
+
                         </div>
                         <div class="col-md-4">
                             <label class="form-label" for="customer-zip">Zip</label>
@@ -215,7 +228,7 @@ $(document).ready(function() {
             customer.phone,
             customer.fax,
             customer.website,
-            `<button data-id="${customer.id}" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
+            `<button data-id="${customer.id}" class="btn btn-sm btn-outline-secondary btn-edit-customer" >Edit</button>
              <button data-id="${customer.id}" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
              <a href="${editUrl}" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</a>`
         ];
@@ -304,7 +317,10 @@ $(document).ready(function () {
                     data: {
                         email: function () {
                             return $("#customer-email").val();
-                        }
+                        },
+                    id: function() {
+                        return $("#customer-id").val();  // Send the customer ID along with the email
+                    }
                     },
                     dataType: "json",
                     dataFilter: function (data) {
@@ -379,10 +395,11 @@ $(document).ready(function () {
         submitHandler: function (form, event) {
             event.preventDefault(); // Prevent default form submission until validation is complete
             var formData = new FormData(form);
-            
+            var actionUrl = ($('#customer-id').val()) ? '<?php echo base_url(); ?>admin/customers/update/' + $('#customer-id').val() : '<?php echo base_url(); ?>admin/customers/add';
+        
             $.ajax({
                 type: 'POST',
-                url: '<?php echo base_url(); ?>admin/customers/add', // Adjust based on your action URL
+                 url: actionUrl,
                 data: formData,
                 processData: false,
                 contentType: false,
@@ -418,6 +435,23 @@ function validateForm() {
 }
 
 $(document).ready(function() {
+    var credentialCount = 1;
+
+    // Reset modal when opened for adding new customer
+    $('#customerModal').on('show.bs.modal', function (e) {
+        // Check if we are opening the "Add Customer" modal
+        if ($(e.relatedTarget).hasClass('btn-add-customer')) {
+            // Reset form fields for Add action
+            $('#customerForm')[0].reset();
+            $('#customer-id').val(''); // Reset the hidden ID field
+            $('#logo-preview').html(''); // Reset the logo preview
+
+            // Clear any existing credentials
+            $('#credentials-container').empty();
+            credentialCount = 1; // Reset the credentials count
+        }
+    });
+
     // Edit button functionality
     $(".btn-edit-customer").click(function() {
         var customerId = $(this).data('id'); // Get customer ID from the button
@@ -428,12 +462,11 @@ $(document).ready(function() {
             method: 'GET',
             dataType: 'json',
             success: function(response) {
-                // Check if response is valid
                 if (response.success) {
                     var customer = response.data; // Customer data
-					var credentials = response.credentials;
-					var imageUrl = response.image_url; // Image URL
-					
+                    var credentials = response.credentials;
+                    var imageUrl = response.image_url; // Image URL
+
                     // Populate the modal fields with the data
                     $("#customer-id").val(customer.id);
                     $("#customer-name").val(customer.name);
@@ -446,14 +479,15 @@ $(document).ready(function() {
                     $("#customer-email").val(customer.email);
                     $("#customer-phone").val(customer.phone);
                     $("#customer-website").val(customer.website);
-					// Show the customer logo image if it exists
+
+                    // Show the customer logo image if it exists
                     if (imageUrl) {
                         $("#logo-preview").html('<img src="' + imageUrl + '" alt="Logo" class="img-thumbnail" style="max-width: 100px;">');
                     } else {
                         $("#logo-preview").html('<p>No logo uploaded</p>');
                     }
 
-					// Clear existing credentials before adding new ones
+                    // Clear existing credentials before adding new ones
                     $("#credentials-container").empty();
 
                     // Populate the credentials section dynamically
@@ -476,11 +510,9 @@ $(document).ready(function() {
                         $("#credentials-container").append(credentialHTML);
                     });
 
-
-                    // Open the modal
+                    // Open the modal for editing
                     $('#customerModal').modal('show');
                 } else {
-                    // Handle error if customer not found
                     Swal.fire('Error!', 'Customer data not found!', 'error');
                 }
             },
@@ -512,6 +544,7 @@ $(document).ready(function() {
         });
     });
 });
+
 </script>
 
 <?= $this->endSection() ?>

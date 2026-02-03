@@ -8,6 +8,8 @@ use App\Models\CustomerModel;
 use App\Models\EquipmentModel;
 use App\Models\InspectionModel;
 use App\Models\WorkOrderModel;
+use App\Models\TechnicianModel;
+
 
 class SitesController extends BaseController
 {
@@ -74,46 +76,44 @@ class SitesController extends BaseController
      */
     public function update($id)
     {
-        $siteModel = new SiteModel();
-        $companyId = $this->session->get('company_id');
+        $model = new SiteModel();
         
-        $site = $siteModel->where('company_id', $companyId)->find($id);
-        if (!$site) {
-            return redirect()->to('admin/sites')->with('error', 'Site not found');
-        }
-        
+        // Validate input
         $rules = [
-            'name'        => 'required|max_length[255]',
-            'customer_id' => 'required|integer',
-            'address'     => 'permit_empty|max_length[255]',
-            'city'        => 'permit_empty|max_length[100]',
-            'state'       => 'permit_empty|max_length[50]',
-            'zip'         => 'permit_empty|max_length[20]',
-            'contact_name'=> 'permit_empty|max_length[255]',
-            'email'       => 'permit_empty|valid_email|max_length[255]',
-            'phone'       => 'permit_empty|max_length[50]',
+            'name' => 'required|max_length[255]',
+            'customer_id' => 'required',
+            'address' => 'permit_empty|max_length[255]',
+            'city' => 'permit_empty|max_length[255]',
+            'state' => 'permit_empty|max_length[255]',
+            'zip' => 'permit_empty|max_length[20]',
+            'contact_name' => 'permit_empty|max_length[255]',
+            'email' => 'permit_empty|valid_email|max_length[255]',
+            'phone' => 'permit_empty|max_length[50]',
         ];
         
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
         
+        // Get the existing site data
         $siteData = [
-            'customer_id'  => $this->request->getPost('customer_id'),
-            'name'         => $this->request->getPost('name'),
-            'address'      => $this->request->getPost('address'),
-            'city'         => $this->request->getPost('city'),
-            'state'        => $this->request->getPost('state'),
-            'zip'          => $this->request->getPost('zip'),
+            'name' => $this->request->getPost('name'),
+            'customer_id' => $this->request->getPost('customer_id'),
+            'address' => $this->request->getPost('address'),
+            'city' => $this->request->getPost('city'),
+            'state' => $this->request->getPost('state'),
+            'zip' => $this->request->getPost('zip'),
             'contact_name' => $this->request->getPost('contact_name'),
-            'email'        => $this->request->getPost('email'),
-            'phone'        => $this->request->getPost('phone'),
+            'email' => $this->request->getPost('email'),
+            'phone' => $this->request->getPost('phone'),
         ];
         
-        $siteModel->update($id, $siteData);
+        // Update the site
+        $model->update($id, $siteData);
         
         return redirect()->to('admin/sites')->with('success', 'Site updated successfully');
     }
+
 
     /**
      * Delete a site
@@ -145,6 +145,8 @@ class SitesController extends BaseController
         $equipmentModel = new EquipmentModel();
         $inspectionModel = new InspectionModel();
         $workOrderModel = new WorkOrderModel();
+        $technicianModel = new TechnicianModel(); // Add TechnicianModel
+
         
         $companyId = $this->session->get('company_id');
         
@@ -168,7 +170,8 @@ class SitesController extends BaseController
                                        ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
                                        ->where('inspections.site_id', $id)
                                        ->where('inspections.company_id', $companyId)
-                                       ->findAll();
+                                       ->findAll();      
+
         
         // Get work orders for this site
         $workOrders = $workOrderModel->select('work_orders.*, users.full_name as assigned_to_name, equipment.asset_tag')
@@ -177,6 +180,14 @@ class SitesController extends BaseController
                                      ->where('work_orders.site_id', $id)
                                      ->where('work_orders.company_id', $companyId)
                                      ->findAll();
+
+                                     // Fetch all technicians
+        $technicians = $technicianModel
+        ->select('technicians.*, users.full_name as full_name')  // Select technician fields and join user full name
+        ->join('users', 'users.id = technicians.user_id', 'left')  // Adjust 'user_id' based on your actual schema
+        ->where('technicians.company_id', $companyId)  // Filter by company ID
+        ->findAll();  // Fetch all technicians
+
         
         $data = [
             'site'        => $site,
@@ -184,8 +195,11 @@ class SitesController extends BaseController
             'equipment'   => $equipment,
             'inspections' => $inspections,
             'workOrders'  => $workOrders,
+            'technicians' => $technicians, // Add technicians to the data array
+            'users' => $technicians, // Add technicians to the data array
+
         ];
         
         return view('admin/sites/details', $data);
     }
-}
+}   

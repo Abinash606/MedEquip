@@ -1,26 +1,57 @@
-<?= $this->extend('layouts/main') ?>
+<?= $this->extend('layouts/customer-header') ?>
+
 <?= $this->section('content') ?>
-<h1 class="mb-4">Inspections</h1>
-<table class="table table-striped data-table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Equipment</th>
-            <th>Scheduled Date</th>
-            <th>Status</th>
-            <th>Technician</th>
-        </tr>
-    </thead>
-    <tbody>
-        <?php foreach ($inspections as $inspection): ?>
-            <tr>
-                <td><?= esc($inspection['id']) ?></td>
-                <td><?= esc($inspection['equipment_id']) ?></td>
-                <td><?= esc($inspection['scheduled_at']) ?></td>
-                <td><?= esc($inspection['status']) ?></td>
-                <td><?= esc($inspection['technician_id'] ?? '') ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
-</table>
+ <section id="inspections" class="view-section active">
+        <div class="row g-4">
+            <div class="col-12">
+                <div class="glass-card mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">Upcoming Inspections</h5>
+</div>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <div class="fw-bold">Oct&nbsp;20,&nbsp;2025</div>
+                                <div class="text-muted small">MRI Scanner Calibration</div>
+                            </div>
+                            <span class="badge bg-info text-dark">Scheduled</span>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <div class="fw-bold">Nov&nbsp;12,&nbsp;2025</div>
+                                <div class="text-muted small">X‑Ray Machines Inspection</div>
+                            </div>
+                            <span class="badge bg-warning text-dark">Due Soon</span>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <div class="fw-bold">Dec&nbsp;01,&nbsp;2025</div>
+                                <div class="text-muted small">Defibrillator Compliance Check</div>
+                            </div>
+                            <span class="badge bg-success">Booked</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="glass-card">
+                    <h5 class="fw-bold mb-3">Inspection History</h5>
+                    <ul class="list-unstyled mb-0">
+                        <li class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <div>
+                                <div class="fw-bold">Aug&nbsp;25,&nbsp;2025</div>
+                                <div class="text-muted small">Infusion Pump – Pass</div>
+                            </div>
+                            <span class="badge bg-success">Pass</span>
+                        </li>
+                        <li class="d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <div class="fw-bold">Jul&nbsp;10,&nbsp;2025</div>
+                                <div class="text-muted small">CT Scanner – Fail</div>
+                            </div>
+                            <span class="badge bg-danger">Fail</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
 <?= $this->endSection() ?>

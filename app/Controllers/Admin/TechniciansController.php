@@ -5,7 +5,6 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Models\TechnicianModel;
 use App\Models\UserModel;
-use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class TechniciansController extends BaseController
 {
@@ -35,7 +34,6 @@ class TechniciansController extends BaseController
         $data['technicians'] = $technicians;
         return view('admin/technicians/index', $data);
     }
-
     // Get all technicians (DataTables AJAX)
     public function getData()
     {

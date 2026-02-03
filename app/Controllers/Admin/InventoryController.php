@@ -7,7 +7,7 @@ use App\Models\InventoryModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 /**
- * Inventory controller for the Super Admin (company owner).
+ * Dashboard controller for the Super Admin (company owner).
  */
 class InventoryController extends BaseController
 {

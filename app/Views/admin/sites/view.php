@@ -306,13 +306,14 @@
     <div class="tab-pane fade show active" id="equipment" role="tabpanel">
         <div class="table-actions">
             <div class="export-buttons">
-                <button class="export-btn" onclick="exportTable('copy')">Copy</button>
-                <button class="export-btn" onclick="exportTable('excel')">Excel</button>
-                <button class="export-btn" onclick="exportTable('csv')">CSV</button>
-                <button class="export-btn" onclick="exportTable('pdf')">PDF</button>
-                <a href="<?= site_url('admin/equipment/add?site_id=' . $site['id']) ?>" class="btn btn-primary">
+                <button class="export-btn" onclick="exportTable('copy', 'equipmentTable')"><i class="fa fa-copy me-1"></i> Copy</button>
+                <button class="export-btn" onclick="exportTable('excel', 'equipmentTable')"><i class="fa fa-file-excel me-1"></i> Excel</button>
+                <button class="export-btn" onclick="exportTable('csv', 'equipmentTable')"><i class="fa fa-file-csv me-1"></i> CSV</button>
+                <button class="export-btn" onclick="exportTable('pdf', 'equipmentTable')"><i class="fa fa-file-pdf me-1"></i> PDF</button>
+                <!-- CORRECTED: This button now properly passes site_id -->
+                <button class="btn btn-primary" onclick="window.location.href='<?= site_url('admin/equipment/add?site_id=' . $site['id']) ?>'">
                     <i class="fa fa-plus me-1"></i> Add Equipment
-                </a>
+                </button>
             </div>
             <div class="search-box">
                 <label>Search:</label>
@@ -402,13 +403,14 @@
     <div class="tab-pane fade" id="inspections" role="tabpanel">
         <div class="table-actions">
             <div class="export-buttons">
-                <button class="export-btn" onclick="exportTable('copy')">Copy</button>
-                <button class="export-btn" onclick="exportTable('excel')">Excel</button>
-                <button class="export-btn" onclick="exportTable('csv')">CSV</button>
-                <button class="export-btn" onclick="exportTable('pdf')">PDF</button>
-                <a href="<?= site_url('admin/inspections/add?site_id=' . $site['id']) ?>" class="btn btn-primary">
+                <button class="export-btn" onclick="exportTable('copy', 'inspectionTable')"><i class="fa fa-copy me-1"></i> Copy</button>
+                <button class="export-btn" onclick="exportTable('excel', 'inspectionTable')"><i class="fa fa-file-excel me-1"></i> Excel</button>
+                <button class="export-btn" onclick="exportTable('csv', 'inspectionTable')"><i class="fa fa-file-csv me-1"></i> CSV</button>
+                <button class="export-btn" onclick="exportTable('pdf', 'inspectionTable')"><i class="fa fa-file-pdf me-1"></i> PDF</button>
+                <!-- CORRECTED: This button now properly passes site_id -->
+                <button class="btn btn-primary" onclick="window.location.href='<?= site_url('admin/inspections/add?site_id=' . $site['id']) ?>'">
                     <i class="fa fa-plus me-1"></i> Add Inspection
-                </a>
+                </button>
             </div>
             <div class="search-box">
                 <label>Search:</label>
@@ -494,13 +496,14 @@
     <div class="tab-pane fade" id="work-orders" role="tabpanel">
         <div class="table-actions">
             <div class="export-buttons">
-                <button class="export-btn" onclick="exportTable('copy')">Copy</button>
-                <button class="export-btn" onclick="exportTable('excel')">Excel</button>
-                <button class="export-btn" onclick="exportTable('csv')">CSV</button>
-                <button class="export-btn" onclick="exportTable('pdf')">PDF</button>
-                <a href="<?= site_url('admin/work-orders/add?site_id=' . $site['id']) ?>" class="btn btn-primary">
+                <button class="export-btn" onclick="exportTable('copy', 'workOrderTable')"><i class="fa fa-copy me-1"></i> Copy</button>
+                <button class="export-btn" onclick="exportTable('excel', 'workOrderTable')"><i class="fa fa-file-excel me-1"></i> Excel</button>
+                <button class="export-btn" onclick="exportTable('csv', 'workOrderTable')"><i class="fa fa-file-csv me-1"></i> CSV</button>
+                <button class="export-btn" onclick="exportTable('pdf', 'workOrderTable')"><i class="fa fa-file-pdf me-1"></i> PDF</button>
+                <!-- CORRECTED: This button now properly passes site_id -->
+                <button class="btn btn-primary" onclick="window.location.href='<?= site_url('admin/work-orders/add?site_id=' . $site['id']) ?>'">
                     <i class="fa fa-plus me-1"></i> Add Work Order
-                </a>
+                </button>
             </div>
             <div class="search-box">
                 <label>Search:</label>
@@ -611,9 +614,50 @@
         }
     }
     
-    // Export function placeholder
-    function exportTable(format) {
-        alert('Export to ' + format + ' functionality would be implemented here');
+    // Export function - Enhanced version with table parameter
+    function exportTable(format, tableId) {
+        // Get the table
+        const table = document.getElementById(tableId);
+        const tableName = tableId.replace('Table', '');
+        
+        if (format === 'copy') {
+            // Copy table to clipboard
+            const range = document.createRange();
+            range.selectNode(table);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            document.execCommand('copy');
+            window.getSelection().removeAllRanges();
+            alert('Table copied to clipboard!');
+        } else if (format === 'csv') {
+            // Export to CSV
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            for (let row of rows) {
+                let cols = row.querySelectorAll('td, th');
+                let csvRow = [];
+                for (let col of cols) {
+                    // Skip actions column
+                    if (col.textContent.trim() !== 'Actions') {
+                        csvRow.push('"' + col.textContent.trim().replace(/"/g, '""') + '"');
+                    }
+                }
+                csv.push(csvRow.join(','));
+            }
+            
+            // Download CSV
+            const csvString = csv.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = tableName + '_export.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        } else {
+            alert('Export to ' + format + ' for ' + tableName + ' - Full implementation would be added here');
+        }
     }
 </script>
 

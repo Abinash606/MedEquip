@@ -6,6 +6,9 @@ use App\Controllers\BaseController;
 use App\Models\CustomerModel;
 use App\Models\UserModel;
 use App\Models\SiteModel;
+use App\Models\UsStateModel;
+use CodeIgniter\Email\Email;
+
 
 class CustomersController extends BaseController
 {
@@ -13,6 +16,7 @@ class CustomersController extends BaseController
     {
         $model = new CustomerModel();
 		$siteModel     = new SiteModel();
+        $stateModel = new UsStateModel();
 
         $companyId = $this->session->get('company_id');
         $customers = $model->where('company_id', $companyId)->findAll();
@@ -32,14 +36,98 @@ class CustomersController extends BaseController
 			$customer['first_site_id'] = $firstSiteMap[$cid] ?? null; // null means no site
 		}
 		unset($customer);
+
+        $states = $stateModel->getAllStates();
         
-        return view('admin/customers/index', ['customers' => $customers]);
+        return view('admin/customers/index', ['customers' => $customers, 'states' => $states]);
     }
 
     /**
      * Store a new customer.
      * Validates input and creates a new customer along with credentials
      */
+    // public function add()
+    // {
+    //     $model = new CustomerModel();
+    //     $companyId = $this->session->get('company_id');
+        
+    //     $rules = [
+    //         'name'             => 'required|max_length[255]',
+    //         'contact_name'     => 'permit_empty|max_length[255]',
+    //         'email'            => 'permit_empty|valid_email|max_length[255]',
+    //         'phone'            => 'permit_empty|max_length[50]',
+    //         'billing_address'  => 'permit_empty|max_length[255]',
+    //         'billing_city'     => 'permit_empty|max_length[255]',
+    //         'billing_state'    => 'permit_empty|max_length[255]',
+    //         'billing_zip'      => 'permit_empty|max_length[20]',
+    //         'fax'              => 'permit_empty|max_length[50]',
+    //         'website'          => 'permit_empty|max_length[255]',
+    //         'logo'             => 'permit_empty|uploaded[logo]|is_image[logo]|max_size[logo,2048]',
+    //     ];
+        
+    //     if (!$this->validate($rules)) {
+    //         return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+    //     }
+        
+    //     // Handle logo upload
+    //     $logoPath = null;
+    //     $logoFile = $this->request->getFile('logo');
+    //     if ($logoFile && $logoFile->isValid() && !$logoFile->hasMoved()) {
+    //         $newName = $logoFile->getRandomName();
+    //         $logoFile->move(WRITEPATH . '../public/uploads/logos', $newName);
+    //         $logoPath = $newName;
+    //     }
+        
+    //     // Insert customer
+    //     $customerData = [
+    //         'company_id'      => $companyId,
+    //         'name'            => $this->request->getPost('name'),
+    //         'contact_name'    => $this->request->getPost('contact_name'),
+    //         'email'           => $this->request->getPost('email'),
+    //         'phone'           => $this->request->getPost('phone'),
+    //         'billing_address' => $this->request->getPost('billing_address'),
+    //         'billing_city'    => $this->request->getPost('billing_city'),
+    //         'billing_state' => strtoupper(trim((string)$this->request->getPost('billing_state'))),
+
+    //         'billing_zip'     => $this->request->getPost('billing_zip'),
+    //         'fax'             => $this->request->getPost('fax'),
+    //         'website'         => $this->request->getPost('website'),
+    //         'logo_path'       => $logoPath,
+    //         'created_by'      => $this->session->get('user_id'),
+    //     ];
+        
+    //     $customerId = $model->insert($customerData);
+        
+    //     if (!$customerId) {
+    //         return redirect()->back()->withInput()->with('error', 'Failed to create customer');
+    //     }
+        
+    //     // Save credentials
+    //     $portalUsernames = $this->request->getPost('portal_username');
+    //     $portalEmails = $this->request->getPost('portal_email');
+    //     $portalPasswords = $this->request->getPost('portal_password');
+        
+    //     if ($portalUsernames && is_array($portalUsernames)) {
+    //         $credentials = [];
+    //         foreach ($portalUsernames as $index => $username) {
+    //             if (!empty($username) && !empty($portalEmails[$index]) && !empty($portalPasswords[$index])) {
+    //                 $credentials[] = [
+    //                     'username' => $username,
+    //                     'email' => $portalEmails[$index],
+    //                     'password' => $portalPasswords[$index]
+    //                 ];
+    //             }
+    //         }
+            
+    //         if (!empty($credentials)) {
+    //             $model->saveCredentials($customerId, $credentials);
+    //         }
+    //     }
+        
+    //     return redirect()->to('admin/customers')->with('success', 'Customer created successfully');
+    // }
+
+
     public function add()
     {
         $model = new CustomerModel();
@@ -58,7 +146,7 @@ class CustomersController extends BaseController
             'website'          => 'permit_empty|max_length[255]',
             'logo'             => 'permit_empty|uploaded[logo]|is_image[logo]|max_size[logo,2048]',
         ];
-        
+
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
@@ -72,7 +160,7 @@ class CustomersController extends BaseController
             $logoPath = $newName;
         }
         
-        // Insert customer
+        // Insert customer data
         $customerData = [
             'company_id'      => $companyId,
             'name'            => $this->request->getPost('name'),
@@ -81,7 +169,7 @@ class CustomersController extends BaseController
             'phone'           => $this->request->getPost('phone'),
             'billing_address' => $this->request->getPost('billing_address'),
             'billing_city'    => $this->request->getPost('billing_city'),
-            'billing_state'   => $this->request->getPost('billing_state'),
+            'billing_state' => strtoupper(trim((string)$this->request->getPost('billing_state'))),
             'billing_zip'     => $this->request->getPost('billing_zip'),
             'fax'             => $this->request->getPost('fax'),
             'website'         => $this->request->getPost('website'),
@@ -95,7 +183,7 @@ class CustomersController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Failed to create customer');
         }
         
-        // Save credentials
+        // Save credentials and send email for each
         $portalUsernames = $this->request->getPost('portal_username');
         $portalEmails = $this->request->getPost('portal_email');
         $portalPasswords = $this->request->getPost('portal_password');
@@ -109,6 +197,13 @@ class CustomersController extends BaseController
                         'email' => $portalEmails[$index],
                         'password' => $portalPasswords[$index]
                     ];
+                    
+                    // Generate password reset link
+                    $resetToken = bin2hex(random_bytes(16)); // Random reset token
+                    $resetLink = site_url('customer/reset-password/' . $resetToken);
+                    
+                    // Send email with the reset password link
+                    $this->sendPasswordResetEmail($portalEmails[$index], $username, $resetLink);
                 }
             }
             
@@ -119,6 +214,32 @@ class CustomersController extends BaseController
         
         return redirect()->to('admin/customers')->with('success', 'Customer created successfully');
     }
+
+    // Function to send password reset email
+    public function sendPasswordResetEmail($email, $username, $resetLink)
+    {
+        $emailService = \Config\Services::email();
+        $emailService->setFrom('no-reply@company.com', 'Company Name');
+        $emailService->setTo($email);
+        $emailService->setSubject('Welcome to [Company Name] - Set Your Password');
+
+        // Data to be passed to the email template
+        $data = [
+            'customer_name' => $username,
+            'reset_link' => $resetLink
+        ];
+
+        // Load the email template view
+        $message = view('emails/welcome_email', $data);
+
+        $emailService->setMessage($message);
+        
+        if (!$emailService->send()) {
+            log_message('error', 'Failed to send welcome email to: ' . $email);
+        }
+    }
+
+
 
     /**
      * Show edit form - This is used if you want a separate edit page
@@ -202,7 +323,9 @@ class CustomersController extends BaseController
             'phone'           => $this->request->getPost('phone'),
             'billing_address' => $this->request->getPost('billing_address'),
             'billing_city'    => $this->request->getPost('billing_city'),
-            'billing_state'   => $this->request->getPost('billing_state'),
+            // 'billing_state'   => $this->request->getPost('billing_state'),
+            'billing_state' => strtoupper(trim((string)$this->request->getPost('billing_state'))),
+
             'billing_zip'     => $this->request->getPost('billing_zip'),
             'fax'             => $this->request->getPost('fax'),
             'website'         => $this->request->getPost('website'),

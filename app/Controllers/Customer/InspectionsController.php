@@ -7,14 +7,9 @@ use App\Models\InspectionModel;
 
 class InspectionsController extends BaseController
 {
-    public function index(int $siteId)
+    public function index()
     {
-        $model     = new InspectionModel();
-        $companyId = $this->session->get('company_id');
-        $data['inspections'] = $model
-            ->where('company_id', $companyId)
-            ->where('site_id', $siteId)
-            ->findAll();
-        return view('customer/inspections/index', $data);
+        
+        return view('customer/inspections/index');
     }
 }
