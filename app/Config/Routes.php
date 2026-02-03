@@ -50,6 +50,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('scheduling', 'Admin\SchedulingController::index');
     $routes->get('technicians', 'Admin\\TechniciansController::index');
+    $routes->get('states', 'Admin\\TechniciansController::states');
     $routes->get('technicians/data', 'Admin\\TechniciansController::getData');
     $routes->get('technicians/(:num)', 'Admin\\TechniciansController::show/$1');
     $routes->post('technicians/store', 'Admin\\TechniciansController::store');

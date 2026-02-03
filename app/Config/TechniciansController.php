@@ -5,7 +5,6 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Models\TechnicianModel;
 use App\Models\UserModel;
-use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class TechniciansController extends BaseController
 {
@@ -35,7 +34,6 @@ class TechniciansController extends BaseController
         $data['technicians'] = $technicians;
         return view('admin/technicians/index', $data);
     }
-
     // Get all technicians (DataTables AJAX)
     public function getData()
     {
@@ -336,19 +334,6 @@ class TechniciansController extends BaseController
             return $this->response->setJSON([
                 'success' => false,
                 'message' => 'Failed to delete technician: ' . $e->getMessage()
-            ])->setStatusCode(500);
-        }
-    }
-    public function states()
-    {
-        try {
-            $states = $this->db->table('us_states')->orderBy('name')->get()->getResultArray();
-            return $this->response->setJSON(['data' => $states]);
-        } catch (\Exception $e) {
-            return $this->response->setJSON([
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
             ])->setStatusCode(500);
         }
     }

@@ -34,34 +34,57 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="invForm" enctype="multipart/form-data">
+                <form id="invForm" novalidate enctype="multipart/form-data">
                     <input type="hidden" id="invId">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Part #</label>
-                            <input type="text" id="invPartNumber" name="part_number" class="form-control" required>
+                            <label class="form-label">Part # <span class="text-danger">*</span></label>
+                            <input type="text" id="invPartNumber" name="part_number" class="form-control" required
+                                oninput="validateField(this)">
+                            <div class="invalid-feedback">Part number is required.</div>
                         </div>
+
+                        <!-- Part Description -->
                         <div class="col-md-6">
-                            <label class="form-label">Part Description</label>
-                            <input type="text" id="invDescription" name="part_description" class="form-control"
-                                required>
+                            <label class="form-label">Part Description <span class="text-danger">*</span></label>
+                            <input type="text" id="invDescription" name="part_description" class="form-control" required
+                                oninput="validateField(this)">
+                            <div class="invalid-feedback">Part description is required.</div>
                         </div>
+
+                        <!-- Bin -->
                         <div class="col-md-4">
-                            <label class="form-label">Bin</label>
-                            <input type="text" id="invBin" name="bin" class="form-control" required>
+                            <label class="form-label">Bin <span class="text-danger">*</span></label>
+                            <input type="text" id="invBin" name="bin" class="form-control" required
+                                oninput="validateField(this)">
+                            <div class="invalid-feedback">Bin location is required.</div>
                         </div>
+
+                        <!-- QTY -->
                         <div class="col-md-4">
-                            <label class="form-label">QTY</label>
-                            <input type="number" id="invQty" name="qty" class="form-control" required>
+                            <label class="form-label">QTY <span class="text-danger">*</span></label>
+                            <input type="number" id="invQty" name="qty" class="form-control" min="0" required
+                                oninput="validateField(this)">
+                            <div class="invalid-feedback" id="invQtyFeedback">Quantity is required and must be 0 or
+                                more.</div>
                         </div>
+
+                        <!-- Total Value -->
                         <div class="col-md-4">
-                            <label class="form-label">Total Value</label>
+                            <label class="form-label">Total Value <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" id="invCost" name="total_value" class="form-control"
-                                required>
+                                min="0" required oninput="validateField(this)">
+                            <div class="invalid-feedback" id="invCostFeedback">Total value is required and must be 0 or
+                                more.</div>
                         </div>
+
+                        <!-- Image -->
                         <div class="col-12">
                             <label class="form-label">Image</label>
-                            <input type="file" id="invImage" name="image" class="form-control" accept="image/*">
+                            <input type="file" id="invImage" name="image" class="form-control" accept="image/*"
+                                onchange="validateImageField(this)">
+                            <div class="invalid-feedback" id="invImageFeedback">Please select a valid image file (JPG,
+                                PNG, GIF, WEBP).</div>
                         </div>
                     </div>
                 </form>
@@ -77,28 +100,127 @@
 <script>
 let inventoryTable;
 let inventoryModal;
-let inventoryData = []; // Store data locally
+let inventoryData = [];
+
+// ─── Allowed MIME types for the image field ────────────────────────────────
+const ALLOWED_IMAGE_MIMES = [
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'image/svg+xml'
+];
+
+// ─── Real-time validation for text / number fields ─────────────────────────
+function validateField(input) {
+    // Remove any previous state so Bootstrap shows the right one
+    input.classList.remove('is-valid', 'is-invalid');
+
+    if (!input.checkValidity()) {
+        input.classList.add('is-invalid');
+
+        // Custom messages for min violations on number fields
+        if (input.type === 'number' && input.validity.rangeUnderflow) {
+            const feedbackEl = input.nextElementSibling;
+            if (feedbackEl && feedbackEl.classList.contains('invalid-feedback')) {
+                feedbackEl.textContent = `Value must be ${input.min} or more.`;
+            }
+        }
+    } else {
+        input.classList.add('is-valid');
+    }
+}
+
+// ─── Validation for the file input (not covered by checkValidity) ──────────
+function validateImageField(input) {
+    input.classList.remove('is-valid', 'is-invalid');
+    const feedback = document.getElementById('invImageFeedback');
+
+    // Nothing selected is fine — image is optional
+    if (input.files.length === 0) {
+        input.classList.remove('is-valid'); // stay neutral
+        return true;
+    }
+
+    const file = input.files[0];
+
+    // 1. MIME-type check
+    if (!ALLOWED_IMAGE_MIMES.includes(file.type)) {
+        input.classList.add('is-invalid');
+        feedback.textContent = 'Invalid file type. Please select an image (JPG, PNG, GIF, WEBP).';
+        return false;
+    }
+
+    // 2. Optional size check — 5 MB max
+    const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+        input.classList.add('is-invalid');
+        feedback.textContent = 'Image is too large. Maximum allowed size is 5 MB.';
+        return false;
+    }
+
+    input.classList.add('is-valid');
+    return true;
+}
+
+// ─── Full-form validation — returns true only when every field is valid ─────
+function validateForm() {
+    const form = document.getElementById('invForm');
+    const inputs = form.querySelectorAll('input[required]');
+    let isFormValid = true;
+
+    inputs.forEach(function(input) {
+        validateField(input); // mark each field
+        if (!input.checkValidity()) {
+            isFormValid = false;
+        }
+    });
+
+    // Also run the image check (it's optional but may have a bad file selected)
+    const imageInput = document.getElementById('invImage');
+    if (!validateImageField(imageInput)) {
+        isFormValid = false;
+    }
+
+    // Scroll the first invalid field into view so the user sees it
+    if (!isFormValid) {
+        const firstInvalid = form.querySelector('.is-invalid');
+        if (firstInvalid) {
+            firstInvalid.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+            firstInvalid.focus();
+        }
+    }
+
+    return isFormValid;
+}
 
 $(document).ready(function() {
     inventoryModal = new bootstrap.Modal(document.getElementById('inventoryModal'));
 
-    // Fetch data immediately when page loads
     fetchInventoryData();
 
-    // Save button
+    // ── Save button: validate FIRST, then proceed ──────────────────────────
     $('#saveInvBtn').on('click', function() {
-        saveInventory();
+        if (validateForm()) {
+            saveInventory();
+        }
     });
 
-    // Reset modal on close
+    // ── Reset modal + validation states on close ────────────────────────────
     $('#inventoryModal').on('hidden.bs.modal', function() {
         $('#invForm')[0].reset();
         $('#invId').val('');
         $('#invModalLabel').text('Add Inventory Item');
+
+        // Strip every validation class so the modal opens clean next time
+        $('#invForm input').removeClass('is-valid is-invalid');
     });
 });
 
-// Fetch inventory data
+// ─── Fetch inventory data ───────────────────────────────────────────────────
 function fetchInventoryData() {
     const dataUrl = '<?= base_url('admin/inventory/data') ?>';
 
@@ -117,28 +239,27 @@ function fetchInventoryData() {
                 html: `Status: ${xhr.status}<br>Error: ${error}<br>Message: ${thrown}`,
                 footer: 'Check browser console for details'
             });
-            // Initialize empty table even on error
             inventoryData = [];
             initializeDataTable();
         }
     });
 }
 
-// Initialize DataTable with fetched data
+// ─── Initialize DataTable ───────────────────────────────────────────────────
 function initializeDataTable() {
     try {
         inventoryTable = $('#inventory-datatable').DataTable({
-            data: inventoryData, // Use local data instead of ajax
+            data: inventoryData,
             columns: [{
                     data: 'part_number',
                     defaultContent: '-'
                 },
                 {
                     data: 'image',
-                    render: function(data, type, row) {
+                    render: function(data, type) {
                         if (type === 'display') {
                             return data ?
-                                `<img src="${data}" alt="Part Image" style="width:50px;height:50px;object-fit:cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Crect fill=\'%23ddd\' width=\'50\' height=\'50\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';">` :
+                                `<img src="${data}" alt="Part Image" style="width:50px;height:50px;object-fit:cover;" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Crect fill=\'%23ddd\' width=\'50\' height=\'50\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E\';">` :
                                 '<span class="text-muted">No Image</span>';
                         }
                         return data || '';
@@ -165,17 +286,15 @@ function initializeDataTable() {
                     data: 'total_value',
                     defaultContent: '0.00',
                     render: function(data) {
-                        return typeof data === 'number' ?
-                            '$' + parseFloat(data).toFixed(2) :
-                            '$' + parseFloat(data || 0).toFixed(2);
+                        return '$' + parseFloat(data || 0).toFixed(2);
                     }
                 },
                 {
                     data: 'id',
-                    render: function(data, type, row) {
+                    render: function(data) {
                         return `
-                            <button class='btn btn-sm btn-outline-secondary btn-edit-site' data-bs-toggle='modal' onclick="editInventory(${data})">Edit</button>
-                            <button class='btn btn-sm btn-outline-danger btn-delete-site' onclick="deleteInventory(${data})">Delete</button>
+                            <button class="btn btn-sm btn-outline-secondary btn-edit-site" data-bs-toggle="modal" onclick="editInventory(${data})">Edit</button>
+                            <button class="btn btn-sm btn-outline-danger btn-delete-site" onclick="deleteInventory(${data})">Delete</button>
                         `;
                     },
                     orderable: false,
@@ -184,7 +303,23 @@ function initializeDataTable() {
             ],
             responsive: true,
             dom: 'Bfrtip',
-            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
+            buttons: [
+                'copy',
+                {
+                    extend: 'csv',
+                    filename: 'Inventory'
+                },
+                {
+                    extend: 'excel',
+                    filename: 'Inventory'
+                },
+                {
+                    extend: 'pdf',
+                    filename: 'Inventory',
+                    title: 'Inventory'
+                },
+                'print'
+            ],
             searching: true,
             search: {
                 smart: true,
@@ -204,16 +339,8 @@ function initializeDataTable() {
                 [10, 25, 50, 100, -1],
                 [10, 25, 50, 100, "All"]
             ],
-            pageLength: 10,
-            drawCallback: function(settings) {
-                var api = this.api();
-                var filteredCount = api.rows({
-                    search: 'applied'
-                }).count();
-            },
-            initComplete: function(settings, json) {}
+            pageLength: 10
         });
-
     } catch (error) {
         console.error('DataTable initialization error:', error);
         Swal.fire({
@@ -224,7 +351,7 @@ function initializeDataTable() {
     }
 }
 
-// Reload data function
+// ─── Reload data into the existing table ────────────────────────────────────
 function reloadInventoryData() {
     const dataUrl = '<?= base_url('admin/inventory/data') ?>';
 
@@ -235,7 +362,7 @@ function reloadInventoryData() {
             inventoryData = response.data || [];
             inventoryTable.clear();
             inventoryTable.rows.add(inventoryData);
-            inventoryTable.draw(false); // false maintains current page
+            inventoryTable.draw(false);
         },
         error: function(xhr) {
             console.error('Reload error:', xhr);
@@ -244,7 +371,7 @@ function reloadInventoryData() {
     });
 }
 
-// Edit inventory
+// ─── Edit inventory ─────────────────────────────────────────────────────────
 function editInventory(id) {
     const url = `<?= base_url('admin/inventory') ?>/${id}`;
 
@@ -258,6 +385,14 @@ function editInventory(id) {
             $('#invQty').val(data.qty);
             $('#invCost').val(data.total_value);
             $('#invModalLabel').text('Edit Inventory Item');
+
+            // Mark pre-filled fields as valid so they don't look untouched
+            $('#invForm input[required]').each(function() {
+                if ($(this).val() !== '') {
+                    $(this).removeClass('is-invalid').addClass('is-valid');
+                }
+            });
+
             inventoryModal.show();
         } else {
             Swal.fire('Error', response.message || 'Failed to load item', 'error');
@@ -268,7 +403,7 @@ function editInventory(id) {
     });
 }
 
-// Save / Update inventory
+// ─── Save / Update inventory ────────────────────────────────────────────────
 function saveInventory() {
     const formData = new FormData($('#invForm')[0]);
     const id = $('#invId').val();
@@ -285,7 +420,7 @@ function saveInventory() {
         success: function(response) {
             if (response.success) {
                 inventoryModal.hide();
-                reloadInventoryData(); // Use custom reload function
+                reloadInventoryData();
                 Swal.fire('Success', response.message, 'success');
             } else {
                 Swal.fire('Error', response.message || 'Failed to save', 'error');
@@ -295,8 +430,7 @@ function saveInventory() {
             console.error('Save error:', xhr);
             const resp = xhr.responseJSON;
             if (resp && resp.errors) {
-                let errorMsg = Object.values(resp.errors).join('<br>');
-                Swal.fire('Validation Error', errorMsg, 'error');
+                Swal.fire('Validation Error', Object.values(resp.errors).join('<br>'), 'error');
             } else {
                 Swal.fire('Error', resp?.message || 'An error occurred', 'error');
             }
@@ -304,7 +438,7 @@ function saveInventory() {
     });
 }
 
-// Delete inventory
+// ─── Delete inventory ───────────────────────────────────────────────────────
 function deleteInventory(id) {
     Swal.fire({
         title: 'Are you sure?',
@@ -314,7 +448,7 @@ function deleteInventory(id) {
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
+    }).then(function(result) {
         if (result.isConfirmed) {
             const url = `<?= base_url('admin/inventory/delete') ?>/${id}`;
 

@@ -794,330 +794,73 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="technicianForm">
+                <form id="technicianForm" novalidate>
                     <input type="hidden" id="technician-id">
                     <div class="row g-3">
+
+                        <!-- Firstname -->
                         <div class="col-md-6">
-                            <label for="technician-firstname" class="form-label">Firstname </label>
-                            <input type="text" class="form-control" id="technician-firstname" required>
-                            <div class="invalid-feedback" id="error-firstname"></div>
+                            <label for="technician-firstname" class="form-label">Firstname</label>
+                            <input type="text" class="form-control" id="technician-firstname">
                         </div>
+
+                        <!-- Lastname -->
                         <div class="col-md-6">
-                            <label for="technician-lastname" class="form-label">Lastname </label>
-                            <input type="text" class="form-control" id="technician-lastname" required>
-                            <div class="invalid-feedback" id="error-lastname"></div>
+                            <label for="technician-lastname" class="form-label">Lastname</label>
+                            <input type="text" class="form-control" id="technician-lastname">
                         </div>
+
+                        <!-- Username -->
                         <div class="col-md-6">
                             <label for="technician-username" class="form-label">Username <span
                                     class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="technician-username" required>
-                            <div class="invalid-feedback" id="error-username"></div>
+                            <input type="text" class="form-control" id="technician-username" required
+                                oninput="validateTechField(this)">
+                            <div class="invalid-feedback" id="error-username">Username is required.</div>
                         </div>
+
+                        <!-- Password -->
                         <div class="col-md-6">
                             <label for="technician-password" class="form-label d-flex align-items-center">
                                 Password
                                 <span class="text-danger ms-1" id="password-required">*</span>
                             </label>
-
                             <div class="position-relative">
-                                <input type="password" class="form-control" id="technician-password" required>
-
+                                <input type="password" class="form-control" id="technician-password" required
+                                    oninput="validateTechField(this)">
                                 <small class="text-muted position-absolute start-0" style="top: 100%; display: none;"
                                     id="password-hint">
                                     Leave blank to keep current password
                                 </small>
                             </div>
-
-                            <div class="invalid-feedback" id="error-password"></div>
+                            <div class="invalid-feedback" id="error-password">Password is required.</div>
                         </div>
+
+                        <!-- Phone -->
                         <div class="col-md-6">
                             <label for="technician-phone" class="form-label">Phone</label>
-                            <input type="text" class="form-control" id="technician-phone">
-                            <div class="invalid-feedback" id="error-phone"></div>
+                            <input type="text" class="form-control" id="technician-phone"
+                                oninput="validateTechPhone(this)">
+                            <div class="invalid-feedback" id="error-phone">Please enter a valid phone number (digits,
+                                spaces, dashes, or parentheses only).</div>
                         </div>
+
+                        <!-- Email -->
                         <div class="col-md-6">
-                            <label for="technician-email" class="form-label">Email <span class="text-danger ms-1"
-                                    id="password-required">*</span></label>
-                            <input type="email" class="form-control" id="technician-email">
-                            <div class="invalid-feedback" id="error-email"></div>
+                            <label for="technician-email" class="form-label">Email <span
+                                    class="text-danger">*</span></label>
+                            <input type="email" class="form-control" id="technician-email" required
+                                oninput="validateTechField(this)">
+                            <div class="invalid-feedback" id="error-email">Please enter a valid email address.</div>
                         </div>
+
+                        <!-- States — populated dynamically from us_states table -->
                         <div class="col-12 mt-3">
-                            <label class="form-label fw-bold">Select State(s) <span class="text-danger">*</span></label>
-                            <div class="invalid-feedback" id="error-states"></div>
-                            <div class="states-grid"
+                            <label class="form-label fw-bold">Select State(s)</label>
+                            <div class="states-grid" id="states-grid-wrapper"
                                 style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 1rem;">
-                                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-2">
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="AL" id="state-al"><label
-                                                class="form-check-label small" for="state-al">Alabama</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="AK" id="state-ak"><label
-                                                class="form-check-label small" for="state-ak">Alaska</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="AZ" id="state-az"><label
-                                                class="form-check-label small" for="state-az">Arizona</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="AR" id="state-ar"><label
-                                                class="form-check-label small" for="state-ar">Arkansas</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="CA" id="state-ca"><label
-                                                class="form-check-label small" for="state-ca">California</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="CO" id="state-co"><label
-                                                class="form-check-label small" for="state-co">Colorado</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="CT" id="state-ct"><label
-                                                class="form-check-label small" for="state-ct">Connecticut</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="DE" id="state-de"><label
-                                                class="form-check-label small" for="state-de">Delaware</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="DC" id="state-dc"><label
-                                                class="form-check-label small" for="state-dc">District of
-                                                Columbia</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="FL" id="state-fl"><label
-                                                class="form-check-label small" for="state-fl">Florida</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="GA" id="state-ga"><label
-                                                class="form-check-label small" for="state-ga">Georgia</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="HI" id="state-hi"><label
-                                                class="form-check-label small" for="state-hi">Hawaii</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="ID" id="state-id"><label
-                                                class="form-check-label small" for="state-id">Idaho</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="IL" id="state-il"><label
-                                                class="form-check-label small" for="state-il">Illinois</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="IN" id="state-in"><label
-                                                class="form-check-label small" for="state-in">Indiana</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="IA" id="state-ia"><label
-                                                class="form-check-label small" for="state-ia">Iowa</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="KS" id="state-ks"><label
-                                                class="form-check-label small" for="state-ks">Kansas</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="KY" id="state-ky"><label
-                                                class="form-check-label small" for="state-ky">Kentucky</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="LA" id="state-la"><label
-                                                class="form-check-label small" for="state-la">Louisiana</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="ME" id="state-me"><label
-                                                class="form-check-label small" for="state-me">Maine</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MD" id="state-md"><label
-                                                class="form-check-label small" for="state-md">Maryland</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MA" id="state-ma"><label
-                                                class="form-check-label small" for="state-ma">Massachusetts</label>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MI" id="state-mi"><label
-                                                class="form-check-label small" for="state-mi">Michigan</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MN" id="state-mn"><label
-                                                class="form-check-label small" for="state-mn">Minnesota</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MS" id="state-ms"><label
-                                                class="form-check-label small" for="state-ms">Mississippi</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MO" id="state-mo"><label
-                                                class="form-check-label small" for="state-mo">Missouri</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="MT" id="state-mt"><label
-                                                class="form-check-label small" for="state-mt">Montana</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NE" id="state-ne"><label
-                                                class="form-check-label small" for="state-ne">Nebraska</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NV" id="state-nv"><label
-                                                class="form-check-label small" for="state-nv">Nevada</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NH" id="state-nh"><label
-                                                class="form-check-label small" for="state-nh">New Hampshire</label>
-                                        </div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NJ" id="state-nj"><label
-                                                class="form-check-label small" for="state-nj">New Jersey</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NM" id="state-nm"><label
-                                                class="form-check-label small" for="state-nm">New Mexico</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NY" id="state-ny"><label
-                                                class="form-check-label small" for="state-ny">New York</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="NC" id="state-nc"><label
-                                                class="form-check-label small" for="state-nc">North Carolina</label>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="ND" id="state-nd"><label
-                                                class="form-check-label small" for="state-nd">North Dakota</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="OH" id="state-oh"><label
-                                                class="form-check-label small" for="state-oh">Ohio</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="OK" id="state-ok"><label
-                                                class="form-check-label small" for="state-ok">Oklahoma</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="OR" id="state-or"><label
-                                                class="form-check-label small" for="state-or">Oregon</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="PA" id="state-pa"><label
-                                                class="form-check-label small" for="state-pa">Pennsylvania</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="RI" id="state-ri"><label
-                                                class="form-check-label small" for="state-ri">Rhode Island</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="SC" id="state-sc"><label
-                                                class="form-check-label small" for="state-sc">South Carolina</label>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="SD" id="state-sd"><label
-                                                class="form-check-label small" for="state-sd">South Dakota</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="TN" id="state-tn"><label
-                                                class="form-check-label small" for="state-tn">Tennessee</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="TX" id="state-tx"><label
-                                                class="form-check-label small" for="state-tx">Texas</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="UT" id="state-ut"><label
-                                                class="form-check-label small" for="state-ut">Utah</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="VT" id="state-vt"><label
-                                                class="form-check-label small" for="state-vt">Vermont</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="VA" id="state-va"><label
-                                                class="form-check-label small" for="state-va">Virginia</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="WA" id="state-wa"><label
-                                                class="form-check-label small" for="state-wa">Washington</label></div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="WV" id="state-wv"><label
-                                                class="form-check-label small" for="state-wv">West Virginia</label>
-                                        </div>
-                                    </div>
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="WI" id="state-wi"><label
-                                                class="form-check-label small" for="state-wi">Wisconsin</label></div>
-                                    </div>
-
-                                    <div class="col">
-                                        <div class="form-check"><input class="form-check-input state-checkbox"
-                                                type="checkbox" value="WY" id="state-wy"><label
-                                                class="form-check-label small" for="state-wy">Wyoming</label></div>
-                                    </div>
+                                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-5 g-2" id="states-checkbox-row">
+                                    <!-- checkboxes injected here by fetchStates() -->
                                 </div>
                             </div>
                         </div>
