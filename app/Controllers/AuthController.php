@@ -6,6 +6,7 @@ use App\Models\UserModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
+use Config\Services;
 
 /**
  * Authentication controller
@@ -75,27 +76,60 @@ class AuthController extends Controller
      */
     public function forgot()
     {
-        $data = [];
-        if ($this->request->getMethod() === 'post') {
-            $email = trim($this->request->getPost('email'));
-            $userModel = new UserModel();
-            $user = $userModel->getByEmail($email);
-            if ($user) {
-                // Generate token and store in password_resets table
-                $token = bin2hex(random_bytes(16));
-                $userModel->createPasswordReset($email, $token);
-                $data['message'] = 'An email with password reset instructions has been sent if the address exists in our system.';
-            } else {
-                $data['message'] = 'An email with password reset instructions has been sent if the address exists in our system.';
-            }
+        if (! $this->request->isAJAX()) {
+            return view('auth/forgot');
         }
-        return view('auth/forgot', $data);
+
+        try {
+            $emailInput = trim($this->request->getPost('email'));
+            $userModel  = new UserModel();
+            $user       = $userModel->getByEmail($emailInput);
+
+            if ($user) {
+                $token = bin2hex(random_bytes(32));
+                $userModel->createPasswordReset($user['email'], $token);
+
+                $this->sendResetEmail(
+                    $user['email'],
+                    $user['full_name'] ?? 'Customer',
+                    base_url('reset/' . $token)
+                );
+            }
+
+            return $this->response->setJSON([
+                'status'  => 'success',
+                'message' => 'A reset link has been sent.',
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', $e->getMessage());
+
+            return $this->response
+                ->setStatusCode(500)
+                ->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Server error. Check logs.',
+                ]);
+        }
     }
 
-    /**
-     * Reset password using a token. Displays the reset form and updates the
-     * password when submitted.
-     */
+    private function sendResetEmail(string $to, string $name, string $resetUrl): bool
+    {
+        $email = Services::email();
+
+        $body = view('emails/reset_password_email', [
+            'customer_name' => $name,
+            'reset_url'     => $resetUrl,
+        ]);
+
+        $email->clear();
+        $email->setTo($to);
+        $email->setSubject('Reset Your Password – MedEquip');
+        $email->setMessage($body);
+        $email->setMailType('html');
+
+        return $email->send();
+    }
+
     public function reset(string $token)
     {
         $userModel = new UserModel();
@@ -103,21 +137,66 @@ class AuthController extends Controller
             'token' => $token,
         ];
 
-        if ($this->request->getMethod() === 'post') {
+        if ($this->request->getMethod() === 'POST') {  // Changed to uppercase
             $password        = $this->request->getPost('password');
             $passwordConfirm = $this->request->getPost('password_confirm');
+
             if ($password !== $passwordConfirm) {
                 $data['error'] = 'Passwords do not match.';
                 return view('auth/reset', $data);
             }
+
             $email = $userModel->validatePasswordResetToken($token);
-            if ($email) {
-                $userModel->updatePasswordByEmail($email, $password);
-                $userModel->markPasswordResetUsed($token);
-                return redirect()->to('/login')->with('message', 'Your password has been reset. You may now log in.');
+
+            if (! $email) {
+                $data['error'] = 'Invalid or expired token.';
+                return view('auth/reset', $data);
             }
-            $data['error'] = 'Invalid or expired token.';
+
+            $userModel->updatePasswordByEmail($email, $password);
+            $userModel->markPasswordResetUsed($token);
+
+            $user = $userModel->getByEmail($email);
+
+            // Send confirmation email
+            $emailSent = $this->sendResetConfirmationEmail(
+                $email,
+                $user['full_name'] ?? 'Customer'
+            );
+
+            // Log if email failed to send
+            if (!$emailSent) {
+                log_message('error', 'Failed to send password reset confirmation to: ' . $email);
+            }
+
+            return redirect()->to('/login')
+                ->with('message', 'Your password has been reset successfully.');
         }
+
         return view('auth/reset', $data);
+    }
+
+    private function sendResetConfirmationEmail(string $to, string $name): bool
+    {
+        $email = Services::email();
+
+        // Use a proper password reset confirmation template
+        $body = view('emails/welcome_email', [
+            'customer_name' => $name,
+        ]);
+
+        $email->clear();
+        $email->setTo($to);
+        $email->setSubject('Your Password Has Been Reset – MedEquip');
+        $email->setMessage($body);
+        $email->setMailType('html');
+
+        if (!$email->send()) {
+            log_message('error', 'Password reset confirmation email failed: ' . $email->printDebugger(['headers']));
+            return false;
+        }
+
+        log_message('info', 'Password reset confirmation sent to: ' . $to);
+        return true;
     }
 }
