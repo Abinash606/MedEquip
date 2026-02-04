@@ -104,147 +104,183 @@ input[required] {
     background-color: #f9f9f9; /* Light gray background for required fields */
 }
 
-/* Custom message styling */
-.error {
-    font-size: 14px;
-    color: #dc3545;
-}
+        /* Custom message styling */
+        .error {
+            font-size: 14px;
+            color: #dc3545;
+        }
 
         @media (max-width: 768px) {
-            .sidebar { left: -260px; transition: left 0.3s; }
-            .sidebar.active { left: 0; }
-            .main-content { margin-left: 0; }
-            .main-content.collapsed { margin-left: 0; }
-            #sidebar-toggle { display: none; }
-            .hamburger-menu { display: block; }
+            .sidebar {
+                left: -260px;
+                transition: left 0.3s;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .main-content.collapsed {
+                margin-left: 0;
+            }
+
+            #sidebar-toggle {
+                display: none;
+            }
+
+            .hamburger-menu {
+                display: block;
+            }
         }
 
         @media (min-width: 769px) {
-            .hamburger-menu { display: none; }
+            .hamburger-menu {
+                display: none;
+            }
         }
     </style>
 </head>
 
 <body>
 
-<nav class="sidebar">
-    <!-- Logo -->
-    <div class="d-flex align-items-center gap-2 p-4 text-primary fw-bold fs-4">
-        <i class="fa-solid fa-heart-pulse"></i> <span class="sidebar-text">MedEquip</span>
-    </div>
-
-    <!-- Navigation -->
-    <div class="sidebar-nav">
-        <?php $role = session('role'); ?>
-        
-        <!-- Role: Super Admin -->
-        <?php if ($role === 'super_admin'): ?>
-            <div class="section-header">CORE OPERATIONS</div>
-            <a class="nav-link<?= url_is('admin/dashboard') ? ' active' : '' ?>" href="<?= site_url('admin/dashboard') ?>">
-                <i class="fa-solid fa-gauge-high"></i>
-                <span>Dashboard</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/scheduling*') ? ' active' : '' ?>" href="<?= site_url('admin/scheduling') ?>">
-                <i class="fa-solid fa-calendar-check"></i>
-                <span>Scheduling</span>
-            </a>
-
-            <div class="section-header">ASSETS & CLIENTS</div>
-            <a class="nav-link<?= url_is('admin/customers*') ? ' active' : '' ?>" href="<?= site_url('admin/customers') ?>">
-                <i class="fa-solid fa-users"></i>
-                <span>Customers</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/sites*') ? ' active' : '' ?>" href="<?= site_url('admin/sites') ?>">
-                <i class="fa-solid fa-sitemap"></i>
-                <span>Sites</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/equipment*') ? ' active' : '' ?>" href="<?= site_url('admin/equipment') ?>">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                <span>Equipment DB</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/inspection-reports*') ? ' active' : '' ?>" href="<?= site_url('admin/inspection-reports') ?>">
-                <i class="fa-solid fa-clipboard-list"></i>
-                <span>Inspection Reports</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/inventory*') ? ' active' : '' ?>" href="<?= site_url('admin/inventory') ?>">
-                <i class="fa-solid fa-box-open"></i>
-                <span>Inventory</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/technicians*') ? ' active' : '' ?>" href="<?= site_url('admin/technicians') ?>">
-                <i class="fa-solid fa-users-cog"></i>
-                <span>Technicians</span>
-            </a>
-
-            <div class="section-header">ADMIN & ANALYTICS</div>
-            <a class="nav-link<?= url_is('admin/financials*') ? ' active' : '' ?>" href="<?= site_url('admin/financials') ?>">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Financials</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/data-ops*') ? ' active' : '' ?>" href="<?= site_url('admin/data-ops') ?>">
-                <i class="fa-solid fa-database"></i>
-                <span>Data Ops</span>
-            </a>
-            <a class="nav-link<?= url_is('admin/settings*') ? ' active' : '' ?>" href="<?= site_url('admin/settings') ?>">
-                <i class="fa-solid fa-gears"></i>
-                <span>Settings</span>
-            </a>
-
-        <!-- Role: Customer -->
-        <?php elseif ($role === 'customer'): ?>
-            <a class="nav-link<?= url_is('customer/dashboard') ? ' active' : '' ?>" href="<?= site_url('customer/dashboard') ?>">
-                <i class="fa-solid fa-gauge-high"></i>
-                <span>Dashboard</span>
-            </a>
-            <a class="nav-link<?= url_is('customer/sites*') ? ' active' : '' ?>" href="<?= site_url('customer/sites') ?>">
-                <i class="fa-solid fa-sitemap"></i>
-                <span>Sites</span>
-            </a>
-
-        <!-- Role: Technician -->
-        <?php elseif ($role === 'technician'): ?>
-            <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>" href="<?= site_url('technician/dashboard') ?>">
-                <i class="fa-solid fa-gauge-high"></i>
-                <span>Dashboard</span>
-            </a>
-            <a class="nav-link<?= url_is('technician/work-orders*') ? ' active' : '' ?>" href="<?= site_url('technician/work-orders') ?>">
-                <i class="fa-solid fa-file-contract"></i>
-                <span>Work Orders</span>
-            </a>
-        <?php endif; ?>
-    </div>
-
-    <!-- User Profile Footer -->
-<div class="mt-auto p-4 border-top">
-    <div class="d-flex align-items-center gap-2">
-
-        <?php
-            $username = session('username') ?? 'SysAdmin';
-            $initials = strtoupper(substr(trim($username), 0, 2));
-        ?>
-
-        <!-- Avatar circle -->
-        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-semibold"
-             style="width:35px;height:35px; font-size:12px; line-height:1;">
-            <?= esc($initials) ?>
+    <nav class="sidebar">
+        <!-- Logo -->
+        <div class="d-flex align-items-center gap-2 p-4 text-primary fw-bold fs-4">
+            <img src="<?= base_url('logo/assetiq logo.png') ?>" alt="assetIQ Logo"
+                style="max-height: 90px; width: auto; max-width: 100%; object-fit: contain;">
         </div>
 
-        <!-- Name + logout -->
-        <div class="small lh-sm sidebar-text">
-            <div class="fw-bold"><?= esc($username) ?></div>
-            <a href="<?= site_url('logout') ?>" class="text-muted text-decoration-none">Logout</a>
+        <!-- Navigation -->
+        <div class="sidebar-nav">
+            <?php $role = session('role'); ?>
+
+            <!-- Role: Super Admin -->
+            <?php if ($role === 'super_admin'): ?>
+                <div class="section-header">CORE OPERATIONS</div>
+                <a class="nav-link<?= url_is('admin/dashboard') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/dashboard') ?>">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/scheduling*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/scheduling') ?>">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Scheduling</span>
+                </a>
+
+                <div class="section-header">ASSETS & CLIENTS</div>
+                <a class="nav-link<?= url_is('admin/customers*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/customers') ?>">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Customers</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/sites*') ? ' active' : '' ?>" href="<?= site_url('admin/sites') ?>">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>Sites</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/equipment*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/equipment') ?>">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                    <span>Equipment DB</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/inspection-reports*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/inspection-reports') ?>">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                    <span>Inspection Reports</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/inventory*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/inventory') ?>">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>Inventory</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/technicians*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/technicians') ?>">
+                    <i class="fa-solid fa-users-cog"></i>
+                    <span>Technicians</span>
+                </a>
+
+                <div class="section-header">ADMIN & ANALYTICS</div>
+                <a class="nav-link<?= url_is('admin/financials*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/financials') ?>">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Financials</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/data-ops*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/data-ops') ?>">
+                    <i class="fa-solid fa-database"></i>
+                    <span>Data Ops</span>
+                </a>
+                <a class="nav-link<?= url_is('admin/settings*') ? ' active' : '' ?>"
+                    href="<?= site_url('admin/settings') ?>">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>Settings</span>
+                </a>
+
+                <!-- Role: Customer -->
+            <?php elseif ($role === 'customer'): ?>
+                <a class="nav-link<?= url_is('customer/dashboard') ? ' active' : '' ?>"
+                    href="<?= site_url('customer/dashboard') ?>">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-link<?= url_is('customer/sites*') ? ' active' : '' ?>"
+                    href="<?= site_url('customer/sites') ?>">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>Sites</span>
+                </a>
+
+                <!-- Role: Technician -->
+            <?php elseif ($role === 'technician'): ?>
+                <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>"
+                    href="<?= site_url('technician/dashboard') ?>">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-link<?= url_is('technician/work-orders*') ? ' active' : '' ?>"
+                    href="<?= site_url('technician/work-orders') ?>">
+                    <i class="fa-solid fa-file-contract"></i>
+                    <span>Work Orders</span>
+                </a>
+            <?php endif; ?>
         </div>
 
+        <!-- User Profile Footer -->
+        <div class="mt-auto p-4 border-top">
+            <div class="d-flex align-items-center gap-2">
+
+                <?php
+                $username = session('username') ?? 'SysAdmin';
+                $initials = strtoupper(substr(trim($username), 0, 2));
+                ?>
+
+                <!-- Avatar circle -->
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center fw-semibold"
+                    style="width:35px;height:35px; font-size:12px; line-height:1;">
+                    <?= esc($initials) ?>
+                </div>
+
+                <!-- Name + logout -->
+                <div class="small lh-sm sidebar-text">
+                    <div class="fw-bold"><?= esc($username) ?></div>
+                    <a href="<?= site_url('logout') ?>" class="text-muted text-decoration-none">Logout</a>
+                </div>
+
+            </div>
+        </div>
+
+
+    </nav>
+    <?= $this->include('partials/scripts') ?>
+    <div class="main-content">
+        <?= $this->renderSection('content') ?>
     </div>
-</div>
 
-    
-</nav>
-<?= $this->include('partials/scripts') ?>
-<div class="main-content">
-    <?= $this->renderSection('content') ?>
-</div>
-
-<?= $this->include('partials/modals') ?>
+    <?= $this->include('partials/modals') ?>
 
 </body>
+
 </html>
