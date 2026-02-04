@@ -92,30 +92,23 @@ class DataOperationController extends BaseController
 
     public function generateBackup()
     {
-        // 🔹 LIVE DATABASE DETAILS
         $dbName = 'tscameri_medquip';
-        $dbUser = 'tscameri_medquip';   // hosting username
-        $dbPass = '1234';
+        $dbUser = 'tscameri_medquip';
+        $dbPass = 'T01g?^9usyS+';
         $dbHost = 'localhost';
 
-        // 🔹 Backup file name
-        $fileName = 'tscameri_medquip_' . date('Y-m-d_H-i-s') . '.sql';
+        $fileName = 'tscameri_medquip_' . date('Y-m-d_H-i-s') . '.sql.gz';
 
         $backupPath = WRITEPATH . 'backups/';
-
         if (!is_dir($backupPath)) {
             mkdir($backupPath, 0755, true);
         }
 
         $fullPath = $backupPath . $fileName;
 
-        // 🔹 LIVE SERVER mysqldump (Linux hosting)
         $mysqldump = '/usr/bin/mysqldump';
 
-        $command = "$mysqldump -h $dbHost -u$dbUser -p$dbPass $dbName > $fullPath";
-
-        $output = [];
-        $resultCode = null;
+        $command = "$mysqldump -h $dbHost -u$dbUser -p$dbPass $dbName | gzip > $fullPath";
 
         exec($command, $output, $resultCode);
 
@@ -126,18 +119,22 @@ class DataOperationController extends BaseController
             ]);
         }
 
-        // ✅ Save backup time
-        $db = \Config\Database::connect();
-        $db->table('system_backups')->insert([
-            'backup_type' => 'manual',
-            'created_at'  => date('Y-m-d H:i:s')
-        ]);
+        \Config\Database::connect()
+            ->table('system_backups')
+            ->insert([
+                'backup_type' => 'manual',
+                'created_at'  => date('Y-m-d H:i:s')
+            ]);
+
+        $formattedTime = date('d M Y, h:i A');
 
         return $this->response->setJSON([
             'status' => 'success',
-            'file'   => base_url('admin/data-operations/download-backup/' . $fileName)
+            'file'   => base_url('admin/data-operations/download-backup/' . $fileName),
+            'time'   => $formattedTime
         ]);
     }
+
 
 
     public function downloadBackup($file)

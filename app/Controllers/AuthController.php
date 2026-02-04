@@ -8,6 +8,7 @@ use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use Config\Services;
 
+
 /**
  * Authentication controller
  *
@@ -74,7 +75,7 @@ class AuthController extends Controller
      * purposes this simply records a reset token in the database. In a real
      * application you would send the token to the user's email address.
      */
-    public function forgot()
+     public function forgot()
     {
         if (! $this->request->isAJAX()) {
             return view('auth/forgot');

@@ -4,7 +4,7 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Customer Directory</h3>
-    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal" data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
 </div>
 
 <div class="glass-card mb-4">
@@ -56,7 +56,7 @@
                 <td><?= $customer['fax'] ?></td>
                 <td><?= $customer['website'] ?></td>
                 <td>
-                    <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
+                    <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
                     <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
                     <a href="<?= site_url('admin/sites/add?customer_id=' . $customer['id']) ?>" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</a>
                 </td>
@@ -435,22 +435,25 @@ function validateForm() {
 }
 
 $(document).ready(function() {
-    var credentialCount = 1;
+   $('#customerModal').on('show.bs.modal', function (e) {
+    // Check if it's the 'Add' modal (not an 'Edit' modal)
+    var modalType = $(e.relatedTarget).data('modal-type'); // You can set this data in the button that opens the modal (add or edit)
+    
+    if (modalType === 'add') {
+        // Reset the form fields for 'Add' modal
+        $('#customerForm')[0].reset();
+        $('#customer-id').val(''); // Reset the hidden ID field
+        $('#logo-preview').html(''); // Reset the logo preview
+    }
+    // Else, load the data for 'Edit' modal, based on what you need (e.g., customer details)
+});
+$('#customerModal').on('hidden.bs.modal', function () {
+    // Reset the form every time the modal is closed
+    $('#customerForm')[0].reset();
+    $('#customer-id').val(''); // Reset the hidden ID field
+    $('#logo-preview').html(''); // Reset the logo preview
+});
 
-    // Reset modal when opened for adding new customer
-    $('#customerModal').on('show.bs.modal', function (e) {
-        // Check if we are opening the "Add Customer" modal
-        if ($(e.relatedTarget).hasClass('btn-add-customer')) {
-            // Reset form fields for Add action
-            $('#customerForm')[0].reset();
-            $('#customer-id').val(''); // Reset the hidden ID field
-            $('#logo-preview').html(''); // Reset the logo preview
-
-            // Clear any existing credentials
-            $('#credentials-container').empty();
-            credentialCount = 1; // Reset the credentials count
-        }
-    });
 
     // Edit button functionality
     $(".btn-edit-customer").click(function() {

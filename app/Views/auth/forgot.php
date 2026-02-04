@@ -8,40 +8,40 @@
         rel="stylesheet">
 
     <style>
-    body {
-        font-family: 'Poppins', sans-serif;
-        background: #f8fafc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        margin: 0;
-    }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
 
-    .login-card {
-        background: #fff;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        padding: 2.5rem;
-        width: 100%;
-        max-width: 400px;
-    }
+        .login-card {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+        }
 
-    .brand {
-        color: #2563eb;
-        font-weight: 700;
-        font-size: 1.5rem;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
+        .brand {
+            color: #2563eb;
+            font-weight: 700;
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
 
-    .btn-primary {
-        background: #2563eb;
-        border: none;
-        padding: 0.8rem;
-        font-weight: 600;
-    }
+        .btn-primary {
+            background: #2563eb;
+            border: none;
+            padding: 0.8rem;
+            font-weight: 600;
+        }
     </style>
 </head>
 
@@ -80,51 +80,51 @@
     </div>
 
     <script>
-    document.getElementById('forgotForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+        document.getElementById('forgotForm').addEventListener('submit', function(e) {
+            e.preventDefault();
 
-        const form = this;
-        const btn = document.getElementById('submitBtn');
-        const alert = document.getElementById('alertBox');
-        const data = new FormData(form);
+            const form = this;
+            const btn = document.getElementById('submitBtn');
+            const alert = document.getElementById('alertBox');
+            const data = new FormData(form);
 
-        alert.className = 'alert d-none';
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Sending...';
+            alert.className = 'alert d-none';
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i> Sending...';
 
-        fetch("<?= site_url('forgot') ?>", {
-                method: "POST",
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                },
-                body: data
-            })
-            .then(async response => {
-                const text = await response.text();
+            fetch("<?= site_url('forgot') ?>", {
+                    method: "POST",
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: data
+                })
+                .then(async response => {
+                    const text = await response.text();
 
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Non-JSON response:', text);
-                    throw new Error('Invalid server response');
-                }
-            })
-            .then(res => {
-                alert.classList.remove('d-none');
-                alert.classList.add('alert-info');
-                alert.innerText = res.message || 'Request processed successfully.';
-                form.reset();
-            })
-            .catch(() => {
-                alert.classList.remove('d-none');
-                alert.classList.add('alert-danger');
-                alert.innerText = 'Server error. Please try again.';
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.innerHTML = 'Send Reset Link';
-            });
-    });
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('Non-JSON response:', text);
+                        throw new Error('Invalid server response');
+                    }
+                })
+                .then(res => {
+                    alert.classList.remove('d-none');
+                    alert.classList.add('alert-info');
+                    alert.innerText = res.message || 'Request processed successfully.';
+                    form.reset();
+                })
+                .catch(() => {
+                    alert.classList.remove('d-none');
+                    alert.classList.add('alert-danger');
+                    alert.innerText = 'Server error. Please try again.';
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Send Reset Link';
+                });
+        });
     </script>
 
 

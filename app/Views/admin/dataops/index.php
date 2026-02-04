@@ -1,6 +1,6 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-<<h3 class="fw-bold mb-4">Data Operations</h3>
+<h3 class="fw-bold mb-4">Data Operations</h3>
     <div class="row g-4">
         <div class="col-md-6">
             <div class="glass-card">
@@ -38,7 +38,7 @@
                 <a id="downloadLink"
                     class="btn btn-success w-100 mt-3 d-none"
                     href="#">
-                    <i class="fa-solid fa-download me-2"></i> Download Backup (.sql)
+                    <i class="fa-solid fa-download me-2"></i> Download Backup (.sql.gz)
                 </a>
                 <script>
                     document.getElementById('backupBtn').addEventListener('click', function() {
