@@ -99,7 +99,7 @@ class AuthController extends Controller
 
             return $this->response->setJSON([
                 'status'  => 'success',
-                'message' => 'A reset link has been sent.',
+                'message' => 'A reset link has been sent to your Email.',
             ]);
         } catch (\Throwable $e) {
             log_message('error', $e->getMessage());
@@ -138,7 +138,7 @@ class AuthController extends Controller
             'token' => $token,
         ];
 
-        if ($this->request->getMethod() === 'POST') {  // Changed to uppercase
+        if ($this->request->getMethod() === 'POST') {
             $password        = $this->request->getPost('password');
             $passwordConfirm = $this->request->getPost('password_confirm');
 
@@ -173,7 +173,10 @@ class AuthController extends Controller
             return redirect()->to('/login')
                 ->with('message', 'Your password has been reset successfully.');
         }
-
+        $email = $userModel->validatePasswordResetToken($token);
+        if (!$email) {
+            $data['error'] = 'This reset link is invalid or has expired. Password reset links are valid for 1 hour only. Please request a new password reset.';
+        }
         return view('auth/reset', $data);
     }
 

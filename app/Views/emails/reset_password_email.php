@@ -78,15 +78,24 @@
             <h2>Reset Your Password, <?= esc($customer_name) ?>!</h2>
             <p>We received a request to reset the password for your MedEquip account. Click the button below to set a
                 new password.</p>
-            <a href="<?= esc($reset_url) ?>" class="cta-button text-white">Reset My Password</a>
+            <a href="<?= esc($reset_url) ?>" style="
+       display:inline-block;
+       padding:10px 20px;
+       background-color:#39AC73;
+       color:#ffffff !important;
+       text-decoration:none;
+       border-radius:5px;
+       font-weight:500;
+   ">
+                Reset My Password
+            </a>
             <p style="font-size: 13px; color: #888; margin-top: 24px;">This link will expire in <strong>1 hour</strong>.
             </p>
             <p>If you need any assistance, feel free to contact our support team at <a
-                    href="mailto:support@company.com">support@company.com</a>.</p>
+                    href="mailto:support@assetiq.com">support@assetiq.com</a>.</p>
         </div>
         <div class="footer">
-            <p>© <?= date('Y') ?> [Company Name]. All rights reserved.</p>
-            <p>1234 Street Name, City, Country</p>
+            <p>© <?= date('Y') ?> AssetIQ. All rights reserved.</p>
         </div>
     </div>
 </body>

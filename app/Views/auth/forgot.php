@@ -8,28 +8,33 @@
         rel="stylesheet">
 
     <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #64748b;
+            --bg-light: #f8fafc;
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
-            background: #f8fafc;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
         }
 
         .login-card {
-            background: #fff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            padding: 2.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
             width: 100%;
             max-width: 400px;
+            padding: 2.5rem;
         }
 
         .brand {
-            color: #2563eb;
+            color: var(--primary-color);
             font-weight: 700;
             font-size: 1.5rem;
             text-align: center;
@@ -37,7 +42,7 @@
         }
 
         .btn-primary {
-            background: #2563eb;
+            background-color: var(--primary-color);
             border: none;
             padding: 0.8rem;
             font-weight: 600;
