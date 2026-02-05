@@ -3,14 +3,47 @@
 namespace App\Controllers\Technician;
 
 use App\Controllers\BaseController;
+use Config\Database; 
 
 class CustomerController extends BaseController
 {
+    // public function index()
+    // {
+
+    //     return view('technician/customer/index');
+    // }
     public function index()
     {
-       
-        return view('technician/customer/index');
-    }
+        $db = Database::connect();
 
-   
+        // Logged-in user id (session madhun)
+        $userId = session()->get('user_id');
+
+        // 1️⃣ Technician states fetch kara
+        $technician = $db->table('technicians')
+            ->select('state')
+            ->where('user_id', $userId)
+            ->where('deleted_at', null)
+            ->get()
+            ->getRow();
+
+        if (!$technician || empty($technician->state)) {
+            return view('technician/customer/index', [
+                'customers' => []
+            ]);
+        }
+
+        // 2️⃣ States explode kara
+        $states = array_map('trim', explode(',', $technician->state));
+
+        // 3️⃣ Customers fetch kara matching billing_state
+        $customers = $db->table('customers')
+            ->whereIn('billing_state', $states)
+            ->get()
+            ->getResult();
+
+        return view('technician/customer/index', [
+            'customers' => $customers
+        ]);
+    }
 }

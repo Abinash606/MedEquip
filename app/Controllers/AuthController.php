@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\UserModel;
+use App\Models\CredentialsModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -28,7 +29,21 @@ class AuthController extends Controller
         if ($this->request->getMethod() === 'POST') {
             $email    = trim($this->request->getPost('email'));
             $password = $this->request->getPost('password');
+			// First check in credentials table for customer
+			$credentialModel = new CredentialsModel();
+			$credential = $credentialModel->getCustomerWithCompanyByEmail($email);
 
+			if ($credential && password_verify($password, $credential['password'])) {
+				// If a customer is found, store necessary customer info in session
+				$session->set([
+					'user_id'    => $credential['id'],
+					'company_id' => $credential['company_id'],
+					'role'       => 'customer',  // Set the role as 'customer'
+					'isLoggedIn' => true,
+				]);
+
+				return redirect()->to('/customer/dashboard');
+			}
             $userModel = new UserModel();
             $user      = $userModel->getByEmailSimple($email);
 
@@ -45,8 +60,6 @@ class AuthController extends Controller
                 switch ($user['role_name']) {
                     case 'super_admin':
                         return redirect()->to('/admin/dashboard');
-                    case 'customer':
-                        return redirect()->to('/customer/dashboard');
                     case 'technician':
                         return redirect()->to('/technician/dashboard');
                     default:
@@ -131,29 +144,32 @@ class AuthController extends Controller
     //     return $email->send();
     // }
 
-    private function sendResetEmail(string $to, string $name, string $resetUrl): bool
-    {
-        $email = \Config\Services::email();
+   private function sendResetEmail(string $to, string $name, string $resetUrl): bool
+{
+    // Prepare the subject and from details
+    $fromEmail = '1easyecommerce@gmail.com';
+    $fromName = 'Asset IQ';
+    $subject = 'Reset Your Password – Asset IQ';
 
-        $body = view('emails/reset_password_email', [
-            'customer_name' => $name,
-            'reset_url'     => $resetUrl,
-        ]);
+    // Data for the reset email
+    $body = view('emails/reset_password_email', [
+        'customer_name' => $name,
+        'reset_url'     => $resetUrl,
+    ]);
 
-        $email->clear(true); // clear attachments + headers
-        $email->setTo($to);
-        $email->setSubject('Reset Your Password – Asset IQ');
-        $email->setMessage($body);
-        $email->setMailType('html');
+    // Headers for the email
+    $headers = 'MIME-Version: 1.0' . "\r\n";
+    $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
+    $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
 
-        if (! $email->send()) {
-            log_message('error', 'Password reset email failed: ' . print_r($email->printDebugger(['headers']), true));
-            return false;
-        }
-
-        return true;
+    // Send the email using PHP's mail() function
+    if (!mail($to, $subject, $body, $headers)) {
+        log_message('error', 'Password reset email failed: ' . print_r($headers, true));
+        return false;
     }
 
+    return true;
+}
 
     public function reset(string $token)
     {
@@ -204,27 +220,87 @@ class AuthController extends Controller
         return view('auth/reset', $data);
     }
 
-    private function sendResetConfirmationEmail(string $to, string $name): bool
-    {
-        $email = Services::email();
+   private function sendResetConfirmationEmail(string $to, string $name): bool
+{
+    // Prepare the subject and from details
+    $fromEmail = '1easyecommerce@gmail.com';
+    $fromName = 'Asset IQ';
+    $subject = 'Your Password Has Been Reset – Asset IQ';
 
-        // Use a proper password reset confirmation template
-        $body = view('emails/welcome_email', [
-            'customer_name' => $name,
-        ]);
+    // Data for the reset confirmation email
+    $body = view('emails/welcome_email', [
+        'customer_name' => $name,
+    ]);
 
-        $email->clear();
-        $email->setTo($to);
-        $email->setSubject('Your Password Has Been Reset –Asset IQ');
-        $email->setMessage($body);
-        $email->setMailType('html');
+    // Headers for the email
+    $headers = 'MIME-Version: 1.0' . "\r\n";
+    $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
+    $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
 
-        if (!$email->send()) {
-            log_message('error', 'Password reset confirmation email failed: ' . $email->printDebugger(['headers']));
-            return false;
-        }
-
-        log_message('info', 'Password reset confirmation sent to: ' . $to);
-        return true;
+    // Send the email using PHP's mail() function
+    if (!mail($to, $subject, $body, $headers)) {
+        log_message('error', 'Password reset confirmation email failed: ' . print_r($headers, true));
+        return false;
     }
+
+    log_message('info', 'Password reset confirmation sent to: ' . $to);
+    return true;
+}
+
+public function resetPassword(string $resetToken)
+    {
+        $credentialsModel = new CredentialsModel();
+
+		// Find the user by reset token
+		$user = $credentialsModel->where('reset_token', $resetToken)->first();
+
+		// Check if the token exists and is not expired
+		if ($user && strtotime($user['reset_token_expiration']) > time()) {
+			// Token is valid and not expired
+			return view('auth/customer_reset_password', ['resetToken' => $resetToken]);
+		} else {
+			// Token is invalid or expired
+			return redirect()->to('login')->with('error', 'Invalid or expired reset token');
+		}
+
+       
+    }
+	
+	public function updatePassword()
+	{
+		// Get the form data
+		$resetToken = $this->request->getPost('reset_token');
+		$newPassword = $this->request->getPost('password');
+		$confirmPassword = $this->request->getPost('confirm_password');
+
+		// Check if passwords match
+		if ($newPassword !== $confirmPassword) {
+			return redirect()->back()->with('error', 'Passwords do not match.');
+		}
+
+		// Validate the token again (optional, for security)
+		$credentialsModel = new CredentialsModel();
+		$user = $credentialsModel->where('reset_token', $resetToken)->first();
+
+		if ($user && strtotime($user['reset_token_expiration']) > time()) {
+			// Token is valid, update the password
+			$hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
+			// Update the password in the credentials table
+			$data = [
+				'password' => $hashedPassword,
+				'reset_token' => null,  // Clear the reset token after password reset
+				'reset_token_expiration' => null  // Clear the reset token expiration
+			];
+
+			$credentialsModel->update($user['id'], $data);
+
+			// Redirect to login page or another page after successful reset
+			return redirect()->to('login')->with('success', 'Password has been reset successfully.');
+		} else {
+			// Token is invalid or expired
+			return redirect()->to('login')->with('error', 'Invalid or expired reset token');
+		}
+	}
+
 }

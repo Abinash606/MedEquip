@@ -172,7 +172,6 @@ class CustomersController extends BaseController
 
     // Send welcome email to the customer
     $this->sendCustomerWelcomeEmail($customerEmail, $companyName, $logoPath);
-        
         // Insert customer data
         $customerData = [
             'company_id'      => $companyId,
@@ -258,12 +257,12 @@ public function savePasswordResetToken($email, $resetToken)
 }
 	
 	// Function to send welcome email to the customer
-public function sendCustomerWelcomeEmail($customerEmail,$companyName, $companyLogo)
+public function sendCustomerWelcomeEmail($customerEmail, $companyName, $companyLogo)
 {
-    $emailService = \Config\Services::email();
-    $emailService->setFrom('no-reply@company.com', esc($companyName));
-    $emailService->setTo($customerEmail);
-    $emailService->setSubject('Welcome to ' . esc($companyName));
+    // Prepare the subject and from details
+    $fromEmail = '1easyecommerce@gmail.com';
+    $fromName = esc($companyName);
+    $subject = 'Welcome to ' . esc($companyName);
 
     // Data for customer email
     $data = [
@@ -272,22 +271,31 @@ public function sendCustomerWelcomeEmail($customerEmail,$companyName, $companyLo
         'company_logo' => $companyLogo  // Company logo path
     ];
 
+    // Generate the email content by rendering the view template
     $message = view('emails/welcome_email', $data);
-    $emailService->setMessage($message);
 
-    if (!$emailService->send()) {
-        log_message('error', 'Failed to send customer welcome email to: ' . $customerEmail);
-    }
+    // Headers for the email
+    $headers = 'MIME-Version: 1.0' . "\r\n";
+    $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
+    $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
+
+    // Send the email
+    if (mail($customerEmail, $subject, $message, $headers)) {
+        echo 'email sent';
+    }else{
+		log_message('error', 'Failed to send customer welcome email to: ' . $customerEmail);
+	}
 }
+
 
 
 // Function to send password reset email
 public function sendUserWelcomeEmail($userEmail, $username, $resetLink, $companyName, $companyLogo)
 {
-    $emailService = \Config\Services::email();
-    $emailService->setFrom('no-reply@company.com', esc($companyName));
-    $emailService->setTo($userEmail);
-    $emailService->setSubject('Welcome to ' . esc($companyName) . ' - Set Your Password');
+    // Prepare the subject and from details
+    $fromEmail = '1easyecommerce@gmail.com';
+    $fromName = esc($companyName);
+    $subject = 'Welcome to ' . esc($companyName) . ' - Set Your Password';
 
     // Data for user email
     $data = [
@@ -297,13 +305,20 @@ public function sendUserWelcomeEmail($userEmail, $username, $resetLink, $company
         'company_logo' => $companyLogo  // Company logo path
     ];
 
+    // Generate the email content by rendering the view template
     $message = view('emails/welcome_user_email', $data);
-    $emailService->setMessage($message);
 
-    if (!$emailService->send()) {
+    // Headers for the email
+    $headers = 'MIME-Version: 1.0' . "\r\n";
+    $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
+    $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
+
+    // Send the email
+    if (!mail($userEmail, $subject, $message, $headers)) {
         log_message('error', 'Failed to send user welcome email to: ' . $userEmail);
     }
 }
+
 
 
     // Function to send password reset email

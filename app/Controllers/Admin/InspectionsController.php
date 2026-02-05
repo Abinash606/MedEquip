@@ -211,10 +211,11 @@ class InspectionsController extends BaseController
         }
     }
 
-    public function delete($id)
+    public function delete($groupId)
     {
         $inspectionModel = new InspectionModel();
-        $inspectionModel->delete($id);
+        // $inspectionModel->delete($id);
+        $inspectionModel->where('group_id', $groupId)->delete();
         return redirect()->back();
     }
 
@@ -338,7 +339,7 @@ class InspectionsController extends BaseController
 
             // Query inspections based on group_id and join the necessary tables
             $inspections = $inspectionModel
-                ->select('inspections.*, sites.name as customer_site, equipment.*, users.full_name as technician_name')
+                ->select('inspections.*, inspections.id as inspections_id, sites.name as customer_site, equipment.*, users.full_name as technician_name')
                 ->join('sites', 'sites.id = inspections.site_id', 'left')
                 ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
                 ->join('users', 'users.id = inspections.technician_id', 'left')
@@ -359,6 +360,123 @@ class InspectionsController extends BaseController
             }
         }
 
+
+        /**
+     * NEW METHOD: Get a single inspection by ID for editing
+     * This returns the inspection data to populate the edit wizard
+     */
+    public function getInspectionById($id)
+    {
+        $companyId = (int) session('company_id');
+        $inspectionModel = new InspectionModel();
+        $equipmentModel = new EquipmentModel();
+        
+        // Get inspection with equipment details
+        $db = \Config\Database::connect();
+        $builder = $db->table('inspections i');
+        $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type, e.asset_tag, e.department, e.location');
+        $builder->join('equipment e', 'e.id = i.equipment_id', 'left');
+        $builder->where('i.company_id', $companyId);
+        $builder->where('i.id', $id);
+        
+        $inspection = $builder->get()->getRowArray();
+        
+        if ($inspection) {
+            return $this->response
+                ->setHeader('Content-Type', 'application/json')
+                ->setBody(json_encode([
+                    'success' => true,
+                    'data' => $inspection
+                ]));
+        }
+        
+        return $this->response
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode([
+                'success' => false,
+                'message' => 'Inspection not found'
+            ]));
+    }
+
+    /**
+     * NEW METHOD: Update a single inspection
+     * This handles the update after editing through the wizard
+     */
+    public function updateInspection()
+    {
+        if ($this->request->getMethod() === 'POST') {
+            $companyId = (int) session('company_id');
+            $inspectionModel = new InspectionModel();
+            $equipmentModel = new EquipmentModel();
+            
+            $inspectionId = $this->request->getPost('inspection_id');
+            $equipmentId = $this->request->getPost('equipment_id');
+            
+            // Check if we need to create new equipment (asset not found scenario)
+            if ($this->request->getPost('asset_not_found') === '1') {
+                $newEquip = [
+                    'company_id'    => $companyId,
+                    'site_id'       => $this->request->getPost('site_id'),
+                    'asset_tag'     => $this->request->getPost('asset_tag') ?? 'NEW-' . strtoupper(uniqid()),
+                    'make'          => $this->request->getPost('manufacturer') ?? '',
+                    'model'         => $this->request->getPost('model_name') ?? '',
+                    'serial_number' => $this->request->getPost('serial_number') ?? '',
+                    'device_type'   => $this->request->getPost('description') ?? '',
+                    'department'    => $this->request->getPost('department') ?? '',
+                    'location'      => $this->request->getPost('location') ?? '',
+                    'status'        => 'Pending',
+                ];
+                $equipmentModel->insert($newEquip);
+                $equipmentId = $equipmentModel->getInsertID();
+            }
+            
+            // Build findings string
+            $findings = '';
+            if ($this->request->getPost('asset_not_found') === '1') {
+                $findings = 'Asset updated/created. '
+                    . 'Manufacturer: ' . ($this->request->getPost('manufacturer') ?? '') . '; '
+                    . 'Model: '        . ($this->request->getPost('model_name') ?? '')    . '; '
+                    . 'Description: '  . ($this->request->getPost('description') ?? '')   . '; '
+                    . 'Serial #: '     . ($this->request->getPost('serial_number') ?? '');
+            }
+            
+            // Prepare update data
+            $data = [
+                'equipment_id'    => $equipmentId,
+                'site_id'         => $this->request->getPost('site_id'),
+                'scheduled_at'    => $this->request->getPost('scheduled_at') ?? date('Y-m-d'),
+                'status'          => $this->request->getPost('status') ?? 'Pass',
+                'technician_id'   => $this->request->getPost('technician_id') ?? null,
+                'next_due_date'   => $this->request->getPost('next_due_date') ?? null,
+                'notes'           => $this->request->getPost('notes') ?? '',
+                'inspection_type' => $this->request->getPost('inspection_type') ?? 'PM',
+                'pm_frequency'    => $this->request->getPost('pm_frequency') ?? '',
+                'device_complete' => $this->request->getPost('device_complete') ?? 'Yes',
+            ];
+            
+            // Only update findings if new equipment was created
+            if (!empty($findings)) {
+                $data['findings'] = $findings;
+            }
+            
+            // Update the inspection
+            $inspectionModel->update($inspectionId, $data);
+            
+            // Check if this is an AJAX request
+            $isJsonRequest = strpos($this->request->getHeader('Content-Type'), 'application/json') !== false;
+            
+            if ($isJsonRequest || $this->request->isAJAX()) {
+                return $this->response->setJSON([
+                    'success' => true,
+                    'message' => 'Inspection updated successfully',
+                    'inspection_id' => $inspectionId
+                ]);
+            }
+            
+            // Redirect for non-AJAX requests
+            return redirect()->to('/admin/inspections');
+        }
+    }
 
 
 }

@@ -624,7 +624,7 @@
                                 </button>
 
                                     <!-- Edit Button -->
-                                    <button class="btn btn-sm btn-info btn-action edit-inspection-btn"
+                                    <!-- <button class="btn btn-sm btn-info btn-action edit-inspection-btn"
                                         data-id="<?= $insp['id'] ?>"
                                         data-equipment_id="<?= $insp['equipment_id'] ?>"
                                         data-scheduled_at="<?= $insp['scheduled_at'] ?>"
@@ -635,11 +635,11 @@
                                         data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
                                         data-next_due_date="<?= $insp['next_due_date'] ?? '' ?>">
                                     <i class="fa fa-edit"></i> Edit
-                                </button>
+                                </button> -->
 
 
                                     <!-- Delete Button -->
-                                    <a href="<?= site_url('admin/inspections/delete/' . $insp['id']) ?>" 
+                                    <a href="<?= site_url('admin/inspections/delete/' . $insp['group_id']) ?>" 
                                     class="btn btn-sm btn-danger btn-action"
                                     onclick="return confirm('Are you sure you want to delete this inspection?')">
                                         <i class="fa fa-trash"></i> Delete
@@ -1186,6 +1186,7 @@
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
+                                    <th>Action</th>
                                     <th>Pass/Fail</th>
                                     <th>Customer Site</th>
                                     <th>Model</th>
@@ -1218,6 +1219,598 @@
 </div>
 
 
+<!-- ================================================
+     EDIT INSPECTION 3-STEP WIZARD MODAL (NEW)
+     This is separate from the add inspection wizard
+     ================================================ -->
+<div class="modal fade" id="editInspectionWizardModal" tabindex="-1" aria-labelledby="editInspectionWizardLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Wizard Header -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="editInspectionWizardLabel">Edit Inspection</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Hidden fields for tracking -->
+                <input type="hidden" id="edit-wiz-inspection-id">
+                <input type="hidden" id="edit-wiz-site-id" value="<?= $site['id'] ?>">
+                <input type="hidden" id="edit-wiz-group-id">
+                <input type="hidden" id="edit-wiz-equipment-id">
+                <input type="hidden" id="edit-wiz-asset-not-found" value="0">
+
+                <!-- ═════════════════════════════════════════
+                     STEP 1: Select Site & Equipment
+                     ═════════════════════════════════════════ -->
+                <div class="wizard-step active" id="edit-wiz-step1">
+                    <h5>Step 1: Select Location & Equipment</h5>
+                    <p class="step-subtitle">Choose the site and search for equipment</p>
+
+                    <!-- Site Selection -->
+                    <div class="row g-3 mt-2">
+                        <div class="col-12">
+                            <label for="edit-wiz-s1-site" class="form-label">Customer Site <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit-wiz-s1-site" name="site_id">
+                                <option value="<?= $site['id'] ?>" selected><?= esc($site['name']) ?></option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search by Serial Number -->
+                    <div class="row g-3 mt-3">
+                        <div class="col-12">
+                            <label for="edit-wiz-s1-serial" class="form-label">Search Equipment by Serial # <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="edit-wiz-s1-serial" 
+                                   placeholder="Enter serial number"
+                                   autocomplete="off">
+                            <div class="helper-text">Type the serial number and press Enter or click Search</div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-primary" id="edit-wiz-s1-search-btn">
+                                <i class="fa fa-search me-1"></i> Search
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Alert if asset not found -->
+                    <div id="edit-wiz-asset-not-found-alert" class="asset-not-found-alert" style="display:none;">
+                        <i class="fa fa-exclamation-triangle me-1"></i>
+                        Asset not found! Please enter details manually in Step 2.
+                    </div>
+
+                    <!-- Footer buttons -->
+                    <div class="wizard-footer">
+                        <div class="left-btns"></div>
+                        <div class="right-btns">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="edit-wiz-step1-next">
+                                Next <i class="fa fa-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════
+                     STEP 2: Enter/Confirm Equipment Details
+                     ═════════════════════════════════════════ -->
+                <div class="wizard-step" id="edit-wiz-step2">
+                    <h5>Step 2: Equipment Details</h5>
+                    <p class="step-subtitle">Review or enter equipment information</p>
+
+                    <div class="row g-3 mt-2">
+                        <!-- Manufacturer -->
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s2-manufacturer" class="form-label">Manufacturer</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-manufacturer" name="manufacturer">
+                        </div>
+                        
+                        <!-- Model -->
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s2-model" class="form-label">Model</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-model" name="model_name">
+                        </div>
+
+                        <!-- Description/Device Type -->
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s2-description" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-description" name="description">
+                        </div>
+
+                        <!-- Serial Number -->
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s2-serial" class="form-label">Serial #</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-serial" name="serial_number">
+                        </div>
+
+                        <!-- Asset ID -->
+                        <div class="col-md-4">
+                            <label for="edit-wiz-s2-assetid" class="form-label">Asset ID</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-assetid" name="asset_tag">
+                        </div>
+
+                        <!-- Department -->
+                        <div class="col-md-4">
+                            <label for="edit-wiz-s2-department" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-department" name="department">
+                        </div>
+
+                        <!-- Location/Room -->
+                        <div class="col-md-4">
+                            <label for="edit-wiz-s2-location" class="form-label">Location / Room</label>
+                            <input type="text" class="form-control" id="edit-wiz-s2-location" name="location">
+                        </div>
+                    </div>
+
+                    <!-- Footer buttons -->
+                    <div class="wizard-footer">
+                        <div class="left-btns">
+                            <button type="button" class="btn btn-outline-secondary" id="edit-wiz-step2-back">
+                                <i class="fa fa-arrow-left me-1"></i> Back
+                            </button>
+                        </div>
+                        <div class="right-btns">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="edit-wiz-step2-next">
+                                Next <i class="fa fa-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═════════════════════════════════════════
+                     STEP 3: Enter Inspection Details
+                     ═════════════════════════════════════════ -->
+                <div class="wizard-step" id="edit-wiz-step3">
+                    <h5>Step 3: Enter Inspection Details</h5>
+                    <p class="step-subtitle">Complete inspection information</p>
+
+                    <!-- Row 1: Model | Description | Serial # (readonly from Step 2) -->
+                    <div class="row g-3 mt-2 step3-readonly-row">
+                        <div class="col-md-4">
+                            <label class="form-label">Model</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-model-ro" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Description</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-desc-ro" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Serial #</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-serial-ro" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Asset ID | Department | Location/Room (readonly from Step 2) -->
+                    <div class="row g-3 mt-1 step3-readonly-row">
+                        <div class="col-md-4">
+                            <label class="form-label">Asset ID</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-assetid-ro" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Department</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-dept-ro" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Location / Room</label>
+                            <input type="text" class="form-control" id="edit-wiz-s3-location-ro" readonly>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: PM Service Frequency | Inspection Type -->
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-pmfreq" class="form-label">PM Service Frequency</label>
+                            <select class="form-select" id="edit-wiz-s3-pmfreq" name="pm_frequency">
+                                <option value="">Select frequency</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Semi-Annual">Semi-Annual</option>
+                                <option value="Annual">Annual</option>
+                                <option value="As Needed">As Needed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-insptype" class="form-label">Inspection Type</label>
+                            <select class="form-select" id="edit-wiz-s3-insptype" name="inspection_type">
+                                <option value="">Select type</option>
+                                <option value="Preventive Maintenance">Preventive Maintenance</option>
+                                <option value="Corrective Maintenance">Corrective Maintenance</option>
+                                <option value="Safety Inspection">Safety Inspection</option>
+                                <option value="Compliance Check">Compliance Check</option>
+                                <option value="Initial Setup">Initial Setup</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Row 4: Technician | Inspection Date -->
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-technician" class="form-label">Technician</label>
+                            <select class="form-select" id="edit-wiz-s3-technician" name="technician_id">
+                                <option value="">-- Select Technician --</option>
+                                <?php if (!empty($technicians)): ?>
+                                    <?php foreach ($technicians as $tech): ?>
+                                        <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-inspdate" class="form-label">Inspection Date</label>
+                            <input type="date" class="form-control" id="edit-wiz-s3-inspdate" name="scheduled_at">
+                        </div>
+                    </div>
+
+                    <!-- Row 5: Service Notes (full width) -->
+                    <div class="row g-3 mt-1">
+                        <div class="col-12">
+                            <label for="edit-wiz-s3-notes" class="form-label">Service Notes</label>
+                            <textarea class="form-control" id="edit-wiz-s3-notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Row 6: Status | Device Complete -->
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-status" class="form-label">Status</label>
+                            <select class="form-select" id="edit-wiz-s3-status" name="status">
+                                <option value="Pass">Pass</option>
+                                <option value="Fail">Fail</option>
+                                <option value="Repair">Repair</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="edit-wiz-s3-devicecomplete" class="form-label">Device Complete</label>
+                            <select class="form-select" id="edit-wiz-s3-devicecomplete" name="device_complete">
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Helper text -->
+                    <p class="text-center text-muted mt-3 mb-1" style="font-size:0.85rem;">
+                        Update device notes and complete status.
+                    </p>
+
+                    <!-- Outcome buttons: Pass | Fail | Repair -->
+                    <div class="inspection-outcome-btns">
+                        <button type="button" class="btn-pass" id="edit-wizBtnPass">Pass Inspection</button>
+                        <button type="button" class="btn-fail" id="edit-wizBtnFail">Fail Inspection</button>
+                        <button type="button" class="btn-repair" id="edit-wizBtnRepair">Repair Inspection</button>
+                    </div>
+
+                    <!-- Footer with Back / Cancel / Update -->
+                    <div class="wizard-footer">
+                        <div class="left-btns">
+                            <button type="button" class="btn btn-outline-secondary" id="edit-wiz-step3-back">
+                                <i class="fa fa-arrow-left me-1"></i> Back
+                            </button>
+                        </div>
+                        <div class="right-btns">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-success" id="edit-wizBtnUpdate">
+                                <i class="fa fa-save me-1"></i> Update Inspection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- end modal-body -->
+        </div><!-- end modal-content -->
+    </div><!-- end modal-dialog -->
+</div>
+
+<!-- ================================================
+     UPDATE TO VIEW INSPECTION MODAL - ADD EDIT BUTTONS
+     ================================================ -->
+<script>
+// Update the existing viewInspectionModal table to include Edit button
+// This should be added to your existing JavaScript section
+
+// Add this function to handle viewing inspection details with edit buttons
+function viewInspectionGroup(groupId) {
+    $.ajax({
+        url: '<?= site_url('admin/inspections/getByGroupId') ?>',
+        type: 'GET',
+        data: { group_id: groupId },
+        dataType: 'json',
+        success: function(response) {
+            if (response.success) {
+                let tbody = $('#inspection-details-body');
+                tbody.empty();
+                
+                response.data.forEach(function(inspection) {
+                    let row = `
+                        <tr>
+                            <td>
+                                <button class="btn btn-sm btn-primary btn-edit-inspection" 
+                                        data-inspection-id="${inspection.inspections_id}"
+                                        data-group-id="${inspection.group_id}">
+                                    <i class="fa fa-edit"></i> Edit
+                                </button>
+                            </td>
+                            <td><span class="status-badge status-${inspection.status.toLowerCase()}">${inspection.status || 'N/A'}</span></td>
+                            <td>${inspection.customer_site || 'N/A'}</td>
+                            <td>${inspection.model || 'N/A'}</td>
+                            <td>${inspection.device_type || 'N/A'}</td>
+                            <td>${inspection.serial_number || 'N/A'}</td>
+                            <td>${inspection.inspection_type || 'N/A'}</td>
+                            <td>${inspection.asset_tag || 'N/A'}</td>
+                            <td>${inspection.department || 'N/A'}</td>
+                            <td>${inspection.location || 'N/A'}</td>
+                            <td>${inspection.technician_name || 'N/A'}</td>
+                            <td>N/A</td>
+                            <td>N/A</td>
+                            <td>${inspection.scheduled_at ? new Date(inspection.scheduled_at).toLocaleDateString() : 'N/A'}</td>
+                            <td>N/A</td>
+                            <td>${inspection.notes || 'N/A'}</td>
+                            
+                        </tr>
+                    `;
+                    tbody.append(row);
+                });
+                
+                $('#viewInspectionModal').modal('show');
+            } else {
+                alert('Error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Failed to fetch inspection details');
+        }
+    });
+}
+
+// ================================================
+// EDIT INSPECTION WIZARD JAVASCRIPT
+// ================================================
+
+$(document).ready(function() {
+    
+    // ─────────────────────────────────────────────
+    // Handle Edit Button Click from View Modal
+    // ─────────────────────────────────────────────
+    $(document).on('click', '.btn-edit-inspection', function() {
+        const inspectionId = $(this).data('inspection-id');
+        const groupId = $(this).data('group-id');
+        
+        // Load inspection data
+        loadInspectionForEdit(inspectionId, groupId);
+    });
+    
+    // ─────────────────────────────────────────────
+    // Load Inspection Data for Editing
+    // ─────────────────────────────────────────────
+    function loadInspectionForEdit(inspectionId, groupId) {
+        $.ajax({
+            url: '<?= site_url('admin/inspections/getInspectionById') ?>/' + inspectionId,
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    const data = response.data;
+                    
+                    // Store inspection ID and group ID
+                    $('#edit-wiz-inspection-id').val(data.id);
+                    $('#edit-wiz-group-id').val(data.group_id);
+                    $('#edit-wiz-equipment-id').val(data.equipment_id);
+                    
+                    // Populate Step 1
+                    $('#edit-wiz-s1-serial').val(data.serial_number || '');
+                    
+                    // Populate Step 2
+                    $('#edit-wiz-s2-manufacturer').val(data.make || '');
+                    $('#edit-wiz-s2-model').val(data.model || '');
+                    $('#edit-wiz-s2-description').val(data.device_type || '');
+                    $('#edit-wiz-s2-serial').val(data.serial_number || '');
+                    $('#edit-wiz-s2-assetid').val(data.asset_tag || '');
+                    $('#edit-wiz-s2-department').val(data.department || '');
+                    $('#edit-wiz-s2-location').val(data.location || '');
+                    
+                    // Populate Step 3 readonly fields
+                    $('#edit-wiz-s3-model-ro').val(data.model || '');
+                    $('#edit-wiz-s3-desc-ro').val(data.device_type || '');
+                    $('#edit-wiz-s3-serial-ro').val(data.serial_number || '');
+                    $('#edit-wiz-s3-assetid-ro').val(data.asset_tag || '');
+                    $('#edit-wiz-s3-dept-ro').val(data.department || '');
+                    $('#edit-wiz-s3-location-ro').val(data.location || '');
+                    
+                    // Populate Step 3 editable fields
+                    $('#edit-wiz-s3-pmfreq').val(data.pm_frequency || '');
+                    $('#edit-wiz-s3-insptype').val(data.inspection_type || '');
+                    $('#edit-wiz-s3-technician').val(data.technician_id || '');
+                    $('#edit-wiz-s3-inspdate').val(data.scheduled_at ? data.scheduled_at.split(' ')[0] : '');
+                    $('#edit-wiz-s3-notes').val(data.notes || '');
+                    $('#edit-wiz-s3-status').val(data.status || 'Pass');
+                    $('#edit-wiz-s3-devicecomplete').val(data.device_complete || 'Yes');
+                    
+                    // Hide view modal and show edit wizard
+                    $('#viewInspectionModal').modal('hide');
+                    $('#editInspectionWizardModal').modal('show');
+                    
+                    // Reset to step 1
+                    editWizardGoToStep(1);
+                }
+            },
+            error: function() {
+                alert('Failed to load inspection data');
+            }
+        });
+    }
+    
+    // ─────────────────────────────────────────────
+    // Edit Wizard Navigation
+    // ─────────────────────────────────────────────
+    let editCurrentStep = 1;
+    
+    function editWizardGoToStep(stepNum) {
+        $('#editInspectionWizardModal .wizard-step').removeClass('active');
+        $(`#edit-wiz-step${stepNum}`).addClass('active');
+        editCurrentStep = stepNum;
+    }
+    
+    // Step 1: Search Equipment
+    $('#edit-wiz-s1-search-btn, #edit-wiz-s1-serial').on('keypress click', function(e) {
+        if (e.type === 'click' || (e.type === 'keypress' && e.which === 13)) {
+            e.preventDefault();
+            const serialNumber = $('#edit-wiz-s1-serial').val().trim();
+            
+            if (serialNumber) {
+                searchEditEquipmentBySerial(serialNumber);
+            }
+        }
+    });
+    
+    function searchEditEquipmentBySerial(serial) {
+        $.ajax({
+            url: '<?= site_url('admin/inspections/searchBySerial') ?>',
+            type: 'GET',
+            data: { 
+                serial_number: serial,
+                site_id: $('#edit-wiz-site-id').val()
+            },
+            dataType: 'json',
+            success: function(result) {
+                if (result.found) {
+                    // Found - populate step 2
+                    $('#edit-wiz-equipment-id').val(result.id);
+                    $('#edit-wiz-asset-not-found').val('0');
+                    $('#edit-wiz-asset-not-found-alert').hide();
+                    
+                    $('#edit-wiz-s2-manufacturer').val(result.make || '');
+                    $('#edit-wiz-s2-model').val(result.model || '');
+                    $('#edit-wiz-s2-description').val(result.device_type || '');
+                    $('#edit-wiz-s2-serial').val(result.serial_number || '');
+                    $('#edit-wiz-s2-assetid').val(result.asset_tag || '');
+                    $('#edit-wiz-s2-department').val(result.department || '');
+                    $('#edit-wiz-s2-location').val(result.location || '');
+                } else {
+                    // Not found - allow manual entry
+                    $('#edit-wiz-equipment-id').val('');
+                    $('#edit-wiz-asset-not-found').val('1');
+                    $('#edit-wiz-asset-not-found-alert').show();
+                    
+                    $('#edit-wiz-s2-serial').val(serial);
+                }
+            }
+        });
+    }
+    
+    // Step 1 Next
+    $('#edit-wiz-step1-next').click(function() {
+        editWizardGoToStep(2);
+    });
+    
+    // Step 2 Back
+    $('#edit-wiz-step2-back').click(function() {
+        editWizardGoToStep(1);
+    });
+    
+    // Step 2 Next
+    $('#edit-wiz-step2-next').click(function() {
+        // Sync step 2 data to step 3 readonly fields
+        $('#edit-wiz-s3-model-ro').val($('#edit-wiz-s2-model').val());
+        $('#edit-wiz-s3-desc-ro').val($('#edit-wiz-s2-description').val());
+        $('#edit-wiz-s3-serial-ro').val($('#edit-wiz-s2-serial').val());
+        $('#edit-wiz-s3-assetid-ro').val($('#edit-wiz-s2-assetid').val());
+        $('#edit-wiz-s3-dept-ro').val($('#edit-wiz-s2-department').val());
+        $('#edit-wiz-s3-location-ro').val($('#edit-wiz-s2-location').val());
+        
+        editWizardGoToStep(3);
+    });
+    
+    // Step 3 Back
+    $('#edit-wiz-step3-back').click(function() {
+        editWizardGoToStep(2);
+    });
+    
+    // ─────────────────────────────────────────────
+    // Step 3: Outcome Buttons (Pass/Fail/Repair)
+    // ─────────────────────────────────────────────
+    $('#edit-wizBtnPass').click(function() {
+        $('#edit-wiz-s3-status').val('Pass');
+    });
+    
+    $('#edit-wizBtnFail').click(function() {
+        $('#edit-wiz-s3-status').val('Fail');
+    });
+    
+    $('#edit-wizBtnRepair').click(function() {
+        $('#edit-wiz-s3-status').val('Repair');
+    });
+    
+    // ─────────────────────────────────────────────
+    // Update Inspection
+    // ─────────────────────────────────────────────
+    $('#edit-wizBtnUpdate').click(function() {
+        const inspectionId = $('#edit-wiz-inspection-id').val();
+        const groupId = $('#edit-wiz-group-id').val();
+        
+        const formData = {
+            inspection_id: inspectionId,
+            equipment_id: $('#edit-wiz-equipment-id').val(),
+            site_id: $('#edit-wiz-site-id').val(),
+            asset_not_found: $('#edit-wiz-asset-not-found').val(),
+            
+            // Step 2 data
+            manufacturer: $('#edit-wiz-s2-manufacturer').val(),
+            model_name: $('#edit-wiz-s2-model').val(),
+            description: $('#edit-wiz-s2-description').val(),
+            serial_number: $('#edit-wiz-s2-serial').val(),
+            asset_tag: $('#edit-wiz-s2-assetid').val(),
+            department: $('#edit-wiz-s2-department').val(),
+            location: $('#edit-wiz-s2-location').val(),
+            
+            // Step 3 data
+            pm_frequency: $('#edit-wiz-s3-pmfreq').val(),
+            inspection_type: $('#edit-wiz-s3-insptype').val(),
+            technician_id: $('#edit-wiz-s3-technician').val(),
+            scheduled_at: $('#edit-wiz-s3-inspdate').val(),
+            notes: $('#edit-wiz-s3-notes').val(),
+            status: $('#edit-wiz-s3-status').val(),
+            device_complete: $('#edit-wiz-s3-devicecomplete').val()
+        };
+        
+        $.ajax({
+            url: '<?= site_url('admin/inspections/updateInspection') ?>',
+            type: 'POST',
+            data: formData,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert('Inspection updated successfully!');
+                    $('#editInspectionWizardModal').modal('hide');
+                    
+                    // Reopen the view modal with updated data
+                    viewInspectionGroup(groupId);
+                    
+                    // Optionally reload the page
+                    // location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Failed to update inspection');
+            }
+        });
+    });
+    
+    // ─────────────────────────────────────────────
+    // Reset wizard when modal is closed
+    // ─────────────────────────────────────────────
+    $('#editInspectionWizardModal').on('hidden.bs.modal', function() {
+        editWizardGoToStep(1);
+        $('#edit-wiz-asset-not-found-alert').hide();
+        $('#editInspectionWizardModal form').trigger('reset');
+    });
+    
+});
+</script>
 
 <!-- end inspectionWizardModal -->
 
@@ -1401,107 +1994,6 @@ var WIZ_SITE_ID          = '<?= $site['id'] ?>';
 
 $(document).ready(function() {
 
-    // jQuery Validation for the Equipment Form
-    $('#equipmentForm').validate({
-        rules: {
-            'asset_tag': {
-                required: true,
-                maxlength: 50
-            },
-            'serial_number': {
-                required: true,
-                maxlength: 50
-            },
-            'make': {
-                required: true,
-                maxlength: 100
-            },
-            'model': {
-                required: true,
-                maxlength: 100
-            },
-            'device_type': {
-                required: true,
-                maxlength: 100
-            }
-        },
-        messages: {
-            'asset_tag': {
-                required: "Asset Tag is required",
-                maxlength: "Asset Tag can't be longer than 50 characters"
-            },
-            'serial_number': {
-                required: "Serial Number is required",
-                maxlength: "Serial Number can't be longer than 50 characters"
-            },
-            'make': {
-                required: "Make is required",
-                maxlength: "Make can't be longer than 100 characters"
-            },
-            'model': {
-                required: "Model is required",
-                maxlength: "Model can't be longer than 100 characters"
-            },
-            'device_type': {
-                required: "Device Type is required",
-                maxlength: "Device Type can't be longer than 100 characters"
-            }
-        },
-        submitHandler: function(form) {
-            // Prevent form submission if validation fails
-            if (!$(form).valid()) {
-                Swal.fire({
-                    title: 'Error!',
-                    text: 'Please fill out all required fields.',
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-                return false;
-            }
-
-            // Triggering the AJAX form submission
-            var formData = $(form).serialize();
-            var actionUrl = $(form).attr('action');
-
-            $('#equipmentSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
-
-            $.ajax({
-                url: actionUrl,
-                method: 'POST',
-                data: formData,
-                success: function(response) {
-                    // Hide the modal and reload the page upon successful submission
-                    $('#addEquipmentModal').modal('hide');
-                    location.reload(); // Reload to show updated data
-
-                    // Success Alert using SweetAlert2
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Equipment saved successfully.',
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    });
-                },
-                error: function(xhr) {
-                    // Show error alert using SweetAlert2
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Error saving equipment. Please try again.',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-
-                    console.error(xhr.responseText);
-                    $('#equipmentSubmitBtn').prop('disabled', false).html('Save changes');
-                }
-            });
-        }
-    });
-
-});
-
-$(document).ready(function() {
-
     // ─── DataTables Init ─────────────────────────────────
     $('#equipment-datatable').DataTable({
         dom: 'Bfrtip',
@@ -1586,7 +2078,30 @@ $(document).ready(function() {
         $('#equipment-customer-location').val('<?= $site['id'] ?>');
     });
     
-   
+    // Handle form submission
+    $('#equipmentForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var formData = $(this).serialize();
+        var actionUrl = $(this).attr('action');
+        
+        $('#equipmentSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
+        
+        $.ajax({
+            url: actionUrl,
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                $('#addEquipmentModal').modal('hide');
+                location.reload(); // Reload to show updated data
+            },
+            error: function(xhr) {
+                alert('Error saving equipment. Please try again.');
+                console.error(xhr.responseText);
+                $('#equipmentSubmitBtn').prop('disabled', false).html('Save changes');
+            }
+        });
+    });
     
     // Reset form when modal is closed
     $('#addEquipmentModal').on('hidden.bs.modal', function() {
@@ -2102,8 +2617,10 @@ $(document).on('click', '.view-inspection-btn', function() {
 
                 // Generate HTML for the inspections list
                 var inspectionHtml = '';
-                inspections.forEach(function(inspec) {
+                inspections.forEach(function(inspec) {  
+               
                     inspectionHtml += '<tr>';
+                    inspectionHtml += '<td> <button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="'+inspec.inspections_id+'" data-group-id="'+inspec.group_id+'"><i class="fa fa-edit"></i> Edit</button></td>';
                     inspectionHtml += '<td>' + (inspec.status === 'Pass' ? '<span class="badge bg-success">Pass</span>' : '<span class="badge bg-danger">Fail</span>') + '</td>';
                     inspectionHtml += '<td>' + inspec.customer_site + '</td>';
                     inspectionHtml += '<td>' + inspec.model + '</td>';
