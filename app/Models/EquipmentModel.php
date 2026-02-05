@@ -20,6 +20,8 @@ class EquipmentModel extends Model
         'location',
         'status',
         'pm_kit',
+        'pm_manual_path',
+        'photo_path',
         'fast_notes',
         'installation_date',
         'warranty_expires',

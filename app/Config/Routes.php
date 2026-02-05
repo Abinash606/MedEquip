@@ -27,6 +27,9 @@ $routes->post('login', 'AuthController::login');
 $routes->get('logout', 'AuthController::logout');
 $routes->get('forgot', 'AuthController::forgot');
 $routes->post('forgot', 'AuthController::forgot');
+$routes->get('customer/reset-password/(:any)', 'AuthController::resetPassword/$1');
+$routes->post('customer/update-password', 'AuthController::updatePassword');
+
 $routes->get('reset/(:any)', 'AuthController::reset/$1');
 $routes->post('reset/(:any)', 'AuthController::reset/$1');
 
@@ -87,6 +90,16 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('equipment/create', 'Admin\EquipmentController::create');
     $routes->post('equipment/update/(:num)', 'Admin\EquipmentController::update/$1');
     $routes->get('equipment/delete/(:num)', 'Admin\EquipmentController::delete/$1');
+    $routes->get('equipment/show/(:num)', 'Admin\EquipmentController::show/$1');
+    
+    $routes->get('equipment-db/(:num)', 'Admin\EquipmentController::show/$1');
+    $routes->post('equipment-db/save', 'Admin\EquipmentController::save');
+    $routes->post('equipment-db/delete/(:num)', 'Admin\EquipmentController::deletedb/$1');
+
+    $routes->post(
+        'data-operations/import-equipment',
+        'Admin\DataOperationController::importEquipment'
+    );
 
     $routes->post('inspections/create', 'Admin\InspectionsController::create');
     $routes->post('inspections/update/(:num)', 'Admin\InspectionsController::update/$1');
@@ -94,6 +107,15 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('inspections/searchByAssetTag',  'Admin\InspectionsController::searchByAssetTag');
     $routes->get('inspections/searchByModel',     'Admin\InspectionsController::searchByModel');
+
+    $routes->get('inspections/searchBySerial', 'Admin\InspectionsController::searchBySerial');
+    $routes->get('inspections/searchByModel', 'Admin\InspectionsController::searchByModel');
+    // $routes->post('create', 'Admin\InspectionsController::create');
+    $routes->get('inspections/group/(:any)', 'Admin\InspectionsController::getInspectionGroup/$1');
+    $routes->get('inspections/getByGroupId/', 'Admin\InspectionsController::getByGroupId');
+
+
+
 
     $routes->post('work-orders/create', 'Admin\WorkOrdersController::create');
     $routes->post('work-orders/update/(:num)', 'Admin\WorkOrdersController::update/$1');

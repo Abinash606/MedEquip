@@ -1,135 +1,290 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>Equipment</h1>
-    <a href="#" class="btn btn-primary">Add Equipment</a>
+
+<?php $BASE_URL = base_url(); ?>
+<div class="d-flex align-items-center mb-3">
+    <h1 class="me-auto">Equipment</h1>
+    <button class="btn btn-primary" id="addBtn"><i class="fa-solid fa-plus"></i> Add Equipment</button>
 </div>
-<table class="table table-striped data-table">
+
+<!-- PASS PHP DATA TO JS -->
+<script>
+    const BASE_URL = "<?= $BASE_URL ?>";
+    const equipmentData = <?= json_encode($equipment) ?>;
+</script>
+
+<table class="table table-striped" id="equipmentTable">
     <thead>
         <tr>
-            <th>Asset Tag</th>
-            <th>Make</th>
+            <th>Brand</th>
             <th>Model</th>
-            <th>Serial</th>
-            <th>Type</th>
-            <th>Status</th>
+            <th>Description</th>
+            <th>Part #</th>
+            <th>AKA</th>
+            <th>PM Manual</th>
+            <th>Photo</th>
+            <th width="150">Action</th>
         </tr>
     </thead>
-    <tbody>
-        <?php foreach ($equipment as $item): ?>
-            <tr>
-                <td><?= esc($item['asset_tag']) ?></td>
-                <td><?= esc($item['make'] ?? '') ?></td>
-                <td><?= esc($item['model'] ?? '') ?></td>
-                <td><?= esc($item['serial_number'] ?? '') ?></td>
-                <td><?= esc($item['device_type'] ?? '') ?></td>
-                <td><?= esc($item['status'] ?? '') ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </tbody>
+    <tbody></tbody>
 </table>
 
-<!-- Add/Edit Equipment Modal -->
-<div class="modal fade" id="equipmentModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form id="equipmentForm">
-        <?= csrf_field() ?>
-        <input type="hidden" name="id" id="eq-id">
+<!-- MODAL -->
+<div class="modal fade" id="equipmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="equipmentForm" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title">Equipment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
 
-        <div class="modal-header">
-          <h5 class="modal-title fw-bold">Add/Edit Equipment</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="equipment_id">
+
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label>Brand</label>
+                            <input type="text" name="make" id="make" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label>Model</label>
+                            <input type="text" name="model" id="model" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Description</label>
+                        <input type="text" name="device_type" id="device_type" class="form-control" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label>Part #</label>
+                            <input type="text" name="serial_number" id="serial_number" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label>AKA</label>
+                            <input type="text" name="asset_tag" id="asset_tag" class="form-control">
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-2">
+                        <label>PM Manual (Max 5MB)</label>
+                        <input type="file" name="pm_manual" class="form-control">
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Photo / File (Max 5MB)</label>
+                        <input type="file" name="photo" class="form-control">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
         </div>
-
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Asset Tag</label>
-              <input type="text" name="asset_tag" id="eq-asset_tag" class="form-control" placeholder="Auto-generated if empty">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Serial Number</label>
-              <input type="text" name="serial_number" id="eq-serial_number" class="form-control">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Make</label>
-              <input type="text" name="make" id="eq-make" class="form-control" placeholder="e.g., Philips, GE">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Model</label>
-              <input type="text" name="model" id="eq-model" class="form-control" placeholder="Enter model">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Device Type</label>
-              <input type="text" name="device_type" id="eq-device_type" class="form-control" placeholder="e.g., MRI, CT, Ultrasound">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Department</label>
-              <input type="text" name="department" id="eq-department" class="form-control" placeholder="e.g., Radiology">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Room/Location</label>
-              <input type="text" name="location" id="eq-location" class="form-control" placeholder="e.g., Room 101">
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Device Status</label>
-              <select name="status" id="eq-status" class="form-select" required>
-                <option value="Ready">Ready</option>
-                <option value="In Service">In Service</option>
-                <option value="Needs Repair">Needs Repair</option>
-                <option value="Out of Service">Out of Service</option>
-              </select>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">PM Kit</label>
-              <select name="pm_kit" id="eq-pm_kit" class="form-select">
-                <option value="">Select PM Kit</option>
-                <option value="Basic Kit">Basic Kit</option>
-                <option value="Full Kit">Full Kit</option>
-                <option value="Calibration Only">Calibration Only</option>
-              </select>
-            </div>
-
-            <div class="col-12">
-              <label class="form-label">Fast Notes</label>
-              <input type="text" name="fast_notes" id="eq-fast_notes" class="form-control" placeholder="Short note for fast entry">
-            </div>
-
-            <div class="col-12">
-              <label class="form-label">Customer Location</label>
-              <select name="site_id" id="eq-site_id" class="form-select" required>
-                <option value="">Select Location</option>
-                <?php foreach ($sites as $s): ?>
-                  <option value="<?= (int)$s['id'] ?>"><?= esc($s['name']) ?></option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-
-            <div class="col-md-6">
-              <label class="form-label">Installation Date</label>
-              <input type="date" name="installation_date" id="eq-installation_date" class="form-control">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Warranty Expires</label>
-              <input type="date" name="warranty_expires" id="eq-warranty_expires" class="form-control">
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary">Save changes</button>
-        </div>
-      </form>
     </div>
-  </div>
 </div>
 
+<!-- DEPENDENCIES -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    let table;
+
+    function initEquipmentTable() {
+        table = $('#equipmentTable').DataTable({
+            data: equipmentData,
+            destroy: true,
+            columns: [{
+                    data: 'make',
+                    defaultContent: '-'
+                },
+                {
+                    data: 'model',
+                    defaultContent: '-'
+                },
+                {
+                    data: 'device_type',
+                    defaultContent: '-'
+                },
+                {
+                    data: 'serial_number',
+                    defaultContent: '-'
+                },
+                {
+                    data: 'asset_tag',
+                    defaultContent: '-'
+                },
+
+                {
+                    data: 'pm_manual_path',
+                    orderable: false,
+                    searchable: false,
+                    render: d => d ?
+                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
+                },
+                {
+                    data: 'photo_path',
+                    orderable: false,
+                    searchable: false,
+                    render: d => d ?
+                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: id => `
+                    <button class="btn btn-sm btn-info editBtn" data-id="${id}">Edit</button>
+                    <button class="btn btn-sm btn-danger deleteBtn" data-id="${id}">Delete</button>
+                `
+                }
+            ],
+            dom: 'Bfrtip',
+            buttons: [{
+                    extend: 'copy',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4],
+                        modifier: {
+                            page: 'all', // 🔥 ALL pages
+                            search: 'applied' // 🔥 search filter respected
+                        }
+                    }
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4],
+                        modifier: {
+                            page: 'all',
+                            search: 'applied'
+                        }
+                    }
+                },
+                {
+                    extend: 'excel',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4],
+                        modifier: {
+                            page: 'all',
+                            search: 'applied'
+                        }
+                    }
+                },
+                {
+                    extend: 'pdf',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4],
+                        modifier: {
+                            page: 'all',
+                            search: 'applied'
+                        }
+                    }
+                },
+                {
+                    extend: 'print',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3, 4],
+                        modifier: {
+                            page: 'all',
+                            search: 'applied'
+                        }
+                    }
+                }
+            ],
+
+
+            pageLength: 10,
+            responsive: true
+        });
+    }
+
+    $(document).ready(() => initEquipmentTable());
+
+    /* ADD */
+    $('#addBtn').on('click', () => {
+        equipmentForm.reset();
+        equipment_id.value = '';
+        new bootstrap.Modal('#equipmentModal').show();
+    });
+
+    /* EDIT */
+    $(document).on('click', '.editBtn', function() {
+        const id = $(this).data('id');
+        fetch(`${BASE_URL}/admin/equipment-db/${id}`)
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    const d = res.data;
+                    equipment_id.value = d.id;
+                    make.value = d.make ?? '';
+                    model.value = d.model ?? '';
+                    device_type.value = d.device_type ?? '';
+                    serial_number.value = d.serial_number ?? '';
+                    asset_tag.value = d.asset_tag ?? '';
+                    new bootstrap.Modal('#equipmentModal').show();
+                }
+            });
+    });
+
+    /* SAVE */
+    equipmentForm.onsubmit = e => {
+        e.preventDefault();
+        fetch(`${BASE_URL}/admin/equipment-db/save`, {
+                method: 'POST',
+                body: new FormData(equipmentForm)
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') location.reload();
+                else alert('Save failed');
+            });
+    };
+
+    /* DELETE */
+    $(document).on('click', '.deleteBtn', function() {
+        const id = $(this).data('id');
+        const row = $(this).closest('tr');
+
+        Swal.fire({
+            title: 'Delete?',
+            text: 'This equipment will be deleted',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33'
+        }).then(r => {
+            if (!r.isConfirmed) return;
+
+            fetch(`${BASE_URL}/admin/equipment-db/delete/${id}`, {
+                    method: 'POST'
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === 'success') {
+                        table.row(row).remove().draw();
+                        Swal.fire('Deleted', '', 'success');
+                    }
+                });
+        });
+    });
+</script>
 
 <?= $this->endSection() ?>

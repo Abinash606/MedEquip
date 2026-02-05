@@ -24,14 +24,14 @@ class AuthController extends Controller
     {
         $session = session();
         $data = [];
-       
+
         if ($this->request->getMethod() === 'POST') {
             $email    = trim($this->request->getPost('email'));
             $password = $this->request->getPost('password');
 
             $userModel = new UserModel();
             $user      = $userModel->getByEmailSimple($email);
-      
+
             if ($user && password_verify($password, $user['password_hash'])) {
                 // Store necessary user info in session
                 $session->set([
@@ -75,7 +75,7 @@ class AuthController extends Controller
      * purposes this simply records a reset token in the database. In a real
      * application you would send the token to the user's email address.
      */
-     public function forgot()
+    public function forgot()
     {
         if (! $this->request->isAJAX()) {
             return view('auth/forgot');
@@ -113,23 +113,47 @@ class AuthController extends Controller
         }
     }
 
+    // private function sendResetEmail(string $to, string $name, string $resetUrl): bool
+    // {
+    //     $email = Services::email();
+
+    //     $body = view('emails/reset_password_email', [
+    //         'customer_name' => $name,
+    //         'reset_url'     => $resetUrl,
+    //     ]);
+
+    //     $email->clear();
+    //     $email->setTo($to);
+    //     $email->setSubject('Reset Your Password – Asset IQ');
+    //     $email->setMessage($body);
+    //     $email->setMailType('html');
+
+    //     return $email->send();
+    // }
+
     private function sendResetEmail(string $to, string $name, string $resetUrl): bool
     {
-        $email = Services::email();
+        $email = \Config\Services::email();
 
         $body = view('emails/reset_password_email', [
             'customer_name' => $name,
             'reset_url'     => $resetUrl,
         ]);
 
-        $email->clear();
+        $email->clear(true); // clear attachments + headers
         $email->setTo($to);
-        $email->setSubject('Reset Your Password – MedEquip');
+        $email->setSubject('Reset Your Password – Asset IQ');
         $email->setMessage($body);
         $email->setMailType('html');
 
-        return $email->send();
+        if (! $email->send()) {
+            log_message('error', 'Password reset email failed: ' . print_r($email->printDebugger(['headers']), true));
+            return false;
+        }
+
+        return true;
     }
+
 
     public function reset(string $token)
     {
@@ -191,7 +215,7 @@ class AuthController extends Controller
 
         $email->clear();
         $email->setTo($to);
-        $email->setSubject('Your Password Has Been Reset – MedEquip');
+        $email->setSubject('Your Password Has Been Reset –Asset IQ');
         $email->setMessage($body);
         $email->setMailType('html');
 

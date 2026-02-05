@@ -166,11 +166,13 @@ class SitesController extends BaseController
         
         // Get inspections for this site
         $inspections = $inspectionModel->select('inspections.*, users.full_name as technician_name, equipment.asset_tag')
-                                       ->join('users', 'users.id = inspections.technician_id', 'left')
-                                       ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
-                                       ->where('inspections.site_id', $id)
-                                       ->where('inspections.company_id', $companyId)
-                                       ->findAll();      
+            ->join('users', 'users.id = inspections.technician_id', 'left')
+            ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
+            ->where('inspections.site_id', $id)
+            ->where('inspections.company_id', $companyId)
+            ->groupBy('inspections.group_id')  // Group by group_id
+            ->findAll();
+ 
 
         
         // Get work orders for this site

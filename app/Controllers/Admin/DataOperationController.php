@@ -3,6 +3,7 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
+use App\Models\EquipmentModel;
 use Config\Database;
 
 /**
@@ -146,5 +147,142 @@ class DataOperationController extends BaseController
         }
 
         return $this->response->download($path, null)->setFileName($file);
+    }
+
+
+    // public function importEquipment()
+    // {
+    //     $file = $this->request->getFile('csv_file');
+
+    //     if (!$file || !$file->isValid()) {
+    //         return redirect()->back()->with('error', 'Invalid file');
+    //     }
+
+    //     if ($file->getExtension() !== 'csv') {
+    //         return redirect()->back()->with('error', 'Only CSV allowed');
+    //     }
+
+    //     $equipmentModel = new EquipmentModel();
+
+    //     $handle = fopen($file->getTempName(), 'r');
+
+    //     // First row = header
+    //     $header = fgetcsv($handle);
+
+    //     while (($row = fgetcsv($handle)) !== false) {
+
+    //         $data = array_combine($header, $row);
+
+    //         $make        = trim($data['Manufacture'] ?? '');
+    //         $model       = trim($data['Model'] ?? '');
+    //         $deviceType  = trim($data['Equipment Description'] ?? '');
+
+    //         if (!$make || !$model) {
+    //             continue; // skip invalid row
+    //         }
+
+    //         // check existing record
+    //         $existing = $equipmentModel
+    //             ->where('make', $make)
+    //             ->where('model', $model)
+    //             ->first();
+
+    //         if ($existing) {
+    //             // UPDATE
+    //             $equipmentModel->update($existing['id'], [
+    //                 'device_type' => $deviceType,
+    //                 'updated_at'  => date('Y-m-d H:i:s')
+    //             ]);
+    //         } else {
+    //             // INSERT
+    //             $equipmentModel->insert([
+    //                 'make'        => $make,
+    //                 'model'       => $model,
+    //                 'device_type' => $deviceType,
+    //                 'created_at'  => date('Y-m-d H:i:s')
+    //             ]);
+    //         }
+    //     }
+
+    //     fclose($handle);
+
+    //     return redirect()->back()->with('success', 'CSV Imported Successfully');
+    // }
+
+    public function importEquipment()
+    {
+        $companyId = session()->get('company_id');
+
+        if (!$companyId) {
+            return redirect()->back()->with('error', 'Company not found');
+        }
+
+        $file = $this->request->getFile('csv_file');
+
+        if (!$file || !$file->isValid()) {
+            return redirect()->back()->with('error', 'Invalid file');
+        }
+
+        if ($file->getExtension() !== 'csv') {
+            return redirect()->back()->with('error', 'Only CSV allowed');
+        }
+
+        $equipmentModel = new EquipmentModel();
+        $handle = fopen($file->getTempName(), 'r');
+
+        // HEADER CLEAN
+        $header = array_map(function ($h) {
+            return trim(str_replace("\xEF\xBB\xBF", '', $h));
+        }, fgetcsv($handle));
+
+        while (($row = fgetcsv($handle)) !== false) {
+
+            $data = array_combine($header, $row);
+
+            $make = trim(
+                $data['Manufacture']
+                    ?? $data['Manufacturer']
+                    ?? ''
+            );
+
+            $model = trim($data['Model'] ?? '');
+
+            $deviceType = trim(
+                $data['Equipment Description']
+                    ?? $data['Description']
+                    ?? ''
+            );
+
+            if (!$make || !$model) {
+                continue;
+            }
+
+            $existing = $equipmentModel
+                ->where('company_id', $companyId)
+                ->where('site_id', 1)
+                ->where('make', $make)
+                ->where('model', $model)
+                ->where('deleted_at', null)
+                ->first();
+
+            if ($existing) {
+                $equipmentModel->update($existing['id'], [
+                    'device_type' => $deviceType,
+                    'updated_at'  => date('Y-m-d H:i:s')
+                ]);
+            } else {
+                $equipmentModel->insert([
+                    'company_id'  => $companyId,
+                    'site_id'     => 1,
+                    'make'        => $make,
+                    'model'       => $model,
+                    'device_type' => $deviceType,
+                ]);
+            }
+        }
+
+        fclose($handle);
+
+        return redirect()->back()->with('success', 'CSV Imported Successfully');
     }
 }

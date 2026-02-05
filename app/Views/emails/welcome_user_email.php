@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .header {
+            background-color: #235C47;
+            padding: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .header img {
+            width: 150px;
+            height: auto;
+        }
+
+        .content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content h2 {
+            font-size: 24px;
+            color: #333;
+        }
+
+        .content p {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #39AC73;
+            color: white !important;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #aaa;
+        }
+    </style>
+    <title>Welcome to <?= esc($company_name) ?> - Set Your Password</title>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="<?= base_url('uploads/logos/' . $company_logo) ?>" alt="Company Logo">
+        </div>
+        <div class="content">
+            <h2>Welcome, <?= esc($username) ?>!</h2>
+            <p>Thank you for joining <?= esc($company_name) ?>. To complete your registration, please click the button
+                below to set your password:</p>
+            <a href="<?= esc($reset_link) ?>" class="cta-button" style="
+       display:inline-block;
+       padding:10px 20px;
+       background-color:#39AC73;
+       color:#ffffff !important;
+       text-decoration:none;
+       border-radius:5px;
+       font-weight:500;
+   ">Set Your Password</a>
+            <p>If you have any questions, feel free to contact our support team at <a
+                    href="mailto:support@assetiq.com">support@assetiq.com</a>.</p>
+        </div>
+        <div class="footer">
+            <p>© <?= date('Y') ?> <?= esc($company_name) ?>. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+
+</html>

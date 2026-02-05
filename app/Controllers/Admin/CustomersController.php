@@ -20,7 +20,12 @@ class CustomersController extends BaseController
 
         $companyId = $this->session->get('company_id');
         $customers = $model->where('company_id', $companyId)->findAll();
-        
+        // Get the number of sites for each customer
+		foreach ($customers as &$customer) {
+			$customer['site_count'] = $siteModel->where('customer_id', $customer['id'])->countAllResults();
+		}
+
+		unset($customer);
         // Get credentials for each customer to display in modal
         foreach ($customers as &$customer) {
             $customer['credentials'] = $model->getCredentialsByCustomerId($customer['id']);
@@ -159,6 +164,14 @@ class CustomersController extends BaseController
             $logoFile->move(WRITEPATH . '../public/uploads/logos', $newName);
             $logoPath = $newName;
         }
+		
+		// Get customer details
+    $customerName = $this->request->getPost('name');
+    $customerEmail = $this->request->getPost('email');
+    $companyName = $customerName; // Assuming company name is the same as the customer's name
+
+    // Send welcome email to the customer
+    $this->sendCustomerWelcomeEmail($customerEmail, $companyName, $logoPath);
         
         // Insert customer data
         $customerData = [
@@ -197,23 +210,101 @@ class CustomersController extends BaseController
                         'email' => $portalEmails[$index],
                         'password' => $portalPasswords[$index]
                     ];
-                    
-                    // Generate password reset link
-                    $resetToken = bin2hex(random_bytes(16)); // Random reset token
-                    $resetLink = site_url('customer/reset-password/' . $resetToken);
-                    
-                    // Send email with the reset password link
-                    $this->sendPasswordResetEmail($portalEmails[$index], $username, $resetLink);
+					
+
                 }
             }
-            
-            if (!empty($credentials)) {
-                $model->saveCredentials($customerId, $credentials);
+			 // Save all credentials at once (outside the loop)
+        if (!empty($credentials)) {
+            $model->saveCredentials($customerId, $credentials);
+
+            // Now, for each credential, generate the reset token, update the token and expiry, and send the reset email
+            foreach ($credentials as $credential) {
+                $resetToken = bin2hex(random_bytes(16)); // Random reset token
+                $resetLink = site_url('customer/reset-password/' . $resetToken);
+
+                // Save the reset token in the credentials table
+                $this->savePasswordResetToken($credential['email'], $resetToken);
+
+                // Send email with the reset password link
+                $this->sendUserWelcomeEmail($credential['email'], $credential['username'], $resetLink, $companyName, $logoPath);
             }
+        }
+            
+           
         }
         
         return redirect()->to('admin/customers')->with('success', 'Customer created successfully');
     }
+	
+	// Function to save the password reset token in the credentials table
+public function savePasswordResetToken($email, $resetToken)
+{
+    // Use the database service to get a connection to the DB
+    $db = \Config\Database::connect();
+    
+   
+        // Update the user's reset token and expiration date
+        $data = [
+            'reset_token' => $resetToken,
+            'reset_token_expiration' => date('Y-m-d H:i:s', strtotime('+1 hour'))  // Token expires in 1 hour
+        ];
+ 
+        // Perform the update query for each credential by email (or other identifier like username)
+        $db->table('credentials')
+            ->where('email', $email)  // Match by email or other unique identifier
+            ->update($data);
+   
+}
+	
+	// Function to send welcome email to the customer
+public function sendCustomerWelcomeEmail($customerEmail,$companyName, $companyLogo)
+{
+    $emailService = \Config\Services::email();
+    $emailService->setFrom('no-reply@company.com', esc($companyName));
+    $emailService->setTo($customerEmail);
+    $emailService->setSubject('Welcome to ' . esc($companyName));
+
+    // Data for customer email
+    $data = [
+        'customer_name' => esc($companyName),
+        'company_name' => esc($companyName),
+        'company_logo' => $companyLogo  // Company logo path
+    ];
+
+    $message = view('emails/welcome_email', $data);
+    $emailService->setMessage($message);
+
+    if (!$emailService->send()) {
+        log_message('error', 'Failed to send customer welcome email to: ' . $customerEmail);
+    }
+}
+
+
+// Function to send password reset email
+public function sendUserWelcomeEmail($userEmail, $username, $resetLink, $companyName, $companyLogo)
+{
+    $emailService = \Config\Services::email();
+    $emailService->setFrom('no-reply@company.com', esc($companyName));
+    $emailService->setTo($userEmail);
+    $emailService->setSubject('Welcome to ' . esc($companyName) . ' - Set Your Password');
+
+    // Data for user email
+    $data = [
+        'username' => esc($username),
+        'reset_link' => $resetLink,
+        'company_name' => esc($companyName),
+        'company_logo' => $companyLogo  // Company logo path
+    ];
+
+    $message = view('emails/welcome_user_email', $data);
+    $emailService->setMessage($message);
+
+    if (!$emailService->send()) {
+        log_message('error', 'Failed to send user welcome email to: ' . $userEmail);
+    }
+}
+
 
     // Function to send password reset email
     public function sendPasswordResetEmail($email, $username, $resetLink)
@@ -392,8 +483,15 @@ class CustomersController extends BaseController
 	// Example in CodeIgniter controller
 public function checkEmail() {
     $email = $this->request->getPost('email');
-	$model = new CustomerModel();
-    $customer = $model->where('email', $email)->first();
+    $customerId = $this->request->getPost('id');  // Get the customer ID being edited (if any)
+
+    $model = new CustomerModel();
+
+    // Check if there's any other customer with the same email, but not the current one
+    $customer = $model->where('email', $email)
+                      ->where('id !=', $customerId)  // Ignore the current customer's ID
+                      ->first();
+
     if ($customer) {
         return $this->response->setJSON(['unique' => 'false']);
     } else {
@@ -450,5 +548,6 @@ public function checkEmail() {
             'customers' => $customers
         ]);
     }
+	
 
 }

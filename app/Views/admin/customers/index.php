@@ -38,9 +38,15 @@
 			
                 <td>
 					<?php if (!empty($customer['first_site_id'])): ?>
-						<a href="<?= site_url('admin/sites/' . $customer['first_site_id']) ?>" class="text-primary fw-bold">
-							<?= esc($customer['name']) ?>
-						</a>
+						<?php if ($customer['site_count'] == 1): ?>
+							<a href="<?= site_url('admin/sites/' . $customer['first_site_id']) ?>" class="text-primary fw-bold">
+								<?= esc($customer['name']) ?>
+							</a>
+						<?php else: ?>
+							<a href="<?= site_url('admin/sites') ?>" class="text-primary fw-bold">
+								<?= esc($customer['name']) ?>
+							</a>
+						<?php endif; ?>
 					<?php else: ?>
 						<?= esc($customer['name']) ?>
 					<?php endif; ?>
@@ -58,7 +64,7 @@
                 <td>
                     <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
                     <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
-                    <a href="<?= site_url('admin/sites/add?customer_id=' . $customer['id']) ?>" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</a>
+                    <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal" data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -183,6 +189,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save changes</button>
+					<span id="submitBtnProgress" class="text-muted" style="display:none;">Processing...</span>
                 </div>
             </div>
         </form>
@@ -190,8 +197,186 @@
 </div>
 
 
+<div class="modal fade" id="siteModal" tabindex="-1" aria-labelledby="siteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="siteForm" method="post" action="<?= site_url('admin/sites/add') ?>">
+                <?= csrf_field() ?>
+                <div class="modal-header">
+                    <h5 class="modal-title" id="siteModalLabel">Add Site</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="site-id" name="id">
+					 <input type="hidden" id="site-customer-id" name="customer_id"> <!-- Hidden field for customer ID -->
 
+                    <!-- Site Details Fields -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="site-name" name="name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="site-customer-name" name="customer_name" readonly> <!-- Readonly customer name field -->
+
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label" for="site-address">Address</label>
+                            <input type="text" class="form-control" id="site-address" name="address">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-city">City</label>
+                            <input type="text" class="form-control" id="site-city" name="city">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-state">State</label>
+							<select class="form-select" id="site-state" name="state">
+								<option value="">Select State</option>
+								<?php if (!empty($states)): ?>
+									<?php foreach ($states as $st): ?>
+										<option value="<?= esc($st['code']) ?>">
+											<?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
+										</option>
+									<?php endforeach; ?>
+								<?php endif; ?>
+							</select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-zip">Zip</label>
+                            <input type="text" class="form-control" id="site-zip" name="zip">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-contact">Contact Name</label>
+                            <input type="text" class="form-control" id="site-contact" name="contact_name">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-email">Email</label>
+                            <input type="email" class="form-control" id="site-email" name="email">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="site-phone">Phone</label>
+                            <input type="text" class="form-control" id="site-phone" name="phone">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <script>
+$(document).ready(function() {
+    // When the "Add Site" button is clicked
+    $(".btn-add-site").click(function() {
+        var customerId = $(this).data('id'); // Get the customer ID
+        var customerName = $(this).data('name'); // Get the customer name from the table
+
+        // Set the customer ID in the hidden field
+        $("#site-customer-id").val(customerId);
+
+        // Set the customer name in the readonly input field
+        $("#site-customer-name").val(customerName);
+    });
+	
+	 // jQuery Validation for Add/Edit Site
+    $('#siteForm').validate({
+        rules: {
+            'name': {
+                required: true,
+                maxlength: 255
+            },
+            'customer_id': {
+                required: true
+            },
+            'address': {
+                maxlength: 255
+            },
+            'city': {
+                maxlength: 255
+            },
+            'state': {
+                maxlength: 255
+            },
+            'zip': {
+                maxlength: 20
+            },
+            'contact_name': {
+                maxlength: 255
+            },
+            'email': {
+                email: true,
+                maxlength: 255
+            },
+            'phone': {
+                maxlength: 50
+            }
+        },
+        messages: {
+            'name': {
+                required: "Site name is required.",
+                maxlength: "Site name cannot exceed 255 characters."
+            },
+            'customer_id': {
+                required: "Please select a customer."
+            },
+            'email': {
+                email: "Please enter a valid email address.",
+                maxlength: "Email cannot exceed 255 characters."
+            },
+            'phone': {
+                maxlength: "Phone number cannot exceed 50 characters."
+            }
+        },
+        submitHandler: function(form) {
+            var actionUrl = $(form).attr('action');
+            var formData = new FormData(form);
+
+            // AJAX request to submit the form
+            $.ajax({
+                type: 'POST',
+                url: actionUrl,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Site saved successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        // Close modal and reset form
+                        $('#siteModal').modal('hide');
+                        $('#siteForm')[0].reset(); // Clear form data
+                        $('#siteModalLabel').text('Add Site');
+                        $('#submitBtn').text('Save');
+
+                        // Force page reload after success
+                        location.reload();  // This reloads the page and shows the latest data
+                    });
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'An error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+    });
+});
 
 $(document).ready(function() {
 	var table = $('#customer-datatable').DataTable({
@@ -428,6 +613,9 @@ $(document).ready(function () {
 
 function validateForm() {
     if ($("#customerForm").valid()) {
+		$('#submitBtn').prop('disabled', true);
+            $('#submitBtnProgress').show();
+
         $('#customerForm').submit();
     } else {
         console.log('Form is invalid');

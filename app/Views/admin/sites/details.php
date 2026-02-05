@@ -2,6 +2,21 @@
 <?= $this->section('content') ?>
 
 <style>
+    #viewInspectionModal .modal-header {
+    background: #6c757d;
+    color: #fff;
+}
+
+#viewInspectionModal .modal-body {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#viewInspectionModal table th, #viewInspectionModal table td {
+    text-align: center;
+}
+
+
     .glass-card {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
@@ -55,12 +70,12 @@
         display: inline-block;
     }
     
-    .status-ready, .status-completed {
+    .status-ready, .status-completed, .status-pass {
         background: #d1fae5;
         color: #065f46;
     }
     
-    .status-need-attention {
+    .status-need-attention, .status-fail {
         background: #fee2e2;
         color: #991b1b;
     }
@@ -70,7 +85,7 @@
         color: #92400e;
     }
     
-    .status-scheduled, .status-in-progress {
+    .status-scheduled, .status-in-progress, .status-repair {
         background: #dbeafe;
         color: #1e40af;
     }
@@ -224,6 +239,18 @@
         background: #f1f5f9;
     }
 
+    .btn-complete {
+        background-color: #7c3aed;
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    .btn-complete:hover { background-color: #6d28d9; }
+
     .wizard-footer {
         display: flex;
         justify-content: space-between;
@@ -235,24 +262,143 @@
     .wizard-footer .left-btns { display: flex; gap: 0.5rem; }
     .wizard-footer .right-btns { display: flex; gap: 0.5rem; }
 
-    .modal-header-wizard {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 1.25rem 1.5rem;
-        border-radius: 0.375rem 0.375rem 0 0;
+    /* Inspection Queue Styles */
+    .inspection-queue {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .inspection-queue-item {
+        background: white;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    .modal-header-wizard h5 {
-        margin: 0;
-        color: #fff;
+
+    .inspection-queue-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .queue-item-info {
+        flex: 1;
+    }
+
+    .queue-item-model {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.9rem;
+    }
+
+    .queue-item-details {
+        font-size: 0.82rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+
+    .queue-item-remove {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+    }
+
+    .queue-item-remove:hover {
+        background: #dc2626;
+    }
+
+    .queue-count {
+        background: #7c3aed;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Grouped Inspection View Styles */
+    .grouped-inspection {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .grouped-inspection-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .group-id-badge {
+        background: #7c3aed;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
         font-weight: 600;
     }
-    .modal-header-wizard .btn-close {
-        filter: brightness(0) invert(1);
-        margin: 0;
+
+    .group-date {
+        color: #64748b;
+        font-size: 0.9rem;
     }
+
+    .grouped-inspection-items {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .grouped-item {
+        background: white;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 0.75rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.5rem;
+    }
+
+    .grouped-item-field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .grouped-item-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .grouped-item-value {
+        font-size: 0.9rem;
+        color: #1e293b;
+        font-weight: 500;
+    }
+    .site-avatar img {
+    width: 100%;             /* Makes sure the image is responsive */
+    height: 100%;            /* Ensures the image fills the container */
+    object-fit: cover;       /* Ensures the image scales and stays within the circle */
+}
 </style>
 
 <!-- Back Button -->
@@ -266,16 +412,25 @@
         <div class="col-md-auto me-4">
             <div class="site-avatar" id="site-details-logo">
                 <?php 
-                $nameParts = explode(' ', $site['name']);
-                $initials = '';
-                if (count($nameParts) >= 2) {
-                    $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
+                $logoPath = $customer['logo_path']; // Get the logo file name
+                $logoUrl = base_url('uploads/logos/' . $logoPath); // Construct the URL assuming the logos are in the 'uploads/logos' directory
+               
+                // Check if the logo exists (optional)
+                if (file_exists(FCPATH . 'uploads/logos/' . $logoPath) && !empty($logoPath)) {
+                    echo '<img src="' . $logoUrl . '" alt="Customer Logo" />'; // Display the logo image
                 } else {
-                    $initials = strtoupper(substr($site['name'], 0, 2));
+                    $nameParts = explode(' ', $customer['name']);
+                    $initials = '';
+                    if (count($nameParts) >= 2) {
+                        $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
+                    } else {
+                        $initials = strtoupper(substr($customer['name'], 0, 2));
+                    }
+                    echo $initials; // Display initials if logo doesn't exist
                 }
-                echo $initials;
                 ?>
             </div>
+
         </div>
         <div class="col-md">
             <div class="row">
@@ -403,13 +558,13 @@
                     <i class="fa fa-plus me-2"></i> Add Inspection
                 </button>
             </div>
-            <table id="inspections-datatable" class="table table-striped table-hover" style="width:100%">
+
+           <table id="inspections-datatable" class="table table-striped table-hover" style="width:100%">
                 <thead>
                     <tr>
-                        <th>Equipment</th>
+                        <th>Inspection ID</th>
                         <th>Scheduled Date</th>
-                        <th>Completed Date</th>
-                        <th>Status</th>
+                        <!-- <th>Status</th> -->
                         <th>Technician</th>
                         <th>Next Due Date</th>
                         <th class="text-center">Actions</th>
@@ -419,10 +574,16 @@
                     <?php if (!empty($inspections)): ?>
                         <?php foreach ($inspections as $insp): ?>
                             <tr>
-                                <td><?= esc($insp['asset_tag'] ?? 'N/A') ?></td>
+                                <!-- Equipment Name -->
+                                <td><?= esc($insp['group_id'] ?? 'N/A') ?></td>
+
+                                <!-- Scheduled Date -->
                                 <td><?= date('M d, Y', strtotime($insp['scheduled_at'])) ?></td>
-                                <td><?= $insp['completed_at'] ? date('M d, Y', strtotime($insp['completed_at'])) : '-' ?></td>
-                                <td>
+
+                                
+
+                                <!-- Status -->
+                                <!-- <td>
                                     <?php
                                     $statusClass = 'status-badge ';
                                     $status = strtolower($insp['status']);
@@ -435,25 +596,52 @@
                                     }
                                     ?>
                                     <span class="<?= $statusClass ?>"><?= esc($insp['status']) ?></span>
-                                </td>
+                                </td> -->
+
+                                <!-- Technician -->
                                 <td><?= esc($insp['technician_name'] ?? 'Unassigned') ?></td>
+
+                                <!-- Next Due Date -->
                                 <td><?= $insp['next_due_date'] ? date('M d, Y', strtotime($insp['next_due_date'])) : '-' ?></td>
+
+                                <!-- Actions -->
                                 <td>
+
+                                 <!-- View Button -->
+                                <button class="btn btn-sm btn-info btn-action view-inspection-btn"
+                                        data-group_id="<?= esc($insp['group_id']) ?>"
+                                        data-id="<?= $insp['id'] ?>"
+                                        data-equipment_id="<?= esc($insp['equipment_id']) ?>"
+                                        data-scheduled_at="<?= esc($insp['scheduled_at']) ?>"
+                                        data-completed_at="<?= esc($insp['completed_at'] ?? '') ?>"
+                                        data-status="<?= esc($insp['status'], 'attr') ?>"
+                                        data-technician_id="<?= esc($insp['technician_id'] ?? '') ?>"
+                                        data-findings="<?= esc($insp['findings'] ?? '', 'attr') ?>"
+                                        data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
+                                        data-next_due_date="<?= esc($insp['next_due_date'] ?? '') ?>"
+                                        >
+                                    <i class="fa fa-eye"></i> View
+                                </button>
+
+                                    <!-- Edit Button -->
                                     <button class="btn btn-sm btn-info btn-action edit-inspection-btn"
-                                            data-id="<?= $insp['id'] ?>"
-                                            data-equipment_id="<?= $insp['equipment_id'] ?>"
-                                            data-scheduled_at="<?= $insp['scheduled_at'] ?>"
-                                            data-completed_at="<?= $insp['completed_at'] ?? '' ?>"
-                                            data-status="<?= esc($insp['status'], 'attr') ?>"
-                                            data-technician_id="<?= $insp['technician_id'] ?? '' ?>"
-                                            data-findings="<?= esc($insp['findings'] ?? '', 'attr') ?>"
-                                            data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
-                                            data-next_due_date="<?= $insp['next_due_date'] ?? '' ?>">
-                                        <i class="fa fa-edit"></i> Edit
-                                    </button>
+                                        data-id="<?= $insp['id'] ?>"
+                                        data-equipment_id="<?= $insp['equipment_id'] ?>"
+                                        data-scheduled_at="<?= $insp['scheduled_at'] ?>"
+                                        data-completed_at="<?= $insp['completed_at'] ?? '' ?>"
+                                        data-status="<?= esc($insp['status'], 'attr') ?>"
+                                        data-technician_id="<?= $insp['technician_id'] ?? '' ?>"
+                                        data-findings="<?= esc($insp['findings'] ?? '', 'attr') ?>"
+                                        data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
+                                        data-next_due_date="<?= $insp['next_due_date'] ?? '' ?>">
+                                    <i class="fa fa-edit"></i> Edit
+                                </button>
+
+
+                                    <!-- Delete Button -->
                                     <a href="<?= site_url('admin/inspections/delete/' . $insp['id']) ?>" 
-                                       class="btn btn-sm btn-danger btn-action"
-                                       onclick="return confirm('Are you sure you want to delete this inspection?')">
+                                    class="btn btn-sm btn-danger btn-action"
+                                    onclick="return confirm('Are you sure you want to delete this inspection?')">
                                         <i class="fa fa-trash"></i> Delete
                                     </a>
                                 </td>
@@ -462,6 +650,8 @@
                     <?php endif; ?>
                 </tbody>
             </table>
+
+
         </div>
     </div>
     
@@ -542,7 +732,7 @@
 <!-- ================================================
      ADD EQUIPMENT MODAL (unchanged)
      ================================================ -->
-<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+<!-- <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="equipmentForm" method="post" action="<?= site_url('admin/equipment/create') ?>">
@@ -604,35 +794,183 @@
             </form>
         </div>
     </div>
+</div> -->
+
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="equipmentForm" method="post" action="<?= site_url('admin/equipment/create') ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="site_id" value="<?= $site['id'] ?>">
+                <input type="hidden" id="equipment-id" name="id">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title" id="equipmentModalLabel">Add/Edit Equipment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Asset Tag -->
+                        <div class="col-md-6">
+                            <label for="equipment-asset-tag" class="form-label">Asset Tag</label>
+                            <input type="text" class="form-control" id="equipment-asset-tag" name="asset_tag" placeholder=" add Asset Tag" required> 
+                        </div>
+                        
+                        <!-- Serial Number -->
+                        <div class="col-md-6">
+                            <label for="equipment-serial-number" class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="equipment-serial-number" name="serial_number" placeholder="" required>
+                        </div>
+                        
+                        <!-- Make -->
+                        <div class="col-md-6">
+                            <label for="equipment-make" class="form-label">Make</label>
+                            <input type="text" class="form-control" id="equipment-make" name="make" placeholder="e.g., Philips, GE" required >
+                        </div>
+                        
+                        <!-- Model -->
+                        <div class="col-md-6">
+                            <label for="equipment-model" class="form-label">Model</label>
+                            <input type="text" class="form-control" id="equipment-model" name="model" placeholder="Enter model" required>
+                        </div>
+                        
+                        <!-- Device Type -->
+                        <div class="col-md-6">
+                            <label for="equipment-device-type" class="form-label">Device Type</label>
+                            <input type="text" class="form-control" id="equipment-device-type" name="device_type" placeholder="e.g., MRI, CT, Ultrasound" required>
+                        </div>
+                        
+                        <!-- Department -->
+                        <div class="col-md-6">
+                            <label for="equipment-department" class="form-label">Department</label>
+                            <input type="text" class="form-control" id="equipment-department" name="department" placeholder="e.g., Radiology">
+                        </div>
+                        
+                        <!-- Room/Location -->
+                        <div class="col-md-6">
+                            <label for="equipment-location" class="form-label">Room/Location</label>
+                            <input type="text" class="form-control" id="equipment-location" name="location" placeholder="e.g., Room 101">
+                        </div>
+                        
+                        <!-- Device Status -->
+                        <div class="col-md-6">
+                            <label for="equipment-status" class="form-label">Device Status</label>
+                            <select class="form-select" id="equipment-status" name="status">
+                                <option value="Ready">Ready</option>
+                                <option value="Need Attention">Need Attention</option>
+                                <option value="Repair">Repair</option>
+                                <option value="Out of Service">Out of Service</option>
+                            </select>
+                        </div>
+                        
+                        <!-- PM Kit -->
+                        <div class="col-md-12">
+                            <label for="equipment-pm-kit" class="form-label">PM Kit</label>
+                            <select class="form-select" id="equipment-pm-kit" name="pm_kit">
+                                <option value="">Select PM Kit</option>
+                                <option value="Kit A">Kit A</option>
+                                <option value="Kit B">Kit B</option>
+                                <option value="Kit C">Kit C</option>
+                                <option value="Custom">Custom</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Fast Notes -->
+                        <div class="col-md-12">
+                            <label for="equipment-fast-notes" class="form-label">Fast Notes</label>
+                            <textarea class="form-control" id="equipment-fast-notes" name="fast_notes" rows="2" placeholder="Short note for fast entry"></textarea>
+                        </div>
+                        
+                        <!-- Customer Location -->
+                        <div class="col-md-12">
+                            <label for="equipment-customer-location" class="form-label">Customer Location</label>
+                            <select class="form-select" id="equipment-customer-location" name="site_id">
+                                <option value="<?= $site['id'] ?>" selected><?= esc($site['name']) ?></option>
+                                <?php if (isset($sites) && is_array($sites)): ?>
+                                    <?php foreach ($sites as $siteOption): ?>
+                                        <?php if ($siteOption['id'] != $site['id']): ?>
+                                            <option value="<?= $siteOption['id'] ?>"><?= esc($siteOption['name']) ?></option>
+                                        <?php endif; ?>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        
+                        <!-- Installation Date -->
+                        <div class="col-md-6">
+                            <label for="equipment-installation-date" class="form-label">Installation Date</label>
+                            <input type="date" class="form-control" id="equipment-installation-date" name="installation_date">
+                        </div>
+                        
+                        <!-- Warranty Expires -->
+                        <div class="col-md-6">
+                            <label for="equipment-warranty-expires" class="form-label">Warranty Expires</label>
+                            <input type="date" class="form-control" id="equipment-warranty-expires" name="warranty_expires">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" id="equipmentSubmitBtn">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- ================================================
      3-STEP INSPECTION WIZARD MODAL
      ================================================ -->
+<!-- ================================================
+     3-STEP INSPECTION WIZARD MODAL (Updated for Serial Number & Multiple Inspections)
+     ================================================ -->
 <div class="modal fade" id="inspectionWizardModal" tabindex="-1" aria-labelledby="inspectionWizardLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <!-- Wizard Header -->
-            <div class="modal-header-wizard">
-                <h5>New Site Inspection</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-check me-2"></i>
+                    <span id="wizardTitle">New Inspection</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body px-4 py-3">
 
-                <!-- ─── STEP 1: Enter Asset Information ─── -->
+                <!-- Hidden fields for form submission -->
+                <input type="hidden" id="wiz-equipment-id" name="equipment_id" value="">
+                <input type="hidden" id="wiz-site-id" name="site_id" value="<?= $site['id'] ?>">
+                <input type="hidden" id="wiz-group-id" name="group_id" value="">
+
+                <!-- Inspection Queue Display -->
+                <div id="inspectionQueueContainer" style="display:none;">
+                    <div class="alert alert-info">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span style="font-weight:600;">
+                                <i class="fa fa-list me-2"></i>
+                                <span id="queueCount">0</span> device(s) in queue
+                            </span>
+                        </div>
+                        <div id="inspectionQueue" style="max-height:200px; overflow-y:auto;"></div>
+                    </div>
+                </div>
+
+                <!-- ─── STEP 1: Enter Serial Number ─── -->
                 <div class="wizard-step active" id="wizardStep1">
-                    <h5>Step 1: Enter Asset Information</h5>
+                    <h5>Step 1: Enter Serial Number</h5>
                     <p class="site-label"><strong>Site:</strong> <?= esc($site['name']) ?></p>
 
-                    <label for="wiz-asset-barcode" class="form-label">Asset/Barcode Number</label>
+                    <label for="wiz-serial-number" class="form-label">Serial Number</label>
                     <input type="text"
                            class="form-control"
-                           id="wiz-asset-barcode"
-                           placeholder="Enter or scan asset/barcode"
+                           id="wiz-serial-number"
+                           placeholder="Enter or scan serial number"
                            autocomplete="off">
                     <p class="helper-text">
-                        Enter the asset or barcode number. If the asset exists in the site's inventory, details will be automatically filled.
+                        Enter the serial number from the equipment label. If found, details will be automatically filled.
                     </p>
 
                     <div class="wizard-footer">
@@ -648,7 +986,7 @@
                 <div class="wizard-step" id="wizardStep2">
                     <h5>Step 2: Asset Verification (Not Found)</h5>
                     <div class="asset-not-found-alert">
-                        Asset not found. Please search for the device model in the equipment database.
+                        Serial number not found. Please search for the device model in the equipment database.
                     </div>
 
                     <label for="wiz-search-model" class="form-label">Search Model</label>
@@ -673,7 +1011,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="wiz-s2-serial" class="form-label">Serial #</label>
-                            <input type="text" class="form-control" id="wiz-s2-serial" placeholder="Enter Serial Number">
+                            <input type="text" class="form-control" id="wiz-s2-serial" readonly>
                         </div>
                     </div>
 
@@ -691,10 +1029,6 @@
                 <!-- ─── STEP 3: Enter Inspection Details ─── -->
                 <div class="wizard-step" id="wizardStep3">
                     <h5>Step 3: Enter Inspection Details</h5>
-
-                    <!-- Hidden fields for form submission -->
-                    <input type="hidden" id="wiz-equipment-id" name="equipment_id" value="">
-                    <input type="hidden" id="wiz-site-id" name="site_id" value="<?= $site['id'] ?>">
 
                     <!-- Row 1: Model | Description | Serial # (read-only, pre-filled) -->
                     <div class="row g-3 step3-readonly-row">
@@ -769,7 +1103,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="wiz-s3-inspdate" class="form-label">Inspection Date</label>
-                            <input type="date" class="form-control" id="wiz-s3-inspdate" name="scheduled_at">
+                            <input type="date" class="form-control" id="wiz-s3-inspdate" name="scheduled_at" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
 
@@ -813,15 +1147,18 @@
                     </div>
 
                     <!-- Enter Next Device button -->
-                    <button type="button" class="btn-next-device" id="wizBtnNextDevice">Enter Next Device</button>
+                    <button type="button" class="btn-next-device" id="wizBtnNextDevice">Add to Queue & Next Device</button>
 
-                    <!-- Footer with Back / Cancel -->
+                    <!-- Footer with Back / Cancel / Complete -->
                     <div class="wizard-footer">
                         <div class="left-btns">
                             <button type="button" class="btn btn-outline-secondary" id="wizStep3Back">Back</button>
                         </div>
                         <div class="right-btns">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-success" id="wizBtnComplete" style="display:none;">
+                                <i class="fa fa-check-double me-1"></i>Complete Inspections
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -829,7 +1166,61 @@
             </div><!-- end modal-body -->
         </div><!-- end modal-content -->
     </div><!-- end modal-dialog -->
-</div><!-- end inspectionWizardModal -->
+</div>
+
+
+<!-- View Inspection Modal -->
+<!-- View Inspection Modal -->
+<div class="modal fade" id="viewInspectionModal" tabindex="-1" aria-labelledby="viewInspectionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="viewInspectionModalLabel">Inspection Group Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="inspection-details-group">
+                    <!-- Inspection Group Header -->
+                    <h5>Inspection Report Overview</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Pass/Fail</th>
+                                    <th>Customer Site</th>
+                                    <th>Model</th>
+                                    <th>Type</th>
+                                    <th>S/N</th>
+                                    <th>Action Performed</th>
+                                    <th>Asset #</th>
+                                    <th>Department</th>
+                                    <th>Room</th>
+                                    <th>Tech</th>
+                                    <th>EST</th>
+                                    <th>CAL</th>
+                                    <th>Inspection Date</th>
+                                    <th>Battery Expiration Date</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inspection-details-body">
+                                <!-- Inspection details will be populated here via AJAX -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- end inspectionWizardModal -->
+
 
 <!-- ================================================
      EDIT INSPECTION MODAL (legacy single-form, for editing existing records)
@@ -866,10 +1257,10 @@
                             <label for="edit-inspection-status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="edit-inspection-status" name="status" required>
                                 <option value="">-- Select Status --</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Scheduled">Scheduled</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
+                                <option value="pending">Pending</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -946,21 +1337,21 @@
                             <label for="workorder-status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="workorder-status" name="status" required>
                                 <option value="">-- Select Status --</option>
-                                <option value="Open">Open</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="On Hold">On Hold</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
+                                <option value="open">Open</option>
+                                <option value="in progress">In Progress</option>
+                                <option value="on hold">On Hold</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label for="workorder-priority" class="form-label">Priority <span class="text-danger">*</span></label>
                             <select class="form-select" id="workorder-priority" name="priority" required>
                                 <option value="">-- Select Priority --</option>
-                                <option value="Low">Low</option>
-                                <option value="Medium">Medium</option>
-                                <option value="High">High</option>
-                                <option value="Critical">Critical</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -1010,6 +1401,107 @@ var WIZ_SITE_ID          = '<?= $site['id'] ?>';
 
 $(document).ready(function() {
 
+    // jQuery Validation for the Equipment Form
+    $('#equipmentForm').validate({
+        rules: {
+            'asset_tag': {
+                required: true,
+                maxlength: 50
+            },
+            'serial_number': {
+                required: true,
+                maxlength: 50
+            },
+            'make': {
+                required: true,
+                maxlength: 100
+            },
+            'model': {
+                required: true,
+                maxlength: 100
+            },
+            'device_type': {
+                required: true,
+                maxlength: 100
+            }
+        },
+        messages: {
+            'asset_tag': {
+                required: "Asset Tag is required",
+                maxlength: "Asset Tag can't be longer than 50 characters"
+            },
+            'serial_number': {
+                required: "Serial Number is required",
+                maxlength: "Serial Number can't be longer than 50 characters"
+            },
+            'make': {
+                required: "Make is required",
+                maxlength: "Make can't be longer than 100 characters"
+            },
+            'model': {
+                required: "Model is required",
+                maxlength: "Model can't be longer than 100 characters"
+            },
+            'device_type': {
+                required: "Device Type is required",
+                maxlength: "Device Type can't be longer than 100 characters"
+            }
+        },
+        submitHandler: function(form) {
+            // Prevent form submission if validation fails
+            if (!$(form).valid()) {
+                Swal.fire({
+                    title: 'Error!',
+                    text: 'Please fill out all required fields.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                return false;
+            }
+
+            // Triggering the AJAX form submission
+            var formData = $(form).serialize();
+            var actionUrl = $(form).attr('action');
+
+            $('#equipmentSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
+
+            $.ajax({
+                url: actionUrl,
+                method: 'POST',
+                data: formData,
+                success: function(response) {
+                    // Hide the modal and reload the page upon successful submission
+                    $('#addEquipmentModal').modal('hide');
+                    location.reload(); // Reload to show updated data
+
+                    // Success Alert using SweetAlert2
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Equipment saved successfully.',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                error: function(xhr) {
+                    // Show error alert using SweetAlert2
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'Error saving equipment. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+
+                    console.error(xhr.responseText);
+                    $('#equipmentSubmitBtn').prop('disabled', false).html('Save changes');
+                }
+            });
+        }
+    });
+
+});
+
+$(document).ready(function() {
+
     // ─── DataTables Init ─────────────────────────────────
     $('#equipment-datatable').DataTable({
         dom: 'Bfrtip',
@@ -1036,35 +1528,87 @@ $(document).ready(function() {
     });
 
     // ─── Equipment Modal (unchanged) ─────────────────────
-    $('#addEquipmentModal').on('hidden.bs.modal', function () {
-        resetEquipmentForm();
+   
+    // Handle Edit Equipment button click
+    $(document).on('click', '.edit-equipment-btn', function() {
+        var equipmentId = $(this).data('id');
+        
+        // Change modal title
+        $('#equipmentModalLabel').text('Edit Equipment');
+        
+        // Change form action to update
+        $('#equipmentForm').attr('action', '<?= site_url('admin/equipment/update/') ?>' + equipmentId);
+        
+        // Fetch equipment data via AJAX
+        $.ajax({
+            url: '<?= site_url('admin/equipment/show/') ?>' + equipmentId,
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    var data = response.data;
+                    
+                    // Populate form fields
+                    $('#equipment-id').val(data.id);
+                    $('#equipment-asset-tag').val(data.asset_tag);
+                    $('#equipment-serial-number').val(data.serial_number);
+                    $('#equipment-make').val(data.make);
+                    $('#equipment-model').val(data.model);
+                    $('#equipment-device-type').val(data.device_type);
+                    $('#equipment-department').val(data.department);
+                    $('#equipment-location').val(data.location);
+                    $('#equipment-status').val(data.status);
+                    $('#equipment-pm-kit').val(data.pm_kit);
+                    $('#equipment-fast-notes').val(data.fast_notes);
+                    $('#equipment-customer-location').val(data.site_id);
+                    $('#equipment-installation-date').val(data.installation_date);
+                    $('#equipment-warranty-expires').val(data.warranty_expires);
+                    
+                    // Show modal
+                    $('#addEquipmentModal').modal('show');
+                } else {
+                    alert('Error loading equipment data');
+                }
+            },
+            error: function() {
+                alert('Failed to fetch equipment data');
+            }
+        });
     });
-
-    function resetEquipmentForm() {
+    
+    // Reset form when adding new equipment
+    $('#addEquipmentBtn').on('click', function() {
+        $('#equipmentModalLabel').text('Add Equipment');
+        $('#equipmentForm')[0].reset();
+        $('#equipment-id').val('');
+        $('#equipmentForm').attr('action', '<?= site_url('admin/equipment/create') ?>');
+        // Set default site_id
+        $('#equipment-customer-location').val('<?= $site['id'] ?>');
+    });
+    
+   
+    
+    // Reset form when modal is closed
+    $('#addEquipmentModal').on('hidden.bs.modal', function() {
         $('#equipmentForm')[0].reset();
         $('#equipment-id').val('');
         $('#equipmentModalLabel').text('Add Equipment');
-        $('#equipmentSubmitBtn').text('Save Equipment');
         $('#equipmentForm').attr('action', '<?= site_url('admin/equipment/create') ?>');
-    }
-
-    $(document).on('click', '.edit-equipment-btn', function() {
-        var id = $(this).data('id');
-        $('#equipment-id').val(id);
-        $('#equipment-asset-tag').val($(this).data('asset_tag'));
-        $('#equipment-make').val($(this).data('make'));
-        $('#equipment-model').val($(this).data('model'));
-        $('#equipment-serial-number').val($(this).data('serial_number'));
-        $('#equipment-device-type').val($(this).data('device_type'));
-        $('#equipment-location').val($(this).data('location'));
-        $('#equipment-department').val($(this).data('department'));
-        $('#equipment-status').val($(this).data('status'));
-
-        $('#equipmentModalLabel').text('Edit Equipment');
-        $('#equipmentSubmitBtn').text('Update Equipment');
-        $('#equipmentForm').attr('action', '<?= site_url('admin/equipment/update/') ?>' + id);
-        $('#addEquipmentModal').modal('show');
+        $('#equipmentSubmitBtn').prop('disabled', false).html('Save changes');
     });
+
+
+    $('#edit-inspection-completed-at').val(formatDate($(this).data('completed_at')));
+    $('#edit-inspection-next-due-date').val(formatDate($(this).data('next_due_date')));
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        var date = new Date(dateStr);
+        var year = date.getFullYear();
+        var month = ("0" + (date.getMonth() + 1)).slice(-2);
+        var day = ("0" + date.getDate()).slice(-2);
+        return `${year}-${month}-${day}`;
+    }
 
     // ─── Edit Inspection (existing records — classic single modal) ───
     $(document).on('click', '.edit-inspection-btn', function() {
@@ -1072,16 +1616,17 @@ $(document).ready(function() {
         $('#edit-inspection-id').val(id);
         $('#edit-inspection-equipment').val($(this).data('equipment_id'));
         $('#edit-inspection-scheduled-at').val($(this).data('scheduled_at'));
-        $('#edit-inspection-completed-at').val($(this).data('completed_at'));
+        $('#edit-inspection-completed-at').val(formatDate($(this).data('completed_at')));
         $('#edit-inspection-status').val($(this).data('status'));
         $('#edit-inspection-technician').val($(this).data('technician_id'));
         $('#edit-inspection-findings').val($(this).data('findings'));
         $('#edit-inspection-notes').val($(this).data('notes'));
-        $('#edit-inspection-next-due-date').val($(this).data('next_due_date'));
+        $('#edit-inspection-next-due-date').val(formatDate($(this).data('next_due_date')));
 
         $('#editInspectionForm').attr('action', '<?= site_url('admin/inspections/update/') ?>' + id);
         $('#editInspectionModal').modal('show');
     });
+
 
     // ─── Work Order Modal (unchanged) ────────────────────
     $('#addWorkOrderModal').on('hidden.bs.modal', function () {
@@ -1100,6 +1645,8 @@ $(document).ready(function() {
         var id = $(this).data('id');
         $('#workorder-id').val(id);
         $('#workorder-title').val($(this).data('title'));
+        $('#workorder-equipment').val($(this).data('equipment_id'));
+        
         $('#workorder-description').val($(this).data('description'));
         $('#workorder-status').val($(this).data('status'));
         $('#workorder-priority').val($(this).data('priority'));
@@ -1170,313 +1717,429 @@ $(document).ready(function() {
     //  3-STEP INSPECTION WIZARD LOGIC
     // ═══════════════════════════════════════════════════════════════
 
-    // Internal state for the wizard
-    var wizardAssetFound = false;       // did step 1 find a matching asset?
-    var wizardMatchedEquip = null;      // the matched equipment object (or null)
+    // ═══════════════════════════════════════════════════════════════
+//  UPDATED 3-STEP INSPECTION WIZARD LOGIC WITH SERIAL NUMBER & QUEUE
+// ═══════════════════════════════════════════════════════════════
 
-    // ─── Helper: show only one step ─────────────────────
-    function showStep(stepNum) {
-        $('#wizardStep1, #wizardStep2, #wizardStep3').removeClass('active');
-        $('#wizardStep' + stepNum).addClass('active');
+// Base URLs for AJAX calls - CHANGE searchByAssetTag to searchBySerial
+var WIZ_URL_SEARCH_SERIAL = '<?= site_url('admin/inspections/searchBySerial') ?>';
+var WIZ_URL_SEARCH_MODEL = '<?= site_url('admin/inspections/searchByModel') ?>';
+var WIZ_SITE_ID = '<?= $site['id'] ?>';
+
+// Internal state for the wizard
+var wizardAssetFound = false;
+var wizardMatchedEquip = null;
+var inspectionQueue = [];
+var groupId = '';
+
+// Generate unique group ID
+function generateGroupId() {
+    return 'INSP-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+}
+
+// ─── Helper: show only one step ─────────────────────
+function showStep(stepNum) {
+    $('#wizardStep1, #wizardStep2, #wizardStep3').removeClass('active');
+    $('#wizardStep' + stepNum).addClass('active');
+    
+    // Show/hide Complete button
+    if (stepNum === 3 && inspectionQueue.length > 0) {
+        $('#wizBtnComplete').show();
+    } else {
+        $('#wizBtnComplete').hide();
+    }
+}
+
+// ─── Helper: reset the entire wizard ────────────────
+function resetWizard() {
+    wizardAssetFound = false;
+    wizardMatchedEquip = null;
+
+    // Step 1 - CHANGED: wiz-asset-barcode to wiz-serial-number
+    $('#wiz-serial-number').val('');
+
+    // Step 2
+    $('#wiz-search-model').val('');
+    $('#wiz-model-dropdown').remove();
+    $('#wiz-s2-manufacturer').val('');
+    $('#wiz-s2-model').val('');
+    $('#wiz-s2-description').val('');
+    $('#wiz-s2-serial').val('');
+
+    // Step 3 — read-only display fields
+    $('#wiz-s3-model').val('');
+    $('#wiz-s3-description').val('');
+    $('#wiz-s3-serial').val('');
+    $('#wiz-s3-assetid').val('');
+    $('#wiz-s3-department').val('');
+    $('#wiz-s3-location').val('');
+
+    // Step 3 — editable fields
+    $('#wiz-equipment-id').val('');
+    $('#wiz-s3-pmfreq').val('');
+    $('#wiz-s3-insptype').val('');
+    $('#wiz-s3-technician').val('');
+    $('#wiz-s3-inspdate').val('<?= date('Y-m-d') ?>');
+    $('#wiz-s3-notes').val('');
+    $('#wiz-s3-status').val('Pass');
+    $('#wiz-s3-devicecomplete').val('Yes');
+
+    showStep(1);
+}
+
+// ─── Update Queue Display ─────────────────────
+function updateQueueDisplay() {
+    var $container = $('#inspectionQueue');
+    $container.empty();
+    
+    if (inspectionQueue.length === 0) {
+        $('#inspectionQueueContainer').hide();
+        $('#wizBtnComplete').hide();
+        return;
     }
 
-    // ─── Helper: reset the entire wizard ────────────────
-    function resetWizard() {
-        wizardAssetFound  = false;
-        wizardMatchedEquip = null;
+    $('#inspectionQueueContainer').show();
+    $('#queueCount').text(inspectionQueue.length);
+    
+    inspectionQueue.forEach(function(item, index) {
+        var $queueItem = $('<div class="queue-item">');
+        
+        var $info = $('<div class="queue-item-info">');
+        var modelText = (item.make || '') + ' ' + (item.model || '');
+        $info.append('<div class="queue-item-model">' + modelText.trim() + '</div>');
+        $info.append('<div class="queue-item-details">S/N: ' + (item.serial_number || 'N/A') + ' | Status: ' + item.status + '</div>');
+        
+        var $removeBtn = $('<button class="queue-item-remove" data-index="' + index + '">Remove</button>');
+        
+        $queueItem.append($info).append($removeBtn);
+        $container.append($queueItem);
+    });
 
-        $('#wiz-asset-barcode').val('');
+    if (inspectionQueue.length > 0) {
+        $('#wizBtnComplete').show();
+    }
+}
 
-        // Step 2
-        $('#wiz-search-model').val('');
-        $('#wiz-model-dropdown').remove();   // ← close any open search dropdown
-        $('#wiz-s2-manufacturer').val('');
-        $('#wiz-s2-model').val('');
-        $('#wiz-s2-description').val('');
-        $('#wiz-s2-serial').val('');
+// Remove item from queue
+$(document).on('click', '.queue-item-remove', function() {
+    var index = $(this).data('index');
+    inspectionQueue.splice(index, 1);
+    updateQueueDisplay();
+});
 
-        // Step 3 — read-only display fields
-        $('#wiz-s3-model').val('');
-        $('#wiz-s3-description').val('');
-        $('#wiz-s3-serial').val('');
-        $('#wiz-s3-assetid').val('');
-        $('#wiz-s3-department').val('');
-        $('#wiz-s3-location').val('');
+// ─── Open wizard ─────────────────────────────────────
+$('#openInspectionWizardBtn').on('click', function() {
+    inspectionQueue = [];
+    groupId = generateGroupId();
+    $('#wiz-group-id').val(groupId);
+    resetWizard();
+    updateQueueDisplay();
+    $('#inspectionWizardModal').modal('show');
+});
 
-        // Step 3 — editable fields
-        $('#wiz-equipment-id').val('');
-        $('#wiz-s3-pmfreq').val('');
-        $('#wiz-s3-insptype').val('');
-        $('#wiz-s3-technician').val('');
-        $('#wiz-s3-inspdate').val('');
-        $('#wiz-s3-notes').val('');
-        $('#wiz-s3-status').val('Pass');
-        $('#wiz-s3-devicecomplete').val('Yes');
+// ─── Reset wizard when modal is closed ──────────────
+$('#inspectionWizardModal').on('hidden.bs.modal', function() {
+    inspectionQueue = [];
+    resetWizard();
+    updateQueueDisplay();
+});
 
-        showStep(1);
+// ─── STEP 1 ► Next (UPDATED FOR SERIAL NUMBER) ───
+$('#wizStep1Next').on('click', function() {
+    // CHANGED: get serial number instead of barcode
+    var serialNumber = $.trim($('#wiz-serial-number').val());
+    if (serialNumber === '') {
+        alert('Please enter a serial number.');
+        return;
     }
 
-    // ─── Open wizard ─────────────────────────────────────
-    $('#openInspectionWizardBtn').on('click', function() {
-        resetWizard();
-        $('#inspectionWizardModal').modal('show');
-    });
+    $('#wizStep1Next').prop('disabled', true).text('Searching…');
 
-    // ─── Reset wizard when modal is closed ──────────────
-    $('#inspectionWizardModal').on('hidden.bs.modal', function() {
-        resetWizard();
-    });
+    $.ajax({
+        url: WIZ_URL_SEARCH_SERIAL,  // CHANGED URL
+        method: 'GET',
+        data: { serial_number: serialNumber, site_id: WIZ_SITE_ID },  // CHANGED parameter name
+        success: function(res) {
+            $('#wizStep1Next').prop('disabled', false).text('Next');
 
-    // ─── STEP 1 ► Next ───────────────────────────────────
-    $('#wizStep1Next').on('click', function() {
-        var barcode = $.trim($('#wiz-asset-barcode').val());
-        if (barcode === '') {
-            alert('Please enter an asset or barcode number.');
-            return;
-        }
-
-        // Disable button while request is in-flight
-        $('#wizStep1Next').prop('disabled', true).text('Searching…');
-
-        $.ajax({
-            url:    WIZ_URL_SEARCH_ASSET,
-            method: 'GET',
-            data:   { asset_tag: barcode, site_id: WIZ_SITE_ID },
-            success: function(res) {
-                $('#wizStep1Next').prop('disabled', false).text('Next');
-
-                if (res.found) {
-                    // ── Asset FOUND ── jump straight to Step 3
-                    wizardAssetFound   = true;
-                    wizardMatchedEquip = res;
-                    populateStep3FromEquipment(res);
-                    showStep(3);
-                } else {
-                    // ── Asset NOT FOUND ── go to Step 2
-                    wizardAssetFound   = false;
-                    wizardMatchedEquip = null;
-                    showStep(2);
-                }
-            },
-            error: function() {
-                $('#wizStep1Next').prop('disabled', false).text('Next');
-                alert('Search failed. Please try again.');
+            if (res.found) {
+                wizardAssetFound = true;
+                wizardMatchedEquip = res;
+                populateStep3FromEquipment(res);
+                showStep(3);
+            } else {
+                wizardAssetFound = false;
+                wizardMatchedEquip = null;
+                // CHANGED: set serial number in step 2
+                $('#wiz-s2-serial').val(serialNumber);
+                showStep(2);
             }
-        });
-    });
-
-    // ─── STEP 2 ► Back ───────────────────────────────────
-    $('#wizStep2Back').on('click', function() {
-        showStep(1);
-    });
-
-    // ─── STEP 2 ► Live model search (debounced keyup) ────
-    var modelSearchTimer = null;
-
-    $('#wiz-search-model').on('keyup', function() {
-        var val = $.trim($(this).val());
-
-        // Clear dropdown if input is too short
-        if (val.length < 2) {
-            $('#wiz-model-dropdown').remove();
-            return;
+        },
+        error: function() {
+            $('#wizStep1Next').prop('disabled', false).text('Next');
+            alert('Search failed. Please try again.');
         }
-
-        // Debounce — wait 350 ms after user stops typing
-        clearTimeout(modelSearchTimer);
-        modelSearchTimer = setTimeout(function() {
-            $.ajax({
-                url:    WIZ_URL_SEARCH_MODEL,
-                method: 'GET',
-                data:   { keyword: val },
-                success: function(results) {
-                    $('#wiz-model-dropdown').remove(); // remove any previous dropdown
-
-                    if (!results || results.length === 0) return;
-
-                    // Build the dropdown list
-                    var $wrap  = $('#wiz-search-model').parent();
-                    var $input = $('#wiz-search-model');
-
-                    // Ensure wrapper is positioned so dropdown can absolute-position inside it
-                    $wrap.css('position', 'relative');
-
-                    var html = '<div id="wiz-model-dropdown" style="'
-                        + 'position:absolute; top:100%; left:0; right:0; z-index:9999;'
-                        + 'background:#fff; border:1px solid #cbd5e1; border-radius:6px;'
-                        + 'box-shadow:0 4px 12px rgba(0,0,0,0.12); max-height:220px;'
-                        + 'overflow-y:auto; margin-top:2px;">';
-
-                    $.each(results, function(i, item) {
-                        var label = (item.make || '') + ' ' + (item.model || '');
-                        label = $.trim(label) || item.device_type || 'Unknown';
-
-                        html += '<div class="wiz-model-option" '
-                            + 'data-make="'          + (item.make          || '') + '" '
-                            + 'data-model="'         + (item.model         || '') + '" '
-                            + 'data-serial_number="' + (item.serial_number || '') + '" '
-                            + 'data-device_type="'   + (item.device_type   || '') + '" '
-                            + 'style="padding:0.55rem 0.75rem; cursor:pointer; border-bottom:1px solid #f1f5f9;"'
-                            + ' onmouseover="$(this).css(\'background\',\'#eef2ff\')"'
-                            + ' onmouseout="$(this).css(\'background\',\'#fff\')">'
-                            + '<strong>' + label + '</strong>'
-                            + (item.serial_number ? ' &nbsp;<span style="color:#64748b; font-size:0.82rem;">S/N: ' + item.serial_number + '</span>' : '')
-                            + '</div>';
-                    });
-
-                    html += '</div>';
-                    $input.after(html);
-                }
-            });
-        }, 350);
     });
+});
 
-    // ─── STEP 2 ► Pick an item from the model dropdown ──
-    $(document).on('click', '.wiz-model-option', function() {
-        $('#wiz-s2-manufacturer').val($(this).data('make'));
-        $('#wiz-s2-model').val($(this).data('model'));
-        $('#wiz-s2-description').val($(this).data('device_type'));
-        $('#wiz-s2-serial').val($(this).data('serial_number'));
+// ─── STEP 2 ► Back ───────────────────────────────────
+$('#wizStep2Back').on('click', function() {
+    showStep(1);
+});
 
-        // Put the selected label back into the search box and close dropdown
-        $('#wiz-search-model').val($.trim($(this).data('make') + ' ' + $(this).data('model')));
+// ─── STEP 2 ► Live model search ────
+var modelSearchTimer = null;
+
+$('#wiz-search-model').on('keyup', function() {
+    var val = $.trim($(this).val());
+
+    if (val.length < 2) {
         $('#wiz-model-dropdown').remove();
-    });
-
-    // ─── Close model dropdown when clicking elsewhere ────
-    $(document).on('click', function(e) {
-        if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown').length) {
-            $('#wiz-model-dropdown').remove();
-        }
-    });
-    $('#wizStep2Next').on('click', function() {
-        // Carry Step 2 manual entries into Step 3 read-only display
-        $('#wiz-s3-model').val($('#wiz-s2-model').val());
-        $('#wiz-s3-description').val($('#wiz-s2-description').val());
-        $('#wiz-s3-serial').val($('#wiz-s2-serial').val());
-        // Asset ID / Department / Location are unknown for a new (not-found) device
-        $('#wiz-s3-assetid').val('');
-        $('#wiz-s3-department').val('');
-        $('#wiz-s3-location').val('');
-        $('#wiz-equipment-id').val('');   // no linked equipment record
-
-        showStep(3);
-    });
-
-    // ─── STEP 3 ► Back ───────────────────────────────────
-    $('#wizStep3Back').on('click', function() {
-        if (wizardAssetFound) {
-            // Came from Step 1 directly — go back to Step 1
-            showStep(1);
-        } else {
-            // Came through Step 2
-            showStep(2);
-        }
-    });
-
-    // ─── STEP 3 ► Outcome Buttons (Pass / Fail / Repair) ─
-    // Each button sets the status dropdown to the matching value, then submits.
-    $('#wizBtnPass').on('click', function() {
-        $('#wiz-s3-status').val('Pass');
-        submitInspectionWizard();
-    });
-    $('#wizBtnFail').on('click', function() {
-        $('#wiz-s3-status').val('Fail');
-        submitInspectionWizard();
-    });
-    $('#wizBtnRepair').on('click', function() {
-        $('#wiz-s3-status').val('Repair');
-        submitInspectionWizard();
-    });
-
-    // ─── STEP 3 ► Enter Next Device ──────────────────────
-    // Submits the current inspection and resets wizard back to Step 1
-    $('#wizBtnNextDevice').on('click', function() {
-        submitInspectionWizard(true);   // true = reset to step 1 after submit
-    });
-
-    // ─── Populate Step 3 from a matched equipment record ─
-    function populateStep3FromEquipment(eq) {
-        $('#wiz-equipment-id').val(eq.id);
-        $('#wiz-s3-model').val(eq.model);
-        $('#wiz-s3-description').val(eq.device_type);
-        $('#wiz-s3-serial').val(eq.serial_number);
-        $('#wiz-s3-assetid').val(eq.asset_tag);
-        $('#wiz-s3-department').val(eq.department);
-        $('#wiz-s3-location').val(eq.location);
+        return;
     }
 
-    // ─── Submit inspection via AJAX POST ─────────────────
-    function submitInspectionWizard(resetAfter) {
-        var siteId       = '<?= $site['id'] ?>';
-        var equipId      = $('#wiz-equipment-id').val();
-        var inspDate     = $('#wiz-s3-inspdate').val();
-        var status       = $('#wiz-s3-status').val();
-        var techId       = $('#wiz-s3-technician').val();
-        var notes        = $('#wiz-s3-notes').val();
-        var pmFreq       = $('#wiz-s3-pmfreq').val();
-        var inspType     = $('#wiz-s3-insptype').val();
-        var devComplete  = $('#wiz-s3-devicecomplete').val();
-
-        // ── Minimal validation ──
-        if (inspDate === '') {
-            alert('Please select an Inspection Date.');
-            return;
-        }
-
-        // Build form data
-        var formData = new FormData();
-        // CI4 CSRF token — grab from any existing csrf_field on the page
-        var csrfName  = $('input[name="csrf_token"]').first().attr('name');
-        var csrfValue = $('input[name="csrf_token"]').first().val();
-        if (csrfName && csrfValue) {
-            formData.append(csrfName, csrfValue);
-        }
-
-        formData.append('site_id',          siteId);
-        formData.append('equipment_id',     equipId);
-        formData.append('scheduled_at',     inspDate);
-        formData.append('status',           status);
-        formData.append('technician_id',    techId);
-        formData.append('notes',            notes);
-        formData.append('pm_frequency',     pmFreq);
-        formData.append('inspection_type',  inspType);
-        formData.append('device_complete',  devComplete);
-
-        // If asset was NOT found, pass along Step-2 details so the controller
-        // can optionally create an equipment record or store them in findings.
-        if (!wizardAssetFound) {
-            formData.append('manufacturer',  $('#wiz-s2-manufacturer').val());
-            formData.append('model_name',    $('#wiz-s2-model').val());
-            formData.append('description',   $('#wiz-s2-description').val());
-            formData.append('serial_number', $('#wiz-s2-serial').val());
-            formData.append('asset_not_found', '1');
-        }
-
+    clearTimeout(modelSearchTimer);
+    modelSearchTimer = setTimeout(function() {
         $.ajax({
-            url:         '<?= site_url('admin/inspections/create') ?>',
-            method:      'POST',
-            data:        formData,
-            contentType: false,
-            processData: false,
-            success: function() {
-                if (resetAfter) {
-                    // "Enter Next Device" — keep modal open, go back to step 1
-                    resetWizard();
-                    // Refresh the inspections datatable (soft — reload page after a short delay)
-                    setTimeout(function() { location.reload(); }, 800);
-                } else {
-                    // Pass / Fail / Repair — close modal and reload
-                    $('#inspectionWizardModal').modal('hide');
-                    location.reload();
-                }
-            },
-            error: function(xhr) {
-                console.error('Inspection create failed', xhr);
-                alert('Failed to save inspection. Please try again.');
+            url: WIZ_URL_SEARCH_MODEL,
+            method: 'GET',
+            data: { keyword: val },
+            success: function(results) {
+                $('#wiz-model-dropdown').remove();
+
+                if (!results || results.length === 0) return;
+
+                var $wrap = $('#wiz-search-model').parent();
+                $wrap.css('position', 'relative');
+
+                var html = '<div id="wiz-model-dropdown" style="position:absolute; top:100%; left:0; right:0; z-index:9999; background:#fff; border:1px solid #cbd5e1; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto; margin-top:2px;">';
+
+                $.each(results, function(i, item) {
+                    var label = (item.make || '') + ' ' + (item.model || '');
+                    label = $.trim(label) || item.device_type || 'Unknown';
+
+                    html += '<div class="wiz-model-option" data-make="' + (item.make || '') + '" data-model="' + (item.model || '') + '" data-serial_number="' + (item.serial_number || '') + '" data-device_type="' + (item.device_type || '') + '" style="padding:0.55rem 0.75rem; cursor:pointer; border-bottom:1px solid #f1f5f9;" onmouseover="$(this).css(\'background\',\'#eef2ff\')" onmouseout="$(this).css(\'background\',\'#fff\')">';
+                    html += '<strong>' + label + '</strong>';
+                    if (item.serial_number) {
+                        html += ' &nbsp;<span style="color:#64748b; font-size:0.82rem;">S/N: ' + item.serial_number + '</span>';
+                    }
+                    html += '</div>';
+                });
+
+                html += '</div>';
+                $('#wiz-search-model').after(html);
             }
         });
+    }, 350);
+});
+
+// ─── STEP 2 ► Pick model from dropdown ───
+$(document).on('click', '.wiz-model-option', function() {
+    $('#wiz-s2-manufacturer').val($(this).data('make'));
+    $('#wiz-s2-model').val($(this).data('model'));
+    $('#wiz-s2-description').val($(this).data('device_type'));
+    $('#wiz-search-model').val($.trim($(this).data('make') + ' ' + $(this).data('model')));
+    $('#wiz-model-dropdown').remove();
+});
+
+// Close dropdown on outside click
+$(document).on('click', function(e) {
+    if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown').length) {
+        $('#wiz-model-dropdown').remove();
     }
+});
+
+// ─── STEP 2 ► Next ───
+$('#wizStep2Next').on('click', function() {
+    $('#wiz-s3-model').val($('#wiz-s2-model').val());
+    $('#wiz-s3-description').val($('#wiz-s2-description').val());
+    $('#wiz-s3-serial').val($('#wiz-s2-serial').val());
+    $('#wiz-s3-assetid, #wiz-s3-department, #wiz-s3-location').val('');
+    $('#wiz-equipment-id').val('');
+    showStep(3);
+});
+
+// ─── STEP 3 ► Back ───
+$('#wizStep3Back').on('click', function() {
+    if (wizardAssetFound) {
+        showStep(1);
+    } else {
+        showStep(2);
+    }
+});
+
+// ─── Populate Step 3 from matched equipment ───
+function populateStep3FromEquipment(eq) {
+    $('#wiz-equipment-id').val(eq.id);
+    $('#wiz-s3-model').val(eq.model);
+    $('#wiz-s3-description').val(eq.device_type);
+    $('#wiz-s3-serial').val(eq.serial_number);
+    $('#wiz-s3-assetid').val(eq.asset_tag);
+    $('#wiz-s3-department').val(eq.department);
+    $('#wiz-s3-location').val(eq.location);
+}
+
+// ─── Add to Queue Function (NEW) ───
+function addToQueue(status) {
+    var inspectionData = {
+        site_id: '<?= $site['id'] ?>',
+        equipment_id: $('#wiz-equipment-id').val(),
+        scheduled_at: $('#wiz-s3-inspdate').val(),
+        status: status,
+        technician_id: $('#wiz-s3-technician').val(),
+        notes: $('#wiz-s3-notes').val(),
+        pm_frequency: $('#wiz-s3-pmfreq').val(),
+        inspection_type: $('#wiz-s3-insptype').val(),
+        device_complete: $('#wiz-s3-devicecomplete').val(),
+        
+        // Equipment details for display
+        make: wizardMatchedEquip ? (wizardMatchedEquip.make || '') : ($('#wiz-s2-manufacturer').val() || ''),
+        model: $('#wiz-s3-model').val(),
+        serial_number: $('#wiz-s3-serial').val(),
+        device_type: $('#wiz-s3-description').val(),
+        asset_tag: $('#wiz-s3-assetid').val(),
+        department: $('#wiz-s3-department').val(),
+        location: $('#wiz-s3-location').val()
+    };
+
+    if (!wizardAssetFound) {
+        inspectionData.manufacturer = $('#wiz-s2-manufacturer').val();
+        inspectionData.model_name = $('#wiz-s2-model').val();
+        inspectionData.description = $('#wiz-s2-description').val();
+        inspectionData.asset_not_found = '1';
+    }
+
+    inspectionQueue.push(inspectionData);
+    updateQueueDisplay();
+}
+
+// ─── STEP 3 ► Outcome Buttons (UPDATED) ───
+$('#wizBtnPass').on('click', function() {
+    addToQueue('Pass');
+    alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
+});
+
+$('#wizBtnFail').on('click', function() {
+    addToQueue('Fail');
+    alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
+});
+
+$('#wizBtnRepair').on('click', function() {
+    addToQueue('Repair');
+    alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
+});
+
+// ─── Add to Queue & Next Device ───
+$('#wizBtnNextDevice').on('click', function() {
+    resetWizard();
+    updateQueueDisplay();
+});
+
+// ─── Complete All Inspections (NEW) ───
+$('#wizBtnComplete').on('click', function() {
+    if (inspectionQueue.length === 0) {
+        alert('No inspections in queue.');
+        return;
+    }
+
+    console.log('Inspection Queue:', inspectionQueue);
+    console.log('Group ID:', groupId);
+
+    var formData = new FormData();
+    var csrfName = $('input[name="csrf_token"]').first().attr('name');
+    var csrfValue = $('input[name="csrf_token"]').first().val();
+    
+    if (csrfName && csrfValue) {
+        formData.append(csrfName, csrfValue);
+    }
+
+    formData.append('group_id', groupId);
+    formData.append('inspection_items', JSON.stringify(inspectionQueue));
+
+    console.log('Sending data:', {
+        group_id: groupId,
+        inspection_items: JSON.stringify(inspectionQueue)
+    });
+
+    $('#wizBtnComplete').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
+
+    $.ajax({
+        url: '<?= site_url('admin/inspections/create') ?>',
+        method: 'POST',
+        data: formData,
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            console.log('Success response:', response);
+            $('#inspectionWizardModal').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            console.error('Failed to save inspections', xhr);
+            console.error('Response Text:', xhr.responseText);
+            alert('Failed to save inspections. Check console for details.');
+            $('#wizBtnComplete').prop('disabled', false).html('<i class="fa fa-check-double me-1"></i>Complete Inspections');
+        }
+    });
+});
+
+
+$(document).on('click', '.view-inspection-btn', function() {
+    var groupId = $(this).data('group_id');  // Get the group_id from the button
+
+    // Show loading indicator
+    // $('#viewInspectionModal').find('.modal-body').html('<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading...</div>');
+
+    // AJAX request to get inspections by group_id
+    $.ajax({
+        url: '<?= site_url('admin/inspections/getByGroupId') ?>', // Endpoint to fetch inspection data
+        method: 'GET',
+        data: { group_id: groupId },
+        success: function(response) {
+          
+            if (response.success) {
+                var inspections = response.data; // Assume response contains the inspections data
+
+                // Generate HTML for the inspections list
+                var inspectionHtml = '';
+                inspections.forEach(function(inspec) {
+                    inspectionHtml += '<tr>';
+                    inspectionHtml += '<td>' + (inspec.status === 'Pass' ? '<span class="badge bg-success">Pass</span>' : '<span class="badge bg-danger">Fail</span>') + '</td>';
+                    inspectionHtml += '<td>' + inspec.customer_site + '</td>';
+                    inspectionHtml += '<td>' + inspec.model + '</td>';
+                    inspectionHtml += '<td>' + inspec.device_type + '</td>';
+                    inspectionHtml += '<td>' + inspec.serial_number + '</td>';
+                    inspectionHtml += '<td>' + inspec.inspection_type + '</td>';
+                    inspectionHtml += '<td>' + inspec.asset_tag + '</td>';
+                    inspectionHtml += '<td>' + inspec.department + '</td>';
+                    inspectionHtml += '<td>' + inspec.room + '</td>';
+                    inspectionHtml += '<td>' + inspec.est + '</td>';
+                    inspectionHtml += '<td>' + inspec.cal + '</td>';
+                    inspectionHtml += '<td>' + inspec.technician_name + '</td>';
+                    inspectionHtml += '<td>' + inspec.updated_at + '</td>';
+                    inspectionHtml += '<td>' + inspec.battery_expiration_date + '</td>';
+                    inspectionHtml += '<td>' + inspec.notes + '</td>';
+                    inspectionHtml += '</tr>';
+                });
+                // Inject the generated HTML into the modal body
+                $('#inspection-details-body').html(inspectionHtml);
+
+                // Show the modal
+                $('#viewInspectionModal').modal('show');
+            } else {
+                $('#viewInspectionModal').find('.modal-body').html('<div class="text-center text-danger">No inspections found for this group.</div>');
+            }
+        },
+        error: function() {
+            $('#viewInspectionModal').find('.modal-body').html('<div class="text-center text-danger">An error occurred while fetching the data.</div>');
+        }
+    });
+});
+
+
+
+
+
 
 });
 </script>
