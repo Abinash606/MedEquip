@@ -3,7 +3,7 @@
 
 <?php $BASE_URL = base_url(); ?>
 <div class="d-flex align-items-center mb-3">
-    <h1 class="me-auto">Equipment</h1>
+    <h1 class="me-auto">Equipment DB</h1>
     <button class="btn btn-primary" id="addBtn"><i class="fa-solid fa-plus"></i> Add Equipment</button>
 </div>
 
@@ -13,6 +13,7 @@
     const equipmentData = <?= json_encode($equipment) ?>;
 </script>
 
+<div class="glass-card">
 <table class="table table-striped" id="equipmentTable">
     <thead>
         <tr>
@@ -28,7 +29,7 @@
     </thead>
     <tbody></tbody>
 </table>
-
+</div>
 <!-- MODAL -->
 <div class="modal fade" id="equipmentModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
