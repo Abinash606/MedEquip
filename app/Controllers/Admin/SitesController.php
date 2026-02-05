@@ -176,12 +176,20 @@ class SitesController extends BaseController
 
         
         // Get work orders for this site
-        $workOrders = $workOrderModel->select('work_orders.*, users.full_name as assigned_to_name, equipment.asset_tag')
-                                     ->join('users', 'users.id = work_orders.assigned_to', 'left')
-                                     ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
-                                     ->where('work_orders.site_id', $id)
-                                     ->where('work_orders.company_id', $companyId)
-                                     ->findAll();
+       $workOrders = $workOrderModel->select('
+                    work_orders.*,        
+                    equipment.asset_tag,
+                    equipment.serial_number,
+                    technician_user.full_name as assigned_to_name') // technician's full name from the users table
+                ->join('users', 'users.id = work_orders.assigned_to', 'left') // for the assigned_to_name
+                ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left') // for the asset_tag
+                ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left') // join technician table
+                ->join('users as technician_user', 'technician_user.id = technicians.user_id', 'left') // join users table for technician's full name
+                ->where('work_orders.site_id', $id)
+                ->where('work_orders.company_id', $companyId)
+                ->findAll();
+
+
 
                                      // Fetch all technicians
         $technicians = $technicianModel

@@ -9,8 +9,8 @@
     <div class="glass-card mb-4">
         <div class="input-group">
             <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-            <input type="text" class="form-control border-start-0 ps-0" placeholder="Search for customers by name or address...">
-            <button class="btn btn-outline-primary">Search</button>
+            <input type="text" class="form-control border-start-0 ps-0" id="customerSearch" placeholder="Search for customers by name or address...">
+            <button class="btn btn-outline-primary" id="customerSearchBtn">Search</button>
         </div>
     </div>
 

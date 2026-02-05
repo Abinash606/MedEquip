@@ -667,11 +667,12 @@
             <table id="work-orders-datatable" class="table table-striped table-hover" style="width:100%">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Title</th>
                         <th>Equipment</th>
                         <th>Status</th>
                         <th>Priority</th>
-                        <th>Assigned To</th>
+                        <th>Technician</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Actions</th>
@@ -681,6 +682,7 @@
                     <?php if (!empty($workOrders)): ?>
                         <?php foreach ($workOrders as $wo): ?>
                             <tr>
+                                <td>WO-<?= esc($wo['id']) ?></td>
                                 <td><?= esc($wo['title']) ?></td>
                                 <td><?= esc($wo['asset_tag'] ?? 'N/A') ?></td>
                                 <td>
@@ -705,6 +707,7 @@
                                     <button class="btn btn-sm btn-info btn-action edit-workorder-btn"
                                             data-id="<?= $wo['id'] ?>"
                                             data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
+                                            data-serial_number="<?= $wo['serial_number'] ?? '' ?>"
                                             data-title="<?= esc($wo['title'], 'attr') ?>"
                                             data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
                                             data-status="<?= esc($wo['status'], 'attr') ?>"
@@ -1533,7 +1536,7 @@ function viewInspectionGroup(groupId) {
                                     <i class="fa fa-edit"></i> Edit
                                 </button>
                             </td>
-                            <td><span class="status-badge status-${inspection.status.toLowerCase()}">${inspection.status || 'N/A'}</span></td>
+                            <td><span class="status-badge status-${inspection.inspection_status.toLowerCase()}">${inspection.inspection_status || 'N/A'}</span></td>
                             <td>${inspection.customer_site || 'N/A'}</td>
                             <td>${inspection.model || 'N/A'}</td>
                             <td>${inspection.device_type || 'N/A'}</td>
@@ -1917,6 +1920,10 @@ $(document).ready(function() {
                             <label for="workorder-title" class="form-label">Title <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="workorder-title" name="title" required>
                         </div>
+                        <div class="col-12">
+                            <label for="workorder-sn" class="form-label">S/N <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="workorder-sn" name="sn" readonly>
+                        </div>
                         <div class="col-md-6">
                             <label for="workorder-equipment" class="form-label">Equipment</label>
                             <select class="form-select" id="workorder-equipment" name="equipment_id">
@@ -1948,7 +1955,7 @@ $(document).ready(function() {
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="workorder-assigned-to" class="form-label">Assigned To</label>
+                            <label for="workorder-assigned-to" class="form-label">Technician</label>
                             <select class="form-select" id="workorder-assigned-to" name="assigned_to">
                                 <option value="">-- Select User --</option>
                                 <?php if (!empty($users)): ?>
@@ -2161,6 +2168,9 @@ $(document).ready(function() {
         $('#workorder-id').val(id);
         $('#workorder-title').val($(this).data('title'));
         $('#workorder-equipment').val($(this).data('equipment_id'));
+        $('#workorder-sn').val($(this).data('serial_number'));
+        
+        
         
         $('#workorder-description').val($(this).data('description'));
         $('#workorder-status').val($(this).data('status'));
@@ -2621,7 +2631,7 @@ $(document).on('click', '.view-inspection-btn', function() {
                
                     inspectionHtml += '<tr>';
                     inspectionHtml += '<td> <button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="'+inspec.inspections_id+'" data-group-id="'+inspec.group_id+'"><i class="fa fa-edit"></i> Edit</button></td>';
-                    inspectionHtml += '<td>' + (inspec.status === 'Pass' ? '<span class="badge bg-success">Pass</span>' : '<span class="badge bg-danger">Fail</span>') + '</td>';
+                    inspectionHtml += '<td>' + (inspec.inspection_status === 'Pass' ? '<span class="badge bg-success">Pass</span>' : '<span class="badge bg-danger">Fail</span>') + '</td>';
                     inspectionHtml += '<td>' + inspec.customer_site + '</td>';
                     inspectionHtml += '<td>' + inspec.model + '</td>';
                     inspectionHtml += '<td>' + inspec.device_type + '</td>';

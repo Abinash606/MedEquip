@@ -339,7 +339,7 @@ class InspectionsController extends BaseController
 
             // Query inspections based on group_id and join the necessary tables
             $inspections = $inspectionModel
-                ->select('inspections.*, inspections.id as inspections_id, sites.name as customer_site, equipment.*, users.full_name as technician_name')
+                ->select('inspections.*, inspections.status as inspection_status, inspections.id as inspections_id, sites.name as customer_site, equipment.*, users.full_name as technician_name')
                 ->join('sites', 'sites.id = inspections.site_id', 'left')
                 ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
                 ->join('users', 'users.id = inspections.technician_id', 'left')

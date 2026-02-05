@@ -7,7 +7,7 @@ use App\Models\CredentialsModel;
 use CodeIgniter\Controller;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
-use Config\Services;
+use CodeIgniter\Email\Email;
 
 
 /**
@@ -146,27 +146,38 @@ class AuthController extends Controller
 
    private function sendResetEmail(string $to, string $name, string $resetUrl): bool
 {
-    // Prepare the subject and from details
-    $fromEmail = '1easyecommerce@gmail.com';
+	
+	$fromEmail = '1easyecommerce@gmail.com';
     $fromName = 'Asset IQ';
     $subject = 'Reset Your Password – Asset IQ';
 
-    // Data for the reset email
-    $body = view('emails/reset_password_email', [
-        'customer_name' => $name,
+    // Data for customer email
+    $data = [
+       'customer_name' => $name,
         'reset_url'     => $resetUrl,
-    ]);
+    ];
+
+    // Generate the email content by rendering the view template
+    $message = view('emails/reset_password_email', $data);
 
     // Headers for the email
     $headers = 'MIME-Version: 1.0' . "\r\n";
     $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
     $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
 
+//echo $to;
+
     // Send the email using PHP's mail() function
-    if (!mail($to, $subject, $body, $headers)) {
-        log_message('error', 'Password reset email failed: ' . print_r($headers, true));
+    if (mail($to, $subject, $message, $headers)) {
+		//echo 'mail sent';
+		return true;
+        
+    }else
+	{
+		
+		echo 'Password reset email failed: ' . print_r($headers, true);
         return false;
-    }
+	}
 
     return true;
 }

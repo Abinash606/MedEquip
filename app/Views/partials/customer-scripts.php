@@ -21,7 +21,7 @@
 <script>
   $(document).ready(function() {
 
-    $('#customer-datatable').DataTable({
+    const table = $('#customer-datatable').DataTable({
       pageLength: 5,
       lengthChange: false,
       searching: true,
@@ -112,10 +112,26 @@
               });
             });
 
+
+
           }
         }
 
       ]
+    });
+
+    /* ===============================
+       CUSTOM TOP SEARCH WORKING
+    =============================== */
+
+    // Typing search (live)
+    $('#customerSearch').on('keyup', function () {
+        table.search(this.value).draw();
+    });
+
+    // Button click search
+    $('#customerSearchBtn').on('click', function () {
+        table.search($('#customerSearch').val()).draw();
     });
 
   });

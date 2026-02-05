@@ -103,7 +103,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->post('inspections/create', 'Admin\InspectionsController::create');
     $routes->post('inspections/update/(:num)', 'Admin\InspectionsController::update/$1');
-    $routes->get('inspections/delete/(:num)', 'Admin\InspectionsController::delete/$1');
+    $routes->get('inspections/delete/(:any)', 'Admin\InspectionsController::delete/$1');
 
     $routes->get('inspections/searchByAssetTag',  'Admin\InspectionsController::searchByAssetTag');
     $routes->get('inspections/searchByModel',     'Admin\InspectionsController::searchByModel');
@@ -113,6 +113,10 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     // $routes->post('create', 'Admin\InspectionsController::create');
     $routes->get('inspections/group/(:any)', 'Admin\InspectionsController::getInspectionGroup/$1');
     $routes->get('inspections/getByGroupId/', 'Admin\InspectionsController::getByGroupId');
+
+    // In your admin routes section, add:
+    $routes->get('inspections/getInspectionById/(:num)', 'Admin\InspectionsController::getInspectionById/$1');
+    $routes->post('inspections/updateInspection', 'Admin\InspectionsController::updateInspection');
 
 
 
