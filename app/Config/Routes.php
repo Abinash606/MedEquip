@@ -141,6 +141,7 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
     $routes->get('dashboard', 'Customer\\DashboardController::index');
     $routes->post('assets/store', 'Customer\AssetsController::store');
 
+
     $routes->get('assets', 'Customer\\AssetsController::index');
     $routes->get('inspections', 'Customer\\InspectionsController::index');
     $routes->get('documents', 'Customer\\DocumentsController::index');

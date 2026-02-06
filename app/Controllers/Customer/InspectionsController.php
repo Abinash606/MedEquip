@@ -66,7 +66,7 @@ class InspectionsController extends BaseController
             $inspection['site_name'] = $site['name'] ?? '';
 
             if (empty($inspection['status'])) {
-                $inspection['status'] = 'Pass'; 
+                $inspection['status'] = 'Pass';
             }
 
             $data['inspectionHistory'][] = $inspection;

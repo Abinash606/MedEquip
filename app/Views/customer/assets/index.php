@@ -26,19 +26,19 @@
                 </thead>
                 <tbody>
                     <?php if (!empty($equipment)): ?>
-                    <?php foreach ($equipment as $eq): ?>
-                    <tr>
-                        <td><?= esc($eq['asset_tag']) ?></td>
-                        <td><?= esc($eq['serial_number']) ?></td>
-                        <td><?= esc($eq['make']) ?></td>
-                        <td><?= esc($eq['model']) ?></td>
-                        <td><?= esc($eq['device_type']) ?></td>
-                    </tr>
-                    <?php endforeach; ?>
+                        <?php foreach ($equipment as $eq): ?>
+                            <tr>
+                                <td><?= esc($eq['asset_tag']) ?></td>
+                                <td><?= esc($eq['serial_number']) ?></td>
+                                <td><?= esc($eq['make']) ?></td>
+                                <td><?= esc($eq['model']) ?></td>
+                                <td><?= esc($eq['device_type']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No assets found</td>
-                    </tr>
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No assets found</td>
+                        </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -142,69 +142,69 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('addEquipmentForm');
-    const modal = document.getElementById('addEquipmentModal');
-    const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('addEquipmentForm');
+        const modal = document.getElementById('addEquipmentModal');
+        const bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
 
-    // Frontend validation with Bootstrap
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+        // Frontend validation with Bootstrap
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-        // Check form validity
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            return;
-        }
+            // Check form validity
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return;
+            }
 
-        // Additional custom validation
-        const serialNumber = document.getElementById('serial_number').value.trim();
-        const make = document.getElementById('make').value.trim();
-        const model = document.getElementById('model').value.trim();
-        const deviceType = document.getElementById('device_type').value.trim();
-        const status = document.getElementById('status').value;
+            // Additional custom validation
+            const serialNumber = document.getElementById('serial_number').value.trim();
+            const make = document.getElementById('make').value.trim();
+            const model = document.getElementById('model').value.trim();
+            const deviceType = document.getElementById('device_type').value.trim();
+            const status = document.getElementById('status').value;
 
-        if (!serialNumber || !make || !model || !deviceType || !status) {
-            form.classList.add('was-validated');
-            return;
-        }
+            if (!serialNumber || !make || !model || !deviceType || !status) {
+                form.classList.add('was-validated');
+                return;
+            }
 
-        // All validation passed, submit the form
-        form.classList.remove('was-validated');
-        form.submit();
+            // All validation passed, submit the form
+            form.classList.remove('was-validated');
+            form.submit();
+        });
+
+        // Show simple success message from session
+        <?php if (session()->getFlashdata('success')): ?>
+            bsModal.hide();
+            Swal.fire({
+                title: 'Success!',
+                text: '<?= session()->getFlashdata('success') ?>',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                location.reload();
+            });
+        <?php endif; ?>
+
+        // Show simple error message from session
+        <?php if (session()->getFlashdata('error')): ?>
+            bsModal.show();
+            Swal.fire({
+                title: 'Error!',
+                text: '<?= session()->getFlashdata('error') ?>',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        <?php endif; ?>
+
+        // Reset form when modal closes
+        modal.addEventListener('hidden.bs.modal', function() {
+            form.reset();
+            form.classList.remove('was-validated');
+        });
     });
-
-    // Show simple success message from session
-    <?php if (session()->getFlashdata('success')): ?>
-    bsModal.hide();
-    Swal.fire({
-        title: 'Success!',
-        text: '<?= session()->getFlashdata('success') ?>',
-        icon: 'success',
-        confirmButtonText: 'OK'
-    }).then(() => {
-        location.reload();
-    });
-    <?php endif; ?>
-
-    // Show simple error message from session
-    <?php if (session()->getFlashdata('error')): ?>
-    bsModal.show();
-    Swal.fire({
-        title: 'Error!',
-        text: '<?= session()->getFlashdata('error') ?>',
-        icon: 'error',
-        confirmButtonText: 'OK'
-    });
-    <?php endif; ?>
-
-    // Reset form when modal closes
-    modal.addEventListener('hidden.bs.modal', function() {
-        form.reset();
-        form.classList.remove('was-validated');
-    });
-});
 </script>
 
 <?= $this->endSection() ?>

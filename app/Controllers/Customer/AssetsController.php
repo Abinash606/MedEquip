@@ -39,7 +39,6 @@ class AssetsController extends BaseController
         return view('customer/assets/index', $data);
     }
 
-
     /**
      * Display the details of a site including equipment, inspections and work orders.
      */
@@ -64,8 +63,6 @@ class AssetsController extends BaseController
         $data['workOrders'] = $workModel->where('site_id', $id)->findAll();
         return view('customer/sites/show', $data);
     }
-
-
     public function store()
     {
         $equipModel = new EquipmentModel();
