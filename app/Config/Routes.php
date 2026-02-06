@@ -134,6 +134,14 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('settings/admins/(:num)', 'Admin\SystemSettings::adminGet/$1');
     $routes->post('settings/admins/save', 'Admin\SystemSettings::adminSave');
     $routes->delete('settings/admins/delete/(:num)', 'Admin\SystemSettings::adminDelete/$1');
+
+
+    $routes->get('settings/iq-notes', 'Admin\SystemSettings::iqNotes');
+    $routes->get('settings/iq-notes/(:num)', 'Admin\SystemSettings::iqNoteGet/$1');
+    $routes->post('settings/iq-notes/save', 'Admin\SystemSettings::iqNoteSave');
+    // $routes->delete('iq-notes/delete/(:num)', 'Admin\SystemSettings::iqNoteDelete/$1');
+    $routes->post('settings/iq-notes/delete', 'Admin\SystemSettings::iqNoteDelete');
+
 });
 
 // Routes for Customer role

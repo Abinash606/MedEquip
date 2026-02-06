@@ -118,18 +118,17 @@ class EquipmentController extends BaseController
 
 
     /* ================= ADD + UPDATE ================= */
+
+
     // public function save()
     // {
     //     $companyId = (int) session('company_id');
     //     $id        = (int) ($this->request->getPost('id') ?? 0);
 
     //     $rules = [
-    //         'make'          => 'permit_empty|max_length[100]',
-    //         'model'         => 'permit_empty|max_length[100]',
-    //         'device_type'   => 'permit_empty|max_length[100]',
-    //         'serial_number' => 'permit_empty|max_length[100]',
-    //         'asset_tag'     => 'permit_empty|max_length[100]',
-    //         'status'        => 'permit_empty|max_length[50]',
+    //         'make'        => 'permit_empty|max_length[100]',
+    //         'model'       => 'permit_empty|max_length[100]',
+    //         'device_type' => 'permit_empty|max_length[100]',
     //     ];
 
     //     if (! $this->validate($rules)) {
@@ -139,29 +138,52 @@ class EquipmentController extends BaseController
     //         ]);
     //     }
 
-
-    //     // ✅ ASSET TAG AUTO GENERATE
+    //     // 🔹 Asset tag auto-generate
     //     $assetTag = trim((string) $this->request->getPost('asset_tag'));
     //     if ($assetTag === '') {
-    //         // Example: AT-000123
-    //         $assetTag = 'AT-' . str_pad((string) rand(1, 999999), 6, '0', STR_PAD_LEFT);
+    //         $assetTag = 'AT-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
+    //     }
+
+    //     // 🔹 Existing record (for edit)
+    //     $existing = $id ? $this->equipmentModel->find($id) : [];
+
+    //     /** =========================
+    //      *  FILE UPLOADS
+    //      *  ========================= */
+    //     $pmPath    = $existing['pm_manual_path'] ?? null;
+    //     $photoPath = $existing['photo_path'] ?? null;
+
+    //     // 📄 PM MANUAL
+    //     $pmFile = $this->request->getFile('pm_manual');
+    //     if ($pmFile && $pmFile->isValid()) {
+    //         $newName = $pmFile->getRandomName();
+    //         $pmFile->move(FCPATH . 'uploads/pm_manuals', $newName);
+    //         $pmPath = 'uploads/pm_manuals/' . $newName;
+    //     }
+
+    //     // 🖼 PHOTO
+    //     $photoFile = $this->request->getFile('photo');
+    //     if ($photoFile && $photoFile->isValid()) {
+    //         $newName = $photoFile->getRandomName();
+    //         $photoFile->move(FCPATH . 'uploads/equipment_photos', $newName);
+    //         $photoPath = 'uploads/equipment_photos/' . $newName;
     //     }
 
     //     $payload = [
-    //         'company_id'    => $companyId,
-    //         'site_id'       => 1,
-    //         'make'          => trim((string) $this->request->getPost('make')),
-    //         'model'         => trim((string) $this->request->getPost('model')),
-    //         'device_type'   => trim((string) $this->request->getPost('device_type')),
-    //         'serial_number' => trim((string) $this->request->getPost('serial_number')),
-    //         'asset_tag'     => $assetTag,
-    //         'status'        => $this->request->getPost('status') ?: 'ready',
+    //         'company_id'      => $companyId,
+    //         'site_id'         => 1,
+    //         'make'            => trim($this->request->getPost('make')),
+    //         'model'           => trim($this->request->getPost('model')),
+    //         'device_type'     => trim($this->request->getPost('device_type')),
+    //         'serial_number'   => trim($this->request->getPost('serial_number')),
+    //         'asset_tag'       => $assetTag,
+    //         'status'          => 'ready',
+    //         'pm_manual_path'  => $pmPath,
+    //         'photo_path'      => $photoPath,
     //     ];
 
-    //     // ✅ UPDATE
     //     if ($id > 0) {
     //         $this->equipmentModel->update($id, $payload);
-
     //         return $this->response->setJSON([
     //             'status' => 'success',
     //             'message' => 'Equipment updated',
@@ -169,7 +191,6 @@ class EquipmentController extends BaseController
     //         ]);
     //     }
 
-    //     // ✅ INSERT
     //     $newId = $this->equipmentModel->insert($payload);
 
     //     return $this->response->setJSON([
@@ -181,86 +202,97 @@ class EquipmentController extends BaseController
     // }
 
     public function save()
-{
-    $companyId = (int) session('company_id');
-    $id        = (int) ($this->request->getPost('id') ?? 0);
+    {
+        $companyId = (int) session('company_id');
+        $id        = (int) ($this->request->getPost('id') ?? 0);
 
-    $rules = [
-        'make'        => 'permit_empty|max_length[100]',
-        'model'       => 'permit_empty|max_length[100]',
-        'device_type' => 'permit_empty|max_length[100]',
-    ];
+        $rules = [
+            'make'            => 'permit_empty|max_length[100]',
+            'model'           => 'permit_empty|max_length[100]',
+            'device_type'     => 'permit_empty|max_length[100]',
+            'pm_manual'       => 'permit_empty|max_size[pm_manual,5120]',
+            'service_manual'  => 'permit_empty|max_size[service_manual,5120]',
+            'photo'           => 'permit_empty|max_size[photo,5120]',
+        ];
 
-    if (! $this->validate($rules)) {
-        return $this->response->setJSON([
-            'status' => 'error',
-            'errors' => $this->validator->getErrors()
-        ]);
-    }
+        // if (! $this->validate($rules)) {
+        //     return $this->response->setJSON([
+        //         'status' => 'error',
+        //         'errors' => $this->validator->getErrors()
+        //     ]);
+        // }
 
-    // 🔹 Asset tag auto-generate
-    $assetTag = trim((string) $this->request->getPost('asset_tag'));
-    if ($assetTag === '') {
+        if (! $this->validate($rules)) {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => implode("\n", $this->validator->getErrors())
+            ]);
+        }
+
+
+        // 🔹 Auto-generate asset tag
         $assetTag = 'AT-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
-    }
 
-    // 🔹 Existing record (for edit)
-    $existing = $id ? $this->equipmentModel->find($id) : [];
+        // Existing record (edit case)
+        $existing = $id ? $this->equipmentModel->find($id) : [];
 
-    /** =========================
-     *  FILE UPLOADS
-     *  ========================= */
-    $pmPath    = $existing['pm_manual_path'] ?? null;
-    $photoPath = $existing['photo_path'] ?? null;
+        $pmPath      = $existing['pm_manual_path'] ?? null;
+        $servicePath = $existing['service_manual_path'] ?? null;
+        $photoPath   = $existing['photo_path'] ?? null;
 
-    // 📄 PM MANUAL
-    $pmFile = $this->request->getFile('pm_manual');
-    if ($pmFile && $pmFile->isValid()) {
-        $newName = $pmFile->getRandomName();
-        $pmFile->move(FCPATH . 'uploads/pm_manuals', $newName);
-        $pmPath = 'uploads/pm_manuals/' . $newName;
-    }
+        // 📄 PM Manual
+        $pmFile = $this->request->getFile('pm_manual');
+        if ($pmFile && $pmFile->isValid()) {
+            $newName = $pmFile->getRandomName();
+            $pmFile->move(FCPATH . 'uploads/pm_manuals', $newName);
+            $pmPath = 'uploads/pm_manuals/' . $newName;
+        }
 
-    // 🖼 PHOTO
-    $photoFile = $this->request->getFile('photo');
-    if ($photoFile && $photoFile->isValid()) {
-        $newName = $photoFile->getRandomName();
-        $photoFile->move(FCPATH . 'uploads/equipment_photos', $newName);
-        $photoPath = 'uploads/equipment_photos/' . $newName;
-    }
+        // 📘 Service Manual (PDF)
+        $serviceFile = $this->request->getFile('service_manual');
+        if ($serviceFile && $serviceFile->isValid()) {
+            $newName = $serviceFile->getRandomName();
+            $serviceFile->move(FCPATH . 'uploads/service_manuals', $newName);
+            $servicePath = 'uploads/service_manuals/' . $newName;
+        }
 
-    $payload = [
-        'company_id'      => $companyId,
-        'site_id'         => 1,
-        'make'            => trim($this->request->getPost('make')),
-        'model'           => trim($this->request->getPost('model')),
-        'device_type'     => trim($this->request->getPost('device_type')),
-        'serial_number'   => trim($this->request->getPost('serial_number')),
-        'asset_tag'       => $assetTag,
-        'status'          => 'ready',
-        'pm_manual_path'  => $pmPath,
-        'photo_path'      => $photoPath,
-    ];
+        // 🖼 Photo
+        $photoFile = $this->request->getFile('photo');
+        if ($photoFile && $photoFile->isValid()) {
+            $newName = $photoFile->getRandomName();
+            $photoFile->move(FCPATH . 'uploads/equipment_photos', $newName);
+            $photoPath = 'uploads/equipment_photos/' . $newName;
+        }
 
-    if ($id > 0) {
-        $this->equipmentModel->update($id, $payload);
+        $payload = [
+            'company_id'            => $companyId,
+            'site_id'               => 1,
+            'make'                  => trim($this->request->getPost('make')),
+            'model'                 => trim($this->request->getPost('model')),
+            'device_type'           => trim($this->request->getPost('device_type')),
+            'serial_number'         => trim($this->request->getPost('serial_number')),
+            'asset_tag'             => $assetTag,
+            'status'                => 'ready',
+            'pm_manual_path'        => $pmPath,
+            'service_manual_path'   => $servicePath,
+            'photo_path'            => $photoPath,
+        ];
+
+        if ($id > 0) {
+            $this->equipmentModel->update($id, $payload);
+            return $this->response->setJSON([
+                'status' => 'success',
+                'message' => 'Equipment updated'
+            ]);
+        }
+
+        $this->equipmentModel->insert($payload);
+
         return $this->response->setJSON([
             'status' => 'success',
-            'message' => 'Equipment updated',
-            'data' => $payload
+            'message' => 'Equipment added'
         ]);
     }
-
-    $newId = $this->equipmentModel->insert($payload);
-
-    return $this->response->setJSON([
-        'status' => 'success',
-        'message' => 'Equipment added',
-        'id' => $newId,
-        'data' => $payload
-    ]);
-}
-
 
 
     /* ================= DELETE ================= */

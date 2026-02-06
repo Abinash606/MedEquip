@@ -5,6 +5,7 @@ namespace App\Controllers\Admin;
 use App\Controllers\BaseController;
 use App\Models\SystemSettingsModel;
 use App\Models\UserModel;
+use App\Models\IqNoteModel;
 
 class SystemSettings extends BaseController
 {
@@ -17,7 +18,7 @@ class SystemSettings extends BaseController
 
         $settingsModel = new SystemSettingsModel();
         $settings      = $settingsModel->getOrCreateByCompany($companyId);
-//print_r($settings);
+        //print_r($settings);
         return view('admin/settings/index', [
             'settings' => $settings
         ]);
@@ -113,7 +114,7 @@ class SystemSettings extends BaseController
             'status' => 'success',
             'data' => [
                 'id'       => $row['id'],
-                'full_name'=> $row['full_name'],
+                'full_name' => $row['full_name'],
                 'email'    => $row['email'],
                 'role_id'  => $row['role_id'],
                 'status'   => $row['status'] ?? 'active',
@@ -192,5 +193,66 @@ class SystemSettings extends BaseController
 
         $userModel->delete((int)$id);
         return $this->response->setJSON(['status' => 'success', 'message' => 'Admin deleted']);
+    }
+
+
+    // ---------- IQ NOTES LIST ----------
+    public function iqNotes()
+    {
+        $companyId = session('company_id');
+        $model = new IqNoteModel();
+
+        $rows = $model->where('company_id', $companyId)->orderBy('id', 'DESC')->findAll();
+        return $this->response->setJSON(['data' => $rows]);
+    }
+
+    // ---------- IQ NOTE GET ----------
+    public function iqNoteGet($id)
+    {
+        $model = new IqNoteModel();
+        $row = $model->find($id);
+        return $this->response->setJSON(['data' => $row]);
+    }
+
+    // ---------- IQ NOTE SAVE ----------
+    public function iqNoteSave()
+    {
+        $model = new IqNoteModel();
+
+        $id = $this->request->getPost('id');
+        $data = [
+            'company_id' => session('company_id'),
+            'note'       => $this->request->getPost('note')
+        ];
+
+        if ($id) {
+            $model->update($id, $data);
+            return $this->response->setJSON(['message' => 'Note updated']);
+        }
+
+        $model->insert($data);
+        return $this->response->setJSON(['message' => 'Note added']);
+    }
+
+    // ---------- IQ NOTE DELETE ----------
+    // public function iqNoteDelete($id)
+    // {
+    //     $model = new IqNoteModel();
+    //     $model->delete($id);
+    //     return $this->response->setJSON(['message' => 'Note deleted']);
+    // }
+
+    public function iqNoteDelete()
+    {
+        $id = (int) $this->request->getPost('id');
+
+        if (!$id) {
+            return $this->response->setJSON(['message' => 'Invalid ID'])->setStatusCode(400);
+        }
+
+        $model = new IqNoteModel();
+        $model->delete($id);
+
+        return $this->response->setJSON(['message' => 'Note deleted']);
     }
 }

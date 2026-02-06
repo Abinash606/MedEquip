@@ -21,6 +21,7 @@ class EquipmentModel extends Model
         'status',
         'pm_kit',
         'pm_manual_path',
+        'service_manual_path',
         'photo_path',
         'fast_notes',
         'installation_date',

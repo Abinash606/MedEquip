@@ -14,21 +14,22 @@
 </script>
 
 <div class="glass-card">
-<table class="table table-striped" id="equipmentTable">
-    <thead>
-        <tr>
-            <th>Brand</th>
-            <th>Model</th>
-            <th>Description</th>
-            <th>Part #</th>
-            <th>AKA</th>
-            <th>PM Manual</th>
-            <th>Photo</th>
-            <th width="150">Action</th>
-        </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+    <table class="table table-striped" id="equipmentTable">
+        <thead>
+            <tr>
+                <th>Brand</th>
+                <th>Model</th>
+                <th>Description</th>
+                <th>Part #</th>
+                <!-- <th>AKA</th> -->
+                <th>Service Manual</th>
+                <th>Owners Manual</th>
+                <th>Photo</th>
+                <th width="150">Action</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 <!-- MODAL -->
 <div class="modal fade" id="equipmentModal" tabindex="-1">
@@ -64,18 +65,28 @@
                             <label>Part #</label>
                             <input type="text" name="serial_number" id="serial_number" class="form-control">
                         </div>
-                        <div class="col-md-6 mb-2">
+                        <!-- <div class="col-md-6 mb-2">
                             <label>AKA</label>
                             <input type="text" name="asset_tag" id="asset_tag" class="form-control">
-                        </div>
+                        </div> -->
                     </div>
 
                     <hr>
 
                     <div class="mb-2">
-                        <label>PM Manual (Max 5MB)</label>
+                        <label>Service Manual (PDF, Max 5MB)</label>
+                        <input type="file"
+                            name="service_manual"
+                            class="form-control"
+                            accept="application/pdf">
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Owners Manual (Max 5MB)</label>
                         <input type="file" name="pm_manual" class="form-control">
                     </div>
+
+
 
                     <div class="mb-2">
                         <label>Photo / File (Max 5MB)</label>
@@ -130,9 +141,16 @@
                     data: 'serial_number',
                     defaultContent: '-'
                 },
+                // {
+                //     data: 'asset_tag',
+                //     defaultContent: '-'
+                // },
                 {
-                    data: 'asset_tag',
-                    defaultContent: '-'
+                    data: 'service_manual_path',
+                    orderable: false,
+                    searchable: false,
+                    render: d => d ?
+                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
                 },
 
                 {
@@ -240,7 +258,7 @@
                     model.value = d.model ?? '';
                     device_type.value = d.device_type ?? '';
                     serial_number.value = d.serial_number ?? '';
-                    asset_tag.value = d.asset_tag ?? '';
+                    // asset_tag.value = d.asset_tag ?? '';
                     new bootstrap.Modal('#equipmentModal').show();
                 }
             });
@@ -255,9 +273,17 @@
             })
             .then(r => r.json())
             .then(res => {
-                if (res.status === 'success') location.reload();
-                else alert('Save failed');
+                if (res.status === 'success') {
+                    location.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Upload Error',
+                        text: res.message ?? 'Save failed'
+                    });
+                }
             });
+
     };
 
     /* DELETE */
@@ -284,6 +310,31 @@
                         Swal.fire('Deleted', '', 'success');
                     }
                 });
+        });
+    });
+
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+    function checkFileSize(input) {
+        if (!input.files.length) return true;
+
+        const file = input.files[0];
+        if (file.size > MAX_SIZE) {
+            Swal.fire({
+                icon: 'error',
+                title: 'File too large',
+                text: 'Maximum allowed size is 5MB'
+            });
+            input.value = ''; // reset file input
+            return false;
+        }
+        return true;
+    }
+
+    // Attach to all file inputs
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            checkFileSize(this);
         });
     });
 </script>
