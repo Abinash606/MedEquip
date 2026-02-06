@@ -156,20 +156,17 @@ class AssetsController extends BaseController
     {
         $equipModel = new EquipmentModel();
 
-        // Get the last asset tag for this company that matches ASSET-XXXX pattern
         $lastEquipment = $equipModel
             ->where('company_id', $companyId)
             ->where('deleted_at', null)
-            ->like('asset_tag', 'ASSET-', 'after') // Only get tags starting with ASSET-
+            ->like('asset_tag', 'ASSET-', 'after')
             ->orderBy('id', 'DESC')
             ->first();
 
         if ($lastEquipment && preg_match('/ASSET-(\d+)/', $lastEquipment['asset_tag'], $matches)) {
-            // Extract the number and increment
             $lastNumber = (int)$matches[1];
             $newNumber = $lastNumber + 1;
         } else {
-            // Start from 1000 if no previous asset tag exists
             $newNumber = 1000;
         }
 
