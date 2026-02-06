@@ -78,7 +78,7 @@
             <h2>Reset Your Password, <?= esc($customer_name) ?>!</h2>
             <p>We received a request to reset the password for your AssetIQ account. Click the button below to set a
                 new password.</p>
-            <a href="<?= esc($reset_url) ?>" style="
+            <a href="<?= esc($reset_link) ?>" class="cta-button" style="
        display:inline-block;
        padding:10px 20px;
        background-color:#39AC73;

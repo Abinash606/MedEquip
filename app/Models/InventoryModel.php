@@ -6,11 +6,11 @@ use CodeIgniter\Model;
 
 class InventoryModel extends Model
 {
-    protected $table = 'inventory';          
-    protected $primaryKey = 'id';            
+    protected $table = 'inventory';
+    protected $primaryKey = 'id';
     protected $useAutoIncrement = true;
-    protected $returnType = 'array';         
-    protected $useTimestamps = true;         
+    protected $returnType = 'array';
+    protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
 

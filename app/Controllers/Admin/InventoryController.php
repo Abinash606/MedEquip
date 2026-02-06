@@ -88,7 +88,12 @@ class InventoryController extends BaseController
     /**
      * Store new inventory item
      */
-
+    /**
+     * Store new inventory item - FIXED VERSION
+     */
+    /**
+     * Store new inventory item - CORRECTED VERSION
+     */
     public function store()
     {
         try {
@@ -197,8 +202,8 @@ class InventoryController extends BaseController
                 'part_number'      => $postData['part_number'] ?? $item['part_number'],
                 'part_description' => $postData['part_description'] ?? $item['part_description'],
                 'bin'              => $postData['bin'] ?? $item['bin'],
-                'row_aisle'        => $postData['row_aisle'] ?? $item['row_aisle'], 
-                'shelf'            => $postData['shelf'] ?? $item['shelf'],      
+                'row_aisle'        => $postData['row_aisle'] ?? $item['row_aisle'],
+                'shelf'            => $postData['shelf'] ?? $item['shelf'],
                 'qty'              => $postData['qty'] ?? $item['qty'],
                 'total_value'      => $postData['total_value'] ?? $item['total_value'],
             ];
