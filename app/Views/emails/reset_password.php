@@ -53,7 +53,7 @@
         display: inline-block;
         padding: 10px 20px;
         background-color: #39AC73;
-        color: white;
+        color: white !important;
         text-decoration: none;
         border-radius: 5px;
         margin-top: 20px;
@@ -66,56 +66,37 @@
         color: #aaa;
     }
     </style>
-    <title>Welcome</title>
+    <title>Reset Your Password</title>
 </head>
 
 <body>
     <div class="container">
-
-        <!-- Header -->
         <div class="header">
-            <?php if (!empty($company_logo)): ?>
-            <img src="<?= base_url($company_logo) ?>" alt="<?= esc($company_name) ?> Logo">
-            <?php endif; ?>
+            <img src="<?= base_url('uploads/logos/' . $company_logo) ?>" alt="Company Logo">
         </div>
-
-        <!-- Content -->
         <div class="content">
-            <h2>Welcome, <?= esc($customer_name) ?>!</h2>
-
-            <p>
-                Thank you for registering with
-                <strong><?= esc($company_name) ?></strong>.
-                We're excited to have you on board and look forward to supporting you.
-            </p>
-
-            <p>
-                You can now log in to your account using the button below.
-            </p>
-
-            <a href="<?= site_url('login') ?>" class="cta-button" style="
-                display:inline-block;
-                padding:10px 20px;
-                background-color:#39AC73;
-                color:#ffffff !important;
-                text-decoration:none;
-                border-radius:5px;
-                font-weight:500;
-            ">
-                Log In to Your Account
+            <h2>Reset Your Password, <?= esc($customer_name) ?>!</h2>
+            <p>We received a request to reset the password for your AssetIQ account. Click the button below to set a
+                new password.</p>
+            <a href="<?= esc($reset_url) ?>" style="
+       display:inline-block;
+       padding:10px 20px;
+       background-color:#39AC73;
+       color:#ffffff !important;
+       text-decoration:none;
+       border-radius:5px;
+       font-weight:500;
+   ">
+                Reset My Password
             </a>
-
-            <p style="margin-top:20px;">
-                If you need any assistance, feel free to contact our support team at
-                <a href="mailto:support@assetiq.com">support@assetiq.com</a>.
+            <p style="font-size: 13px; color: #888; margin-top: 24px;">This link will expire in <strong>1 hour</strong>.
             </p>
+            <p>If you need any assistance, feel free to contact our support team at <a
+                    href="mailto:support@assetiq.com">support@assetiq.com</a>.</p>
         </div>
-
-        <!-- Footer -->
         <div class="footer">
             <p>© <?= date('Y') ?> <?= esc($company_name) ?>. All rights reserved.</p>
         </div>
-
     </div>
 </body>
 

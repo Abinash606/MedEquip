@@ -18,6 +18,8 @@ class InventoryModel extends Model
         'part_number',
         'part_description',
         'bin',
+        'row_aisle',
+        'shelf',
         'qty',
         'total_value',
         'image'
@@ -27,6 +29,8 @@ class InventoryModel extends Model
         'part_number'        => 'required|max_length[100]',
         'part_description'   => 'required|max_length[255]',
         'bin'                => 'required|max_length[50]',
+        'row_aisle'          => 'required|max_length[100]',
+        'shelf'              => 'required|max_length[100]',
         'qty'                => 'required|integer',
         'total_value'        => 'required|decimal',
     ];
@@ -43,6 +47,14 @@ class InventoryModel extends Model
         'bin' => [
             'required' => 'Bin is required',
             'max_length' => 'Bin cannot exceed 50 characters'
+        ],
+        'row_aisle' => [
+            'required' => 'Row/Aisle is required',
+            'max_length' => 'Row/Aisle cannot exceed 100 characters'
+        ],
+        'shelf' => [
+            'required' => 'Shelf is required',
+            'max_length' => 'Shelf cannot exceed 100 characters'
         ],
         'qty' => [
             'required' => 'Quantity is required',

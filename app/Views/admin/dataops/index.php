@@ -10,17 +10,12 @@
                     <input class="form-control" type="file">
                 </div>
                 <button class="btn btn-primary w-100">Upload & Process</button> -->
-            <form action="<?= base_url('admin/data-operations/import-equipment') ?>"
-                method="post"
+            <form action="<?= base_url('admin/data-operations/import-equipment') ?>" method="post"
                 enctype="multipart/form-data">
 
                 <div class="mb-3">
                     <label class="form-label">Import Equipment Data (CSV)</label>
-                    <input class="form-control"
-                        type="file"
-                        name="csv_file"
-                        accept=".csv"
-                        required>
+                    <input class="form-control" type="file" name="csv_file" accept=".csv" required>
                 </div>
 
                 <button class="btn btn-primary w-100">
@@ -31,7 +26,7 @@
 
 
             <hr>
-            <button class="btn btn-outline-secondary w-100">Export All Service Records</button>
+            <!-- <button class="btn btn-outline-secondary w-100">Export All Service Records</button> -->
         </div>
     </div>
     <div class="col-md-6">
@@ -55,32 +50,30 @@
                 <i class="fa-solid fa-database me-2"></i> Trigger Manual Backup
             </button>
 
-            <a id="downloadLink"
-                class="btn btn-success w-100 mt-3 d-none"
-                href="#">
+            <a id="downloadLink" class="btn btn-success w-100 mt-3 d-none" href="#">
                 <i class="fa-solid fa-download me-2"></i> Download Backup (.sql.gz)
             </a>
             <script>
-                document.getElementById('backupBtn').addEventListener('click', function() {
-                    fetch("<?= base_url('admin/data-operations/generate-backup') ?>")
-                        .then(res => res.json())
-                        .then(data => {
-                            // if (data.status === 'success') {
-                            //     const link = document.getElementById('downloadLink');
-                            //     link.href = data.file;
-                            //     link.classList.remove('d-none');
-                            // }
-                            if (data.status === 'success') {
-                                document.querySelector('.small.text-muted').innerText = data.time;
+            document.getElementById('backupBtn').addEventListener('click', function() {
+                fetch("<?= base_url('admin/data-operations/generate-backup') ?>")
+                    .then(res => res.json())
+                    .then(data => {
+                        // if (data.status === 'success') {
+                        //     const link = document.getElementById('downloadLink');
+                        //     link.href = data.file;
+                        //     link.classList.remove('d-none');
+                        // }
+                        if (data.status === 'success') {
+                            document.querySelector('.small.text-muted').innerText = data.time;
 
-                                const link = document.getElementById('downloadLink');
-                                link.href = data.file;
-                                link.classList.remove('d-none');
-                            }
+                            const link = document.getElementById('downloadLink');
+                            link.href = data.file;
+                            link.classList.remove('d-none');
+                        }
 
-                        })
-                        .catch(err => console.error(err));
-                });
+                    })
+                    .catch(err => console.error(err));
+            });
             </script>
         </div>
     </div>
