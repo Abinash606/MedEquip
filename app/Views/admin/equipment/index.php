@@ -95,7 +95,10 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-success">Save</button>
+                    <button type="submit" class="btn btn-success" id="saveBtn">
+                        <span class="btn-text">Save</span>
+                        <span class="spinner-border spinner-border-sm d-none" id="saveLoader"></span>
+                    </button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </form>
@@ -265,8 +268,38 @@
     });
 
     /* SAVE */
+    // equipmentForm.onsubmit = e => {
+    //     e.preventDefault();
+    //     fetch(`${BASE_URL}/admin/equipment-db/save`, {
+    //             method: 'POST',
+    //             body: new FormData(equipmentForm)
+    //         })
+    //         .then(r => r.json())
+    //         .then(res => {
+    //             if (res.status === 'success') {
+    //                 location.reload();
+    //             } else {
+    //                 Swal.fire({
+    //                     icon: 'error',
+    //                     title: 'Upload Error',
+    //                     text: res.message ?? 'Save failed'
+    //                 });
+    //             }
+    //         });
+
+    // };
     equipmentForm.onsubmit = e => {
         e.preventDefault();
+
+        const saveBtn = document.getElementById('saveBtn');
+        const loader = document.getElementById('saveLoader');
+        const text = saveBtn.querySelector('.btn-text');
+
+        // 🔒 Disable button & show loader
+        saveBtn.disabled = true;
+        loader.classList.remove('d-none');
+        text.textContent = 'Saving...';
+
         fetch(`${BASE_URL}/admin/equipment-db/save`, {
                 method: 'POST',
                 body: new FormData(equipmentForm)
@@ -282,9 +315,18 @@
                         text: res.message ?? 'Save failed'
                     });
                 }
+            })
+            .catch(() => {
+                Swal.fire('Error', 'Something went wrong', 'error');
+            })
+            .finally(() => {
+                // 🔓 Re-enable button if needed
+                saveBtn.disabled = false;
+                loader.classList.add('d-none');
+                text.textContent = 'Save';
             });
-
     };
+
 
     /* DELETE */
     $(document).on('click', '.deleteBtn', function() {

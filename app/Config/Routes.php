@@ -91,7 +91,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('equipment/update/(:num)', 'Admin\EquipmentController::update/$1');
     $routes->get('equipment/delete/(:num)', 'Admin\EquipmentController::delete/$1');
     $routes->get('equipment/show/(:num)', 'Admin\EquipmentController::show/$1');
-    
+
     $routes->get('equipment-db/(:num)', 'Admin\EquipmentController::show/$1');
     $routes->post('equipment-db/save', 'Admin\EquipmentController::save');
     $routes->post('equipment-db/delete/(:num)', 'Admin\EquipmentController::deletedb/$1');
@@ -141,7 +141,6 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('settings/iq-notes/save', 'Admin\SystemSettings::iqNoteSave');
     // $routes->delete('iq-notes/delete/(:num)', 'Admin\SystemSettings::iqNoteDelete/$1');
     $routes->post('settings/iq-notes/delete', 'Admin\SystemSettings::iqNoteDelete');
-
 });
 
 // Routes for Customer role

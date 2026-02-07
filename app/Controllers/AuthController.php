@@ -88,76 +88,153 @@ class AuthController extends Controller
      * purposes this simply records a reset token in the database. In a real
      * application you would send the token to the user's email address.
      */
+    /**
+     * Send password reset email
+     */
+    public function sendResetPasswordEmail($userEmail, $username, $resetLink, $companyName, $companyLogo)
+    {
+        // Prepare the subject and from details
+        $fromEmail = '1easyecommerce@gmail.com';
+        $fromName = esc($companyName);
+        $subject = 'Password Reset Request - Asset IQ';
+
+        // Data for user email
+        $data = [
+            'username' => esc($username),
+            'reset_link' => $resetLink,
+            'company_name' => esc($companyName),
+            'company_logo' => $companyLogo  // Company logo path
+        ];
+
+        // Generate the email content by rendering the view template
+        $message = view('emails/reset_password', $data);
+
+        // Headers for the email
+        $headers = 'MIME-Version: 1.0' . "\r\n";
+        $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
+        $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
+
+        // Send the email
+        if (!mail($userEmail, $subject, $message, $headers)) {
+            log_message('error', 'Failed to send password reset email to: ' . $userEmail);
+            return false;
+        }
+        return true;
+    }
+    /**
+     * Handle forgot password request for both Users and Customers
+     */
     public function forgot()
     {
-        $customerController = new \App\Controllers\Admin\CustomersController();
-
-        if (! $this->request->isAJAX()) {
+        if (!$this->request->isAJAX()) {
             return view('auth/forgot');
         }
 
         try {
             $emailInput = trim($this->request->getPost('email'));
-            $userModel  = new UserModel();
-            $user       = $userModel->getByEmail($emailInput);
 
-            if ($user) {
-                $token = bin2hex(random_bytes(32));
-                $userModel->createPasswordReset($user['email'], $token);
-
-                $companyName =  'Asset IQ';
-                $companyLogo = $user['company_logo'] ?? null;
-
-                if (empty($companyLogo)) {
-                    $companyLogo = 'https://i.ibb.co/vx28x4g7/assets-logo.png';
-                }
-
-                $customerController->sendRestPasswordEmail(
-                    $user['email'],
-                    $user['full_name'] ?? 'Customer',
-                    base_url('reset/' . $token),
-                    $companyName,
-                    $companyLogo
-                );
-            } else {
-                // For security, we return success even if the email is not found
-                log_message('warning', 'Password reset requested for non-existent email: ' . $emailInput);
+            if (empty($emailInput)) {
+                return $this->response->setJSON([
+                    'status'  => 'error',
+                    'message' => 'Please provide an email address.'
+                ]);
             }
 
+            $userModel        = new UserModel();
+            $credentialsModel = new CredentialsModel();
+            $emailSent        = false;
+
+            // ==========================
+            // CHECK USERS TABLE FIRST
+            // ==========================
+            $user = $userModel->getByEmailSimple($emailInput);
+
+            if ($user) {
+                // Generate reset token (32 characters)
+                $token = bin2hex(random_bytes(16));
+
+                // Store token in password_resets table
+                $userModel->createPasswordReset($user['email'], $token);
+
+                // Create reset link for regular users - USE site_url() instead of base_url()
+                $resetLink = site_url('reset/' . $token);
+
+                // Send email
+                $emailSent = $this->sendResetPasswordEmail(
+                    $user['email'],
+                    $user['full_name'] ?? 'User',
+                    $resetLink,
+                    'Asset IQ',
+                    $user['company_logo'] ?? 'https://i.ibb.co/vx28x4g7/assets-logo.png'
+                );
+            } else {
+                // ==========================
+                // CHECK CREDENTIALS TABLE
+                // ==========================
+                $credential = $credentialsModel
+                    ->where('email', $emailInput)
+                    ->first();
+
+                if ($credential) {
+                    // Generate reset token (32 characters - same as CustomersController)
+                    $token = bin2hex(random_bytes(16));
+
+                    // Use database builder directly to bypass model validation
+                    $db = \Config\Database::connect();
+                    $db->table('credentials')
+                        ->where('id', $credential['id'])
+                        ->update([
+                            'reset_token' => $token,
+                            'reset_token_expiration' => date('Y-m-d H:i:s', strtotime('+1 hour'))
+                        ]);
+
+                    // Create reset link for customers - USE site_url() instead of base_url()
+                    $resetLink = site_url('customer/reset-password/' . $token);                    // Send email
+                    $emailSent = $this->sendResetPasswordEmail(
+                        $credential['email'],
+                        $credential['username'] ?? 'Customer',
+                        $resetLink,
+                        'Asset IQ',
+                        'https://i.ibb.co/vx28x4g7/assets-logo.png'
+                    );
+                }
+            }
+
+            // Always return success message for security (don't reveal if email exists)
             return $this->response->setJSON([
                 'status'  => 'success',
-                'message' => 'A reset link has been sent to your Email.',
+                'message' => 'If this email exists in our system, a password reset link has been sent.'
             ]);
         } catch (\Throwable $e) {
-            log_message('error', $e->getMessage());
+            log_message('error', 'Forgot password error: ' . $e->getMessage());
 
-            return $this->response
-                ->setStatusCode(500)
-                ->setJSON([
-                    'status'  => 'error',
-                    'message' => 'Server error. Check logs.',
-                ]);
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => 'An error occurred. Please try again later.'
+            ]);
         }
     }
-
     public function reset(string $token)
     {
-        $customerController = new \App\Controllers\Admin\CustomersController();
-
         $userModel = new UserModel();
+
         $data = [
             'token' => $token,
         ];
 
+        // When form submitted
         if ($this->request->getMethod() === 'POST') {
+
             $password        = $this->request->getPost('password');
             $passwordConfirm = $this->request->getPost('password_confirm');
 
+            // Check password match
             if ($password !== $passwordConfirm) {
                 $data['error'] = 'Passwords do not match.';
                 return view('auth/reset', $data);
             }
 
+            // Validate token
             $email = $userModel->validatePasswordResetToken($token);
 
             if (! $email) {
@@ -166,52 +243,43 @@ class AuthController extends Controller
             }
 
             $userModel->updatePasswordByEmail($email, $password);
+
             $userModel->markPasswordResetUsed($token);
 
-            $user = $userModel->getByEmail($email);
-
-            $username    = $user['full_name'] ?? 'Customer';
-            $companyName = 'Asset IQ';
-            $companyLogo = 'https://i.ibb.co/vx28x4g7/assets-logo.png';
-
-            $emailSent =  $customerController->sendCustomerWelcomeEmail(
-                $email,
-                $username,
-                $companyName,
-                $companyLogo
-            );
-            // Log if email failed to send
-            if (!$emailSent) {
-                log_message('error', 'Failed to send password reset confirmation to: ' . $email);
-            }
 
             return redirect()->to('/login')
-                ->with('message', 'Your password has been reset successfully.');
+                ->with('message', 'Password reset successful. Please login.');
         }
+
+        // GET request → validate token before showing page
         $email = $userModel->validatePasswordResetToken($token);
         if (!$email) {
             $data['error'] = 'This reset link is invalid or has expired. Password reset links are valid for 1 hour only. Please request a new password reset.';
         }
+
         return view('auth/reset', $data);
     }
+
 
 
     public function resetPassword(string $resetToken)
     {
         $credentialsModel = new CredentialsModel();
 
-        // Find the user by reset token
-        $user = $credentialsModel->where('reset_token', $resetToken)->first();
+        // Find the customer by reset token
+        $credential = $credentialsModel->where('reset_token', $resetToken)->first();
 
         // Check if the token exists and is not expired
-        if ($user && strtotime($user['reset_token_expiration']) > time()) {
-            // Token is valid and not expired
+        if ($credential && !empty($credential['reset_token_expiration']) && strtotime($credential['reset_token_expiration']) > time()) {
+            // Token is valid and not expired - use the SAME view as users
             return view('auth/customer_reset_password', ['resetToken' => $resetToken]);
         } else {
             // Token is invalid or expired
-            return redirect()->to('login')->with('error', 'Invalid or expired reset token');
+            return redirect()->to('/login')
+                ->with('error', 'This reset link is invalid or has expired. Password reset links are valid for 1 hour only. Please request a new password reset.');
         }
     }
+
 
     public function updatePassword()
     {

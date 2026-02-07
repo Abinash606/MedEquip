@@ -12,7 +12,14 @@ class CredentialsModel extends Model
 
     // Define which fields can be mass-assigned
     protected $allowedFields = [
-        'customer_id', 'username', 'email', 'password', 'reset_token', 'reset_token_expiration', 'created_at', 'updated_at'
+        'customer_id',
+        'username',
+        'email',
+        'password',
+        'reset_token',
+        'reset_token_expiration',
+        'created_at',
+        'updated_at'
     ];
 
     // Define timestamps for automatic handling
@@ -75,14 +82,13 @@ class CredentialsModel extends Model
 
         return $this->where('email', $email)->update($data);
     }
-	// Method to get customer info along with company_id by email
+    // Method to get customer info along with company_id by email
     public function getCustomerWithCompanyByEmail($email)
     {
         // Join the credentials table with the customers table to get the company_id
         return $this->select('credentials.*, customers.company_id')
-                    ->join('customers', 'customers.id = credentials.customer_id')
-                    ->where('credentials.email', $email)
-                    ->first();
+            ->join('customers', 'customers.id = credentials.customer_id')
+            ->where('credentials.email', $email)
+            ->first();
     }
-
 }

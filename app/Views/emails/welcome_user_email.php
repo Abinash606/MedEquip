@@ -66,7 +66,7 @@
             color: #aaa;
         }
     </style>
-    <title>Welcome to <?= esc($company_name) ?> - Set Your Password</title>
+    <title>Welcome to Asset IQ - Set Your Password</title>
 </head>
 
 <body>
@@ -76,7 +76,7 @@
         </div>
         <div class="content">
             <h2>Welcome, <?= esc($username) ?>!</h2>
-            <p>Thank you for joining <?= esc($company_name) ?>. To complete your registration, please click the button
+            <p>Thank you for joining Asset IQ. To complete your registration, please click the button
                 below to set your password:</p>
             <a href="<?= esc($reset_link) ?>" class="cta-button" style="
        display:inline-block;

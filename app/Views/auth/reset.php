@@ -177,18 +177,43 @@
                 </div>
             <?php endif; ?>
 
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle me-2"></i><?= session()->getFlashdata('error') ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i><?= session()->getFlashdata('success') ?>
+                </div>
+            <?php endif; ?>
+
             <!-- Reset Password Form -->
-            <form action="<?= site_url('reset/' . esc($token)) ?>" method="POST">
+            <?php
+            // Determine if this is a customer reset (has resetToken) or user reset (has token)
+            $isCustomer = isset($resetToken);
+            $tokenValue = $isCustomer ? $resetToken : ($token ?? '');
+            $formAction = site_url('reset/' . esc($tokenValue));
+            ?>
+
+            <form action="<?= $formAction ?>" method="POST">
+                <?php if ($isCustomer): ?>
+                    <!-- Hidden field for customer reset token -->
+                    <input type="hidden" name="reset_token" value="<?= esc($resetToken) ?>">
+                <?php endif; ?>
+
                 <div class="mb-3">
                     <label for="password" class="form-label">New Password</label>
                     <input type="password" name="password" id="password" class="form-control"
-                        placeholder="Enter new password" required autocomplete="new-password">
+                        placeholder="Enter new password" required autocomplete="new-password" minlength="8">
                 </div>
 
                 <div class="mb-3">
-                    <label for="password_confirm" class="form-label">Confirm Password</label>
-                    <input type="password" name="password_confirm" id="password_confirm" class="form-control"
-                        placeholder="Confirm new password" required autocomplete="new-password">
+                    <label for="<?= $isCustomer ? 'confirm_password' : 'password_confirm' ?>" class="form-label">Confirm Password</label>
+                    <input type="password" name="<?= $isCustomer ? 'confirm_password' : 'password_confirm' ?>"
+                        id="<?= $isCustomer ? 'confirm_password' : 'password_confirm' ?>" class="form-control"
+                        placeholder="Confirm new password" required autocomplete="new-password" minlength="8">
                 </div>
 
                 <div class="d-grid gap-3 mt-4">

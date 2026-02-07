@@ -171,7 +171,7 @@ class CustomersController extends BaseController
         $companyName = $customerName; // Assuming company name is the same as the customer's name
 
         // Send welcome email to the customer
-        $this->sendCustomerWelcomeEmail($customerEmail, $companyName, $logoPath, $customerName);
+        $this->sendCustomerWelcomeEmail($customerEmail, $companyName, $logoPath);
         // Insert customer data
         $customerData = [
             'company_id'      => $companyId,
@@ -218,9 +218,8 @@ class CustomersController extends BaseController
                 // Now, for each credential, generate the reset token, update the token and expiry, and send the reset email
                 foreach ($credentials as $credential) {
                     $resetToken = bin2hex(random_bytes(16)); // Random reset token
-                    $resetLink = site_url('customer/reset-password/' . $resetToken);
-
-                    // Save the reset token in the credentials table
+                    // Create reset link for customers - NEW URL
+                    $resetLink = site_url('customer/reset-password/' . $resetToken);                    // Save the reset token in the credentials table
                     $this->savePasswordResetToken($credential['email'], $resetToken);
 
                     // Send email with the reset password link
@@ -252,20 +251,16 @@ class CustomersController extends BaseController
     }
 
     // Function to send welcome email to the customer
-    public function sendCustomerWelcomeEmail(
-        $customerEmail,
-        $customerName,
-        $companyName,
-        $companyLogo
-    ) {
+    public function sendCustomerWelcomeEmail($customerEmail, $companyName, $companyLogo,)
+    {
         // Prepare the subject and from details
         $fromEmail = '1easyecommerce@gmail.com';
         $fromName = esc($companyName);
-        $subject = 'Welcome to ' . esc($companyName);
+        $subject = 'Welcome to Asset IQ';
 
         // Data for customer email
         $data = [
-            'customer_name' => esc($customerName),
+            'customer_name' => esc($companyName),
             'company_name' => esc($companyName),
             'company_logo' => $companyLogo  // Company logo path
         ];
@@ -294,7 +289,7 @@ class CustomersController extends BaseController
         // Prepare the subject and from details
         $fromEmail = '1easyecommerce@gmail.com';
         $fromName = esc($companyName);
-        $subject = 'Welcome to ' . esc($companyName) . ' - Set Your Password';
+        $subject = 'Welcome to Asset IQ - Set Your Password';
 
         // Data for user email
         $data = [
@@ -321,33 +316,29 @@ class CustomersController extends BaseController
 
 
     // Function to send password reset email
-    public function sendRestPasswordEmail($userEmail, $username, $resetLink, $companyName, $companyLogo)
+    public function sendPasswordResetEmail($email, $username, $resetLink)
     {
-        // Prepare the subject and from details
-        $fromEmail = '1easyecommerce@gmail.com';
-        $fromName = esc($companyName);
-        $subject = 'Welcome to ' . esc($companyName) . ' - Set Your Password';
+        $emailService = \Config\Services::email();
+        $emailService->setFrom('no-reply@company.com', 'Company Name');
+        $emailService->setTo($email);
+        $emailService->setSubject('Welcome to Asset IQ Set Your Password');
 
-        // Data for user email
+        // Data to be passed to the email template
         $data = [
-            'username' => esc($username),
-            'reset_link' => $resetLink,
-            'company_name' => esc($companyName),
-            'company_logo' => $companyLogo  // Company logo path
+            'customer_name' => $username,
+            'reset_link' => $resetLink
         ];
 
-        // Generate the email content by rendering the view template
-        $message = view('emails/reset_password', $data);
-        // Headers for the email
-        $headers = 'MIME-Version: 1.0' . "\r\n";
-        $headers .= 'Content-Type: text/html; charset=UTF-8' . "\r\n";
-        $headers .= 'From: ' . $fromName . ' <' . $fromEmail . '>' . "\r\n";
+        // Load the email template view
+        $message = view('emails/welcome_email', $data);
 
-        // Send the email
-        if (!mail($userEmail, $subject, $message, $headers)) {
-            log_message('error', 'Failed to send user welcome email to: ' . $userEmail);
+        $emailService->setMessage($message);
+
+        if (!$emailService->send()) {
+            log_message('error', 'Failed to send welcome email to: ' . $email);
         }
     }
+
 
 
     /**

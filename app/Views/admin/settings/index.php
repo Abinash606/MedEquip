@@ -248,6 +248,15 @@
 <script>
   $(function() {
 
+    const hash = window.location.hash.replace('#', '');
+
+    if (hash) {
+      activateTab(hash);
+    } else {
+      activateTab('generalSettings'); // default
+    }
+
+
     // ---------------------------------------
     // SweetAlert helper
     // ---------------------------------------
@@ -270,14 +279,38 @@
     // ---------------------------------------
     // Settings navigation pane switching
     // ---------------------------------------
+    // $('#settings-nav a').on('click', function(e) {
+    //   e.preventDefault();
+    //   $('#settings-nav a').removeClass('active');
+    //   $('.settings-pane').addClass('d-none');
+    //   $(this).addClass('active');
+    //   const targetId = $(this).data('target');
+    //   $('#' + targetId).removeClass('d-none');
+    // });
+
+
     $('#settings-nav a').on('click', function(e) {
       e.preventDefault();
+
+      const targetId = $(this).data('target');
+
+      history.pushState(null, '', '#' + targetId);
+
+      activateTab(targetId);
+    });
+
+    function activateTab(targetId) {
       $('#settings-nav a').removeClass('active');
       $('.settings-pane').addClass('d-none');
-      $(this).addClass('active');
-      const targetId = $(this).data('target');
+
+      $(`#settings-nav a[data-target="${targetId}"]`).addClass('active');
       $('#' + targetId).removeClass('d-none');
-    });
+
+      // ✅ Ensure IQ Notes always loads
+      if (targetId === 'iqNotesSettings') {
+        loadIqNotes();
+      }
+    }
 
     // ---------------------------------------
     // General Form Validation + Submit

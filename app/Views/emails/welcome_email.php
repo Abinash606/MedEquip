@@ -75,17 +75,15 @@
         <!-- Header -->
         <div class="header">
             <?php if (!empty($company_logo)): ?>
-                <img src="<?= base_url($company_logo) ?>" alt="<?= esc($company_name) ?> Logo">
+                <img src="<?= base_url($company_logo) ?>" alt="Asset IQ Logo">
             <?php endif; ?>
         </div>
 
         <!-- Content -->
         <div class="content">
-            <h2>Welcome, <?= esc($customer_name) ?>!</h2>
-
+            <h2>Welcome, To Asset IQ</h2>
             <p>
-                Thank you for registering with
-                <strong><?= esc($company_name) ?></strong>.
+                Thank you for registering with us
                 We're excited to have you on board and look forward to supporting you.
             </p>
 
