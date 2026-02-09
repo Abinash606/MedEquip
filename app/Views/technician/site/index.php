@@ -14,8 +14,7 @@
             <span class="input-group-text bg-white">
                 <i class="fa-solid fa-search"></i>
             </span>
-            <input id="site-search" type="text"
-                class="form-control border-start-0 ps-0"
+            <input id="site-search" type="text" class="form-control border-start-0 ps-0"
                 placeholder="Search by site, address or customer name...">
         </div>
     </div>
@@ -64,7 +63,7 @@
                             <td>
                                 <a href="<?= base_url('technician/sites/view/' . $site['id']) ?>"
                                     class="btn btn-sm btn-outline-primary">
-                                    View
+                                    View Details
                                 </a>
                             </td>
                         </tr>
@@ -118,50 +117,51 @@
     });
 </script>
 <script>
-$(document).ready(function () {
+    $(document).ready(function() {
 
-    const table = $('#sites-datatable').DataTable({
-        dom: 'Bfrtip',   // Buttons + search + table
-        pageLength: 10,
-        order: [[0, 'asc']],
-        buttons: [
-            {
-                extend: 'copy',
-                text: 'Copy'
-            },
-            {
-                extend: 'excelHtml5',
-                text: 'Excel',
-                filename: 'technician_sites',
-                title: 'Technician Sites'
-            },
-            {
-                extend: 'pdfHtml5',
-                text: 'PDF',
-                filename: 'technician_sites',
-                title: 'Technician Sites',
-                orientation: 'landscape',
-                pageSize: 'A4'
+        const table = $('#sites-datatable').DataTable({
+            dom: 'Bfrtip', // Buttons + search + table
+            pageLength: 10,
+            order: [
+                [0, 'asc']
+            ],
+            buttons: [{
+                    extend: 'copy',
+                    text: 'Copy'
+                },
+                {
+                    extend: 'excelHtml5',
+                    text: 'Excel',
+                    filename: 'technician_sites',
+                    title: 'Technician Sites'
+                },
+                {
+                    extend: 'pdfHtml5',
+                    text: 'PDF',
+                    filename: 'technician_sites',
+                    title: 'Technician Sites',
+                    orientation: 'landscape',
+                    pageSize: 'A4'
+                }
+            ]
+        });
+
+        // 🔍 Custom search input
+        $('#site-search').on('keyup', function() {
+            table.search(this.value).draw();
+        });
+
+        // 🧑‍💼 Customer filter
+        $('#customer-filter').on('change', function() {
+            const val = this.value;
+            if (val === '') {
+                table.column(1).search('').draw(); // Customer Name column
+            } else {
+                table.column(1).search('^' + val + '$', true, false).draw();
             }
-        ]
-    });
+        });
 
-    // 🔍 Custom search input
-    $('#site-search').on('keyup', function () {
-        table.search(this.value).draw();
     });
-
-    // 🧑‍💼 Customer filter
-    $('#customer-filter').on('change', function () {
-        const val = this.value;
-        if (val === '') {
-            table.column(1).search('').draw(); // Customer Name column
-        } else {
-            table.column(1).search('^' + val + '$', true, false).draw();
-        }
-    });
-
-});
 </script>
 
 <?= $this->endSection() ?>

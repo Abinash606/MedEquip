@@ -33,7 +33,8 @@ foreach ($customers as $cust) {
 <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-        <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
+        <input type="text" id="site-search" class="form-control border-start-0 ps-0"
+            placeholder="Search for sites by name or address...">
     </div>
 </div>
 
@@ -87,8 +88,7 @@ foreach ($customers as $cust) {
                         <td class="text-center">
                             <!-- Edit button: populate modal with site data -->
                             <button type="button" class="btn btn-sm btn-outline-secondary edit-site-btn" title="Edit"
-                                data-id="<?= $site['id'] ?>"
-                                data-name="<?= esc($site['name'], 'attr') ?>"
+                                data-id="<?= $site['id'] ?>" data-name="<?= esc($site['name'], 'attr') ?>"
                                 data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
                                 data-address="<?= esc($site['address'] ?? '', 'attr') ?>"
                                 data-city="<?= esc($site['city'] ?? '', 'attr') ?>"
@@ -102,8 +102,8 @@ foreach ($customers as $cust) {
                             </button>
 
                             <!-- Delete button -->
-                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger" title="Delete"
-                                onclick="return confirm('Are you sure you want to delete this site?')">
+                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger"
+                                title="Delete" onclick="return confirm('Are you sure you want to delete this site?')">
                                 <i class="fa fa-trash"></i> Delete
                             </a>
                         </td>
@@ -114,8 +114,6 @@ foreach ($customers as $cust) {
     </table>
 </div>
 
-
-<!-- Site Modal -->
 <!-- Site Modal -->
 <div class="modal fade" id="siteModal" tabindex="-1" aria-labelledby="siteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -132,11 +130,13 @@ foreach ($customers as $cust) {
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
+                            <label class="form-label" for="site-name">Site Name<span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
+                            <label class="form-label" for="site-customer-id">Customer<span
+                                    class="text-danger">*</span></label>
                             <select class="form-select" id="site-customer-id" name="customer_id" required>
                                 <option value="">-- Select Customer --</option>
                                 <?php foreach ($customers as $cust): ?>
@@ -206,39 +206,101 @@ foreach ($customers as $cust) {
             buttons: [{
                     extend: 'copyHtml5',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)' // remove action column
                     }
                 },
                 {
                     extend: 'excelHtml5',
-                    filename: 'sites',
+                    filename: 'Sites',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
                     }
                 },
                 {
                     extend: 'csvHtml5',
-                    filename: 'sites',
+                    filename: 'Sites',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
                     }
                 },
                 {
                     extend: 'pdfHtml5',
+                    title: 'Sites',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+
                     filename: function() {
                         const today = new Date();
-
                         let day = String(today.getDate()).padStart(2, '0');
                         let month = String(today.getMonth() + 1).padStart(2, '0');
                         let year = today.getFullYear();
-
                         return 'Sites_' + day + month + year;
                     },
-                    title: 'Sites',
+
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
+                    },
+
+                    customize: function(doc) {
+
+                        /* FONT SIZE */
+                        doc.defaultStyle.fontSize = 7;
+
+                        /* HEADER STYLE */
+                        doc.styles.tableHeader = {
+                            bold: true,
+                            fontSize: 8,
+                            color: 'black',
+                            fillColor: '#a4d169',
+                            alignment: 'center'
+                        };
+
+                        /* PAGE MARGIN */
+                        doc.pageMargins = [10, 10, 10, 10];
+
+                        /* AUTO WIDTH */
+                        var table = doc.content[1].table;
+                        var colCount = table.body[0].length;
+                        table.widths = new Array(colCount).fill('*');
+
+                        /* ROW COLORS */
+                        doc.styles.tableBodyEven = {
+                            fillColor: '#f2f2f2'
+                        };
+                        doc.styles.tableBodyOdd = {
+                            fillColor: '#ffffff'
+                        };
+
+                        /* ===== BORDER FIX ===== */
+                        doc.content[1].layout = {
+                            hLineWidth: function() {
+                                return 0.5;
+                            },
+                            vLineWidth: function() {
+                                return 0.5;
+                            },
+                            hLineColor: function() {
+                                return '#aaaaaa';
+                            },
+                            vLineColor: function() {
+                                return '#aaaaaa';
+                            },
+                            paddingLeft: function() {
+                                return 4;
+                            },
+                            paddingRight: function() {
+                                return 4;
+                            },
+                            paddingTop: function() {
+                                return 3;
+                            },
+                            paddingBottom: function() {
+                                return 3;
+                            }
+                        };
                     }
                 }
+
             ],
             responsive: true,
             scrollX: true,
@@ -246,6 +308,7 @@ foreach ($customers as $cust) {
                 emptyTable: "No sites found matching your search criteria."
             }
         });
+
 
         // Handle search by name or address (global search)
         $('#site-search').on('keyup', function() {
@@ -342,7 +405,8 @@ foreach ($customers as $cust) {
                             $('#submitBtn').text('Save');
 
                             // Force page reload after success
-                            location.reload(); // This reloads the page and shows the latest data
+                            location
+                                .reload(); // This reloads the page and shows the latest data
                         });
                     },
                     error: function() {

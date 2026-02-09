@@ -160,8 +160,10 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->get('customers', 'Technician\\CustomerController::index');
     $routes->get('inspections', 'Technician\\InspectionController::index');
     $routes->get('sites', 'Technician\\SitesController::index');
+    $routes->get('sites/view/(:num)', 'Technician\SitesController::view/$1');
     $routes->get('reports', 'Technician\\ReportsController::index');
     $routes->get('service-history', 'Technician\\ServiceHistoryController::index');
+    $routes->post('service-history/create', 'Technician\\ServiceHistoryController::create');
 });
 
 // Auto routing is disabled for security. Explicitly define your routes above.

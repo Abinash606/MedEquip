@@ -4,13 +4,15 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Customer Directory</h3>
-    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal" data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal"
+        data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
 </div>
 
 <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-        <input type="text" class="form-control border-start-0 ps-0" id="customer-search" placeholder="Search for customers by name or address...">
+        <input type="text" class="form-control border-start-0 ps-0" id="customer-search"
+            placeholder="Search for customers by name or address...">
         <button class="btn btn-outline-primary" id="searchBtn">Search</button>
     </div>
 </div>
@@ -34,39 +36,42 @@
         </thead>
         <tbody>
             <?php foreach ($customers as $customer): ?>
-                <tr>
+            <tr>
 
-                    <td>
-                        <?php if (!empty($customer['first_site_id'])): ?>
-                            <?php if ($customer['site_count'] == 1): ?>
-                                <a href="<?= site_url('admin/sites/' . $customer['first_site_id']) ?>" class="text-primary fw-bold">
-                                    <?= esc($customer['name']) ?>
-                                </a>
-                            <?php else: ?>
-                                <a href="<?= site_url('admin/sites') ?>" class="text-primary fw-bold">
-                                    <?= esc($customer['name']) ?>
-                                </a>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <?= esc($customer['name']) ?>
-                        <?php endif; ?>
-                    </td>
+                <td>
+                    <?php if (!empty($customer['first_site_id'])): ?>
+                    <?php if ($customer['site_count'] == 1): ?>
+                    <a href="<?= site_url('admin/sites/' . $customer['first_site_id']) ?>" class="text-primary fw-bold">
+                        <?= esc($customer['name']) ?>
+                    </a>
+                    <?php else: ?>
+                    <a href="<?= site_url('admin/sites') ?>" class="text-primary fw-bold">
+                        <?= esc($customer['name']) ?>
+                    </a>
+                    <?php endif; ?>
+                    <?php else: ?>
+                    <?= esc($customer['name']) ?>
+                    <?php endif; ?>
+                </td>
 
-                    <td><?= $customer['billing_address'] ?></td>
-                    <td><?= $customer['billing_city'] ?></td>
-                    <td><?= $customer['billing_state'] ?></td>
-                    <td><?= $customer['billing_zip'] ?></td>
-                    <td><?= $customer['contact_name'] ?></td>
-                    <td><?= $customer['email'] ?></td>
-                    <td><?= $customer['phone'] ?></td>
-                    <td><?= $customer['fax'] ?></td>
-                    <td><?= $customer['website'] ?></td>
-                    <td>
-                        <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
-                        <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
-                        <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal" data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
-                    </td>
-                </tr>
+                <td><?= $customer['billing_address'] ?></td>
+                <td><?= $customer['billing_city'] ?></td>
+                <td><?= $customer['billing_state'] ?></td>
+                <td><?= $customer['billing_zip'] ?></td>
+                <td><?= $customer['contact_name'] ?></td>
+                <td><?= $customer['email'] ?></td>
+                <td><?= $customer['phone'] ?></td>
+                <td><?= $customer['fax'] ?></td>
+                <td><?= $customer['website'] ?></td>
+                <td>
+                    <button data-id="<?= $customer['id'] ?>" data-modal-type="edit"
+                        class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
+                    <button data-id="<?= $customer['id'] ?>"
+                        class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
+                    <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal"
+                        data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
+                </td>
+            </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
@@ -88,7 +93,8 @@
                     <!-- Customer Details -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="customer-name">Customer Name<span class="text-danger">*</span></label>
+                            <label class="form-label" for="customer-name">Customer Name<span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="customer-name" name="name" required>
                         </div>
                         <div class="col-md-6">
@@ -100,7 +106,8 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label" for="customer-billing-address">Customer Address</label>
-                            <input type="text" class="form-control" id="customer-billing-address" name="billing_address">
+                            <input type="text" class="form-control" id="customer-billing-address"
+                                name="billing_address">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="customer-city">Billing City</label>
@@ -115,11 +122,11 @@
                             <select class="form-select" id="customer-state" name="billing_state">
                                 <option value="">Select State</option>
                                 <?php if (!empty($states)): ?>
-                                    <?php foreach ($states as $st): ?>
-                                        <option value="<?= esc($st['code']) ?>">
-                                            <?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
-                                        </option>
-                                    <?php endforeach; ?>
+                                <?php foreach ($states as $st): ?>
+                                <option value="<?= esc($st['code']) ?>">
+                                    <?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
+                                </option>
+                                <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
 
@@ -178,7 +185,8 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="admin-password-1" class="form-label">Admin password 1</label>
-                                <input type="password" class="form-control" id="admin-password-1" name="portal_password[]">
+                                <input type="password" class="form-control" id="admin-password-1"
+                                    name="portal_password[]">
                             </div>
                         </div>
                     </div>
@@ -188,7 +196,8 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save changes</button>
+                    <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save
+                        changes</button>
                     <span id="submitBtnProgress" class="text-muted" style="display:none;">Processing...</span>
                 </div>
             </div>
@@ -213,12 +222,15 @@
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
+                            <label class="form-label" for="site-name">Site Name<span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="site-customer-name" name="customer_name" readonly> <!-- Readonly customer name field -->
+                            <label class="form-label" for="site-customer-id">Customer<span
+                                    class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="site-customer-name" name="customer_name"
+                                readonly> <!-- Readonly customer name field -->
 
                         </div>
                     </div>
@@ -237,11 +249,11 @@
                             <select class="form-select" id="site-state" name="state">
                                 <option value="">Select State</option>
                                 <?php if (!empty($states)): ?>
-                                    <?php foreach ($states as $st): ?>
-                                        <option value="<?= esc($st['code']) ?>">
-                                            <?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
-                                        </option>
-                                    <?php endforeach; ?>
+                                <?php foreach ($states as $st): ?>
+                                <option value="<?= esc($st['code']) ?>">
+                                    <?= esc($st['name']) ?> (<?= esc($st['code']) ?>)
+                                </option>
+                                <?php endforeach; ?>
                                 <?php endif; ?>
                             </select>
                         </div>
@@ -275,211 +287,252 @@
     </div>
 </div>
 <script>
-    $(document).ready(function() {
-        // When the "Add Site" button is clicked
-        $(".btn-add-site").click(function() {
-            var customerId = $(this).data('id'); // Get the customer ID
-            var customerName = $(this).data('name'); // Get the customer name from the table
+$(document).ready(function() {
+    // When the "Add Site" button is clicked
+    $(".btn-add-site").click(function() {
+        var customerId = $(this).data('id'); // Get the customer ID
+        var customerName = $(this).data('name'); // Get the customer name from the table
 
-            // Set the customer ID in the hidden field
-            $("#site-customer-id").val(customerId);
+        // Set the customer ID in the hidden field
+        $("#site-customer-id").val(customerId);
 
-            // Set the customer name in the readonly input field
-            $("#site-customer-name").val(customerName);
-        });
+        // Set the customer name in the readonly input field
+        $("#site-customer-name").val(customerName);
+    });
 
-        // jQuery Validation for Add/Edit Site
-        $('#siteForm').validate({
-            rules: {
-                'name': {
-                    required: true,
-                    maxlength: 255
+    // jQuery Validation for Add/Edit Site
+    $('#siteForm').validate({
+        rules: {
+            'name': {
+                required: true,
+                maxlength: 255
+            },
+            'customer_id': {
+                required: true
+            },
+            'address': {
+                maxlength: 255
+            },
+            'city': {
+                maxlength: 255
+            },
+            'state': {
+                maxlength: 255
+            },
+            'zip': {
+                maxlength: 20
+            },
+            'contact_name': {
+                maxlength: 255
+            },
+            'email': {
+                email: true,
+                maxlength: 255
+            },
+            'phone': {
+                maxlength: 50
+            }
+        },
+        messages: {
+            'name': {
+                required: "Site name is required.",
+                maxlength: "Site name cannot exceed 255 characters."
+            },
+            'customer_id': {
+                required: "Please select a customer."
+            },
+            'email': {
+                email: "Please enter a valid email address.",
+                maxlength: "Email cannot exceed 255 characters."
+            },
+            'phone': {
+                maxlength: "Phone number cannot exceed 50 characters."
+            }
+        },
+        submitHandler: function(form) {
+            var actionUrl = $(form).attr('action');
+            var formData = new FormData(form);
+
+            // AJAX request to submit the form
+            $.ajax({
+                type: 'POST',
+                url: actionUrl,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Site saved successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then((result) => {
+                        // Close modal and reset form
+                        $('#siteModal').modal('hide');
+                        $('#siteForm')[0].reset(); // Clear form data
+                        $('#siteModalLabel').text('Add Site');
+                        $('#submitBtn').text('Save');
+
+                        // Force page reload after success
+                        location
+                            .reload(); // This reloads the page and shows the latest data
+                    });
                 },
-                'customer_id': {
-                    required: true
-                },
-                'address': {
-                    maxlength: 255
-                },
-                'city': {
-                    maxlength: 255
-                },
-                'state': {
-                    maxlength: 255
-                },
-                'zip': {
-                    maxlength: 20
-                },
-                'contact_name': {
-                    maxlength: 255
-                },
-                'email': {
-                    email: true,
-                    maxlength: 255
-                },
-                'phone': {
-                    maxlength: 50
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'An error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+    });
+});
+
+$(document).ready(function() {
+    var table = $('#customer-datatable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [{
+                extend: 'copyHtml5',
+                exportOptions: {
+                    columns: ':visible:not(:last-child)' // Exclude Actions column
                 }
             },
-            messages: {
-                'name': {
-                    required: "Site name is required.",
-                    maxlength: "Site name cannot exceed 255 characters."
-                },
-                'customer_id': {
-                    required: "Please select a customer."
-                },
-                'email': {
-                    email: "Please enter a valid email address.",
-                    maxlength: "Email cannot exceed 255 characters."
-                },
-                'phone': {
-                    maxlength: "Phone number cannot exceed 50 characters."
+            {
+                extend: 'excelHtml5',
+                filename: 'Customers',
+                exportOptions: {
+                    columns: ':visible:not(:last-child)' // Exclude Actions column
                 }
             },
-            submitHandler: function(form) {
-                var actionUrl = $(form).attr('action');
-                var formData = new FormData(form);
+            {
+                extend: 'csvHtml5',
+                filename: 'Customers',
+                exportOptions: {
+                    columns: ':visible:not(:last-child)' // Exclude Actions column
+                }
+            },
+            {
+                extend: 'pdfHtml5',
+                title: 'Customers',
 
-                // AJAX request to submit the form
-                $.ajax({
-                    type: 'POST',
-                    url: actionUrl,
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Site saved successfully!',
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then((result) => {
-                            // Close modal and reset form
-                            $('#siteModal').modal('hide');
-                            $('#siteForm')[0].reset(); // Clear form data
-                            $('#siteModalLabel').text('Add Site');
-                            $('#submitBtn').text('Save');
+                orientation: 'landscape',
+                pageSize: 'LEGAL', // ⭐ IMPORTANT — more width than A4
 
-                            // Force page reload after success
-                            location.reload(); // This reloads the page and shows the latest data
-                        });
-                    },
-                    error: function() {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
+                filename: function() {
+                    const d = new Date();
+                    return 'Customers_' +
+                        String(d.getDate()).padStart(2, '0') +
+                        String(d.getMonth() + 1).padStart(2, '0') +
+                        d.getFullYear();
+                },
+
+                exportOptions: {
+                    columns: ':visible:not(:last-child)'
+                },
+
+                customize: function(doc) {
+
+                    doc.defaultStyle.fontSize = 6;
+
+                    doc.styles.tableHeader = {
+                        bold: true,
+                        fontSize: 7,
+                        color: 'black',
+                        fillColor: '#a4d169',
+                        alignment: 'center'
+                    };
+
+                    doc.pageMargins = [5, 5, 5, 5];
+
+                    var table = doc.content[1].table;
+                    var colCount = table.body[0].length;
+
+                    table.widths = [];
+                    for (var i = 0; i < colCount; i++) {
+                        table.widths.push('*');
                     }
-                });
+
+                    doc.content[1].layout = {
+                        hLineWidth: function() {
+                            return 0.5;
+                        },
+                        vLineWidth: function() {
+                            return 0.5;
+                        }
+                    };
+                }
+            }
+
+
+
+        ],
+        responsive: true,
+        scrollX: true,
+        language: {
+            emptyTable: "No customers found matching your search criteria."
+        }
+    });
+    // On page load, populate the table with all customers
+    // Load all customers on page load
+    function loadTable(customers) {
+        // Clear existing rows in the table
+        table.clear();
+
+        // Add customers to the table
+        customers.forEach(function(customer) {
+            var editUrl = "<?= site_url('admin/sites/add?customer_id='); ?>" + customer
+                .id; // Correct way to get the URL
+            var row = [
+                customer.name,
+                customer.billing_address,
+                customer.billing_city,
+                customer.billing_state,
+                customer.billing_zip,
+                customer.contact_name,
+                customer.email,
+                customer.phone,
+                customer.fax,
+                customer.website,
+                `<button data-id="${customer.id}" class="btn btn-sm btn-outline-secondary btn-edit-customer" >Edit</button>
+             <button data-id="${customer.id}" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
+             <a href="${editUrl}" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</a>`
+            ];
+
+            table.row.add(row).draw();
+        });
+    }
+
+
+    // Search button functionality
+    $('#searchBtn').click(function() {
+        var searchTerm = $('#customer-search').val().trim(); // Get the search term
+
+        // Make AJAX request to search customers
+        $.ajax({
+            url: '<?php echo base_url(); ?>admin/customers/search', // Controller method to handle search
+            method: 'GET',
+            data: {
+                search: searchTerm
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    loadTable(response.customers); // Update the table with search results
+                }
+            },
+            error: function() {
+                Swal.fire('Error', 'An error occurred while searching for customers.',
+                    'error');
             }
         });
     });
-
-    $(document).ready(function() {
-        var table = $('#customer-datatable').DataTable({
-            dom: 'Bfrtip',
-            buttons: [{
-                    extend: 'copyHtml5',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
-                {
-                    extend: 'excelHtml5',
-                    filename: 'Customers',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
-                {
-                    extend: 'csvHtml5',
-                    filename: 'Customers',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                },
-                {
-                    extend: 'pdfHtml5',
-                    filename: function() {
-                        const today = new Date();
-
-                        let day = String(today.getDate()).padStart(2, '0');
-                        let month = String(today.getMonth() + 1).padStart(2, '0');
-                        let year = today.getFullYear();
-
-                        return 'Customers_' + day + month + year;
-                    },
-                    title: 'Customers',
-                    exportOptions: {
-                        columns: ':visible'
-                    }
-                }
-            ],
-            responsive: true,
-            scrollX: true,
-            language: {
-                emptyTable: "No customers found matching your search criteria."
-            }
-        });
-        // On page load, populate the table with all customers
-        // Load all customers on page load
-        function loadTable(customers) {
-            // Clear existing rows in the table
-            table.clear();
-
-            // Add customers to the table
-            customers.forEach(function(customer) {
-                var editUrl = "<?= site_url('admin/sites/add?customer_id='); ?>" + customer.id; // Correct way to get the URL
-                var row = [
-                    customer.name,
-                    customer.billing_address,
-                    customer.billing_city,
-                    customer.billing_state,
-                    customer.billing_zip,
-                    customer.contact_name,
-                    customer.email,
-                    customer.phone,
-                    customer.fax,
-                    customer.website,
-                    `<button data-id="${customer.id}" class="btn btn-sm btn-outline-secondary btn-edit-customer" >Edit</button>
-             <button data-id="${customer.id}" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
-             <a href="${editUrl}" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</a>`
-                ];
-
-                table.row.add(row).draw();
-            });
-        }
-
-
-        // Search button functionality
-        $('#searchBtn').click(function() {
-            var searchTerm = $('#customer-search').val().trim(); // Get the search term
-
-            // Make AJAX request to search customers
-            $.ajax({
-                url: '<?php echo base_url(); ?>admin/customers/search', // Controller method to handle search
-                method: 'GET',
-                data: {
-                    search: searchTerm
-                },
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        loadTable(response.customers); // Update the table with search results
-                    }
-                },
-                error: function() {
-                    Swal.fire('Error', 'An error occurred while searching for customers.', 'error');
-                }
-            });
-        });
-        let credentialCount = 1;
-        $('#add-credential-btn').on('click', function() {
-            credentialCount++;
-            const newCredentialSet = `
+    let credentialCount = 1;
+    $('#add-credential-btn').on('click', function() {
+        credentialCount++;
+        const newCredentialSet = `
                 <div class="row g-3 credential-set mt-3">
                     <div class="col-md-4">
                         <label for="admin-username-${credentialCount}" class="form-label">Admin username ${credentialCount}</label>
@@ -494,229 +547,237 @@
                         <input type="password" class="form-control" id="admin-password-${credentialCount}" name="portal_password[]">
                     </div>
                 </div>`;
-            $('#credentials-container').append(newCredentialSet);
-        });
-
+        $('#credentials-container').append(newCredentialSet);
     });
 
-    $(document).ready(function() {
-        $.validator.addMethod("extension", function(value, element, param) {
-            // Get file extension from input value
-            var fileExtension = value.split('.').pop().toLowerCase();
-            // Check if the extension is in the allowed list
-            return this.optional(element) || param.split('|').indexOf(fileExtension) !== -1;
-        }, "Please upload a valid file format (jpg, jpeg, png, gif).");
-        // Custom filesize validation function
-        $.validator.addMethod("filesize", function(value, element, param) {
-            var file = element.files[0];
-            if (file) {
-                var fileSize = file.size / 1024; // File size in KB
-                return fileSize <= param; // Check if file size is less than or equal to max size
-            }
-            return true; // Allow empty file input (optional)
-        }, "File size must be less than {0}KB.");
-        // jQuery Validation
-        $('#customerForm').validate({
-            rules: {
-                'name': {
-                    required: true,
-                    maxlength: 255
-                },
-                'contact_name': {
-                    maxlength: 255
-                },
-                'email': {
-                    required: true,
-                    email: true,
-                    maxlength: 255,
-                    remote: {
-                        url: "<?php echo base_url(); ?>admin/customers/check-email", // URL to check email uniqueness
-                        type: "post",
-                        data: {
-                            email: function() {
-                                return $("#customer-email").val();
-                            },
-                            id: function() {
-                                return $("#customer-id").val(); // Send the customer ID along with the email
-                            }
-                        },
-                        dataType: "json",
-                        dataFilter: function(data) {
-                            var json = JSON.parse(data);
-                            return json.unique === "true"; // Based on your backend logic (respond with {unique: "true/false"})
-                        }
-                    }
-                },
-                'phone': {
-                    maxlength: 50
-                },
-                'billing_address': {
-                    maxlength: 255
-                },
-                'billing_city': {
-                    maxlength: 255
-                },
-                'billing_state': {
-                    maxlength: 255
-                },
-                'billing_zip': {
-                    maxlength: 20
-                },
-                'fax': {
-                    maxlength: 50
-                },
-                'website': {
-                    maxlength: 255
-                },
-                'logo': {
-                    extension: "jpg|jpeg|png|gif",
-                    filesize: 2048 // 2MB max size
-                }
-            },
-            messages: {
-                'name': {
-                    required: "Customer name is required.",
-                    maxlength: "Customer name cannot exceed 255 characters."
-                },
-                'email': {
-                    required: "Email is required.",
-                    email: "Please enter a valid email address.",
-                    maxlength: "Email cannot exceed 255 characters.",
-                    remote: "This email is already taken." // Error message when email is not unique
-                },
-                'phone': {
-                    maxlength: "Phone number cannot exceed 50 characters."
-                },
-                'billing_address': {
-                    maxlength: "Billing address cannot exceed 255 characters."
-                },
-                'billing_city': {
-                    maxlength: "Billing city cannot exceed 255 characters."
-                },
-                'billing_state': {
-                    maxlength: "Billing state cannot exceed 255 characters."
-                },
-                'billing_zip': {
-                    maxlength: "Billing zip cannot exceed 20 characters."
-                },
-                'fax': {
-                    maxlength: "Fax cannot exceed 50 characters."
-                },
-                'website': {
-                    maxlength: "Website cannot exceed 255 characters."
-                },
-                'logo': {
-                    extension: "Only image files (jpg, jpeg, png, gif) are allowed.",
-                    filesize: "File size should not exceed 2MB."
-                }
-            },
-            submitHandler: function(form, event) {
-                event.preventDefault(); // Prevent default form submission until validation is complete
-                var formData = new FormData(form);
-                var actionUrl = ($('#customer-id').val()) ? '<?php echo base_url(); ?>admin/customers/update/' + $('#customer-id').val() : '<?php echo base_url(); ?>admin/customers/add';
+});
 
-                $.ajax({
-                    type: 'POST',
-                    url: actionUrl,
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function(response) {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Customer saved successfully!',
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        });
-                        $('#customerModal').modal('hide');
-                        location.reload();
-                    },
-                    error: function() {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    }
-                });
-            }
-        });
-    });
-
-    function validateForm() {
-        if ($("#customerForm").valid()) {
-            $('#submitBtn').prop('disabled', true);
-            $('#submitBtnProgress').show();
-
-            $('#customerForm').submit();
-        } else {
-            console.log('Form is invalid');
+$(document).ready(function() {
+    $.validator.addMethod("extension", function(value, element, param) {
+        // Get file extension from input value
+        var fileExtension = value.split('.').pop().toLowerCase();
+        // Check if the extension is in the allowed list
+        return this.optional(element) || param.split('|').indexOf(fileExtension) !== -1;
+    }, "Please upload a valid file format (jpg, jpeg, png, gif).");
+    // Custom filesize validation function
+    $.validator.addMethod("filesize", function(value, element, param) {
+        var file = element.files[0];
+        if (file) {
+            var fileSize = file.size / 1024; // File size in KB
+            return fileSize <= param; // Check if file size is less than or equal to max size
         }
-    }
-
-    $(document).ready(function() {
-        $('#customerModal').on('show.bs.modal', function(e) {
-            // Check if it's the 'Add' modal (not an 'Edit' modal)
-            var modalType = $(e.relatedTarget).data('modal-type'); // You can set this data in the button that opens the modal (add or edit)
-
-            if (modalType === 'add') {
-                // Reset the form fields for 'Add' modal
-                $('#customerForm')[0].reset();
-                $('#customer-id').val(''); // Reset the hidden ID field
-                $('#logo-preview').html(''); // Reset the logo preview
+        return true; // Allow empty file input (optional)
+    }, "File size must be less than {0}KB.");
+    // jQuery Validation
+    $('#customerForm').validate({
+        rules: {
+            'name': {
+                required: true,
+                maxlength: 255
+            },
+            'contact_name': {
+                maxlength: 255
+            },
+            'email': {
+                required: true,
+                email: true,
+                maxlength: 255,
+                remote: {
+                    url: "<?php echo base_url(); ?>admin/customers/check-email", // URL to check email uniqueness
+                    type: "post",
+                    data: {
+                        email: function() {
+                            return $("#customer-email").val();
+                        },
+                        id: function() {
+                            return $("#customer-id")
+                                .val(); // Send the customer ID along with the email
+                        }
+                    },
+                    dataType: "json",
+                    dataFilter: function(data) {
+                        var json = JSON.parse(data);
+                        return json.unique ===
+                            "true"; // Based on your backend logic (respond with {unique: "true/false"})
+                    }
+                }
+            },
+            'phone': {
+                maxlength: 50
+            },
+            'billing_address': {
+                maxlength: 255
+            },
+            'billing_city': {
+                maxlength: 255
+            },
+            'billing_state': {
+                maxlength: 255
+            },
+            'billing_zip': {
+                maxlength: 20
+            },
+            'fax': {
+                maxlength: 50
+            },
+            'website': {
+                maxlength: 255
+            },
+            'logo': {
+                extension: "jpg|jpeg|png|gif",
+                filesize: 2048 // 2MB max size
             }
-            // Else, load the data for 'Edit' modal, based on what you need (e.g., customer details)
-        });
-        $('#customerModal').on('hidden.bs.modal', function() {
-            // Reset the form every time the modal is closed
+        },
+        messages: {
+            'name': {
+                required: "Customer name is required.",
+                maxlength: "Customer name cannot exceed 255 characters."
+            },
+            'email': {
+                required: "Email is required.",
+                email: "Please enter a valid email address.",
+                maxlength: "Email cannot exceed 255 characters.",
+                remote: "This email is already taken." // Error message when email is not unique
+            },
+            'phone': {
+                maxlength: "Phone number cannot exceed 50 characters."
+            },
+            'billing_address': {
+                maxlength: "Billing address cannot exceed 255 characters."
+            },
+            'billing_city': {
+                maxlength: "Billing city cannot exceed 255 characters."
+            },
+            'billing_state': {
+                maxlength: "Billing state cannot exceed 255 characters."
+            },
+            'billing_zip': {
+                maxlength: "Billing zip cannot exceed 20 characters."
+            },
+            'fax': {
+                maxlength: "Fax cannot exceed 50 characters."
+            },
+            'website': {
+                maxlength: "Website cannot exceed 255 characters."
+            },
+            'logo': {
+                extension: "Only image files (jpg, jpeg, png, gif) are allowed.",
+                filesize: "File size should not exceed 2MB."
+            }
+        },
+        submitHandler: function(form, event) {
+            event.preventDefault(); // Prevent default form submission until validation is complete
+            var formData = new FormData(form);
+            var actionUrl = ($('#customer-id').val()) ?
+                '<?php echo base_url(); ?>admin/customers/update/' + $('#customer-id').val() :
+                '<?php echo base_url(); ?>admin/customers/add';
+
+            $.ajax({
+                type: 'POST',
+                url: actionUrl,
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Customer saved successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+                    $('#customerModal').modal('hide');
+                    location.reload();
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Error!',
+                        text: 'An error occurred. Please try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+    });
+});
+
+function validateForm() {
+    if ($("#customerForm").valid()) {
+        $('#submitBtn').prop('disabled', true);
+        $('#submitBtnProgress').show();
+
+        $('#customerForm').submit();
+    } else {
+        console.log('Form is invalid');
+    }
+}
+
+$(document).ready(function() {
+    $('#customerModal').on('show.bs.modal', function(e) {
+        // Check if it's the 'Add' modal (not an 'Edit' modal)
+        var modalType = $(e.relatedTarget).data(
+            'modal-type'); // You can set this data in the button that opens the modal (add or edit)
+
+        if (modalType === 'add') {
+            // Reset the form fields for 'Add' modal
             $('#customerForm')[0].reset();
             $('#customer-id').val(''); // Reset the hidden ID field
             $('#logo-preview').html(''); // Reset the logo preview
-        });
+        }
+        // Else, load the data for 'Edit' modal, based on what you need (e.g., customer details)
+    });
+    $('#customerModal').on('hidden.bs.modal', function() {
+        // Reset the form every time the modal is closed
+        $('#customerForm')[0].reset();
+        $('#customer-id').val(''); // Reset the hidden ID field
+        $('#logo-preview').html(''); // Reset the logo preview
+    });
 
 
-        // Edit button functionality
-        $(".btn-edit-customer").click(function() {
-            var customerId = $(this).data('id'); // Get customer ID from the button
+    // Edit button functionality
+    $(".btn-edit-customer").click(function() {
+        var customerId = $(this).data('id'); // Get customer ID from the button
 
-            // Make AJAX call to fetch customer details
-            $.ajax({
-                url: '<?php echo base_url(); ?>admin/customers/edit/' + customerId, // Controller action to fetch data
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success) {
-                        var customer = response.data; // Customer data
-                        var credentials = response.credentials;
-                        var imageUrl = response.image_url; // Image URL
+        // Make AJAX call to fetch customer details
+        $.ajax({
+            url: '<?php echo base_url(); ?>admin/customers/edit/' +
+                customerId, // Controller action to fetch data
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    var customer = response.data; // Customer data
+                    var credentials = response.credentials;
+                    var imageUrl = response.image_url; // Image URL
 
-                        // Populate the modal fields with the data
-                        $("#customer-id").val(customer.id);
-                        $("#customer-name").val(customer.name);
-                        $("#customer-contact").val(customer.contact_name);
-                        $("#customer-billing-address").val(customer.billing_address);
-                        $("#customer-city").val(customer.billing_city);
-                        $("#customer-state").val(customer.billing_state);
-                        $("#customer-zip").val(customer.billing_zip);
-                        $("#customer-fax").val(customer.fax);
-                        $("#customer-email").val(customer.email);
-                        $("#customer-phone").val(customer.phone);
-                        $("#customer-website").val(customer.website);
+                    // Populate the modal fields with the data
+                    $("#customer-id").val(customer.id);
+                    $("#customer-name").val(customer.name);
+                    $("#customer-contact").val(customer.contact_name);
+                    $("#customer-billing-address").val(customer.billing_address);
+                    $("#customer-city").val(customer.billing_city);
+                    $("#customer-state").val(customer.billing_state);
+                    $("#customer-zip").val(customer.billing_zip);
+                    $("#customer-fax").val(customer.fax);
+                    $("#customer-email").val(customer.email);
+                    $("#customer-phone").val(customer.phone);
+                    $("#customer-website").val(customer.website);
 
-                        // Show the customer logo image if it exists
-                        if (imageUrl) {
-                            $("#logo-preview").html('<img src="' + imageUrl + '" alt="Logo" class="img-thumbnail" style="max-width: 100px;">');
-                        } else {
-                            $("#logo-preview").html('<p>No logo uploaded</p>');
-                        }
+                    // Show the customer logo image if it exists
+                    if (imageUrl) {
+                        $("#logo-preview").html('<img src="' + imageUrl +
+                            '" alt="Logo" class="img-thumbnail" style="max-width: 100px;">'
+                        );
+                    } else {
+                        $("#logo-preview").html('<p>No logo uploaded</p>');
+                    }
 
-                        // Clear existing credentials before adding new ones
-                        $("#credentials-container").empty();
+                    // Clear existing credentials before adding new ones
+                    $("#credentials-container").empty();
 
-                        // Populate the credentials section dynamically
-                        credentials.forEach(function(credential, index) {
-                            var credentialHTML = `
+                    // Populate the credentials section dynamically
+                    credentials.forEach(function(credential, index) {
+                        var credentialHTML = `
                             <div class="row g-3 credential-set">
                                 <div class="col-md-4">
                                     <label for="admin-username-${index + 1}" class="form-label">Admin username ${index + 1}</label>
@@ -731,43 +792,45 @@
                                     <input type="password" class="form-control" id="admin-password-${index + 1}" name="portal_password[]" value="${credential.password}">
                                 </div>
                             </div>`;
-                            $("#credentials-container").append(credentialHTML);
-                        });
+                        $("#credentials-container").append(credentialHTML);
+                    });
 
-                        // Open the modal for editing
-                        $('#customerModal').modal('show');
-                    } else {
-                        Swal.fire('Error!', 'Customer data not found!', 'error');
-                    }
-                },
-                error: function() {
-                    Swal.fire('Error!', 'An error occurred while fetching customer data.', 'error');
+                    // Open the modal for editing
+                    $('#customerModal').modal('show');
+                } else {
+                    Swal.fire('Error!', 'Customer data not found!', 'error');
                 }
-            });
-        });
-
-        // Delete button functionality with SweetAlert confirmation
-        $(".btn-delete-customer").click(function(e) {
-            e.preventDefault();
-            var customerId = $(this).data('id');
-
-            // Show SweetAlert confirmation
-            Swal.fire({
-                title: 'Are you sure?',
-                text: 'You won\'t be able to revert this!',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Redirect to delete URL
-                    window.location.href = '<?php echo base_url(); ?>admin/customers/delete/' + customerId;
-                }
-            });
+            },
+            error: function() {
+                Swal.fire('Error!', 'An error occurred while fetching customer data.',
+                    'error');
+            }
         });
     });
+
+    // Delete button functionality with SweetAlert confirmation
+    $(".btn-delete-customer").click(function(e) {
+        e.preventDefault();
+        var customerId = $(this).data('id');
+
+        // Show SweetAlert confirmation
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'You won\'t be able to revert this!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Redirect to delete URL
+                window.location.href = '<?php echo base_url(); ?>admin/customers/delete/' +
+                    customerId;
+            }
+        });
+    });
+});
 </script>
 
 <?= $this->endSection() ?>

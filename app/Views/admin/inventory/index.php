@@ -329,18 +329,84 @@
                         filename: 'Inventory'
                     },
                     {
-                        extend: 'pdf',
+                        extend: 'pdfHtml5',
+                        title: 'Inventory',
+
+                        orientation: 'landscape',
+                        pageSize: 'LEGAL',
+
                         filename: function() {
                             const today = new Date();
-
                             let day = String(today.getDate()).padStart(2, '0');
                             let month = String(today.getMonth() + 1).padStart(2, '0');
                             let year = today.getFullYear();
-
                             return 'Inventory_' + day + month + year;
                         },
-                        title: 'Inventory'
+
+                        exportOptions: {
+                            columns: ':visible:not(:last-child)' // remove actions column if exists
+                        },
+
+                        customize: function(doc) {
+
+                            /* FONT SIZE */
+                            doc.defaultStyle.fontSize = 7;
+
+                            /* HEADER STYLE */
+                            doc.styles.tableHeader = {
+                                bold: true,
+                                fontSize: 8,
+                                color: 'black',
+                                fillColor: '#a4d169',
+                                alignment: 'center'
+                            };
+
+                            /* PAGE MARGINS */
+                            doc.pageMargins = [10, 10, 10, 10];
+
+                            /* AUTO COLUMN WIDTH */
+                            var table = doc.content[1].table;
+                            var colCount = table.body[0].length;
+                            table.widths = new Array(colCount).fill('*');
+
+                            /* ROW COLORS */
+                            doc.styles.tableBodyEven = {
+                                fillColor: '#f2f2f2'
+                            };
+                            doc.styles.tableBodyOdd = {
+                                fillColor: '#ffffff'
+                            };
+
+                            /* ===== BORDERS ===== */
+                            doc.content[1].layout = {
+                                hLineWidth: function() {
+                                    return 0.5;
+                                },
+                                vLineWidth: function() {
+                                    return 0.5;
+                                },
+                                hLineColor: function() {
+                                    return '#aaaaaa';
+                                },
+                                vLineColor: function() {
+                                    return '#aaaaaa';
+                                },
+                                paddingLeft: function() {
+                                    return 4;
+                                },
+                                paddingRight: function() {
+                                    return 4;
+                                },
+                                paddingTop: function() {
+                                    return 3;
+                                },
+                                paddingBottom: function() {
+                                    return 3;
+                                }
+                            };
+                        }
                     },
+
                     'print'
                 ],
                 searching: true,

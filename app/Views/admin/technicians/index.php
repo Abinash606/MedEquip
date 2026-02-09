@@ -318,23 +318,83 @@
                     },
                     {
                         extend: 'pdfHtml5',
+                        title: 'Technicians',
+
+                        orientation: 'landscape',
+                        pageSize: 'LEGAL',
+
                         filename: function() {
                             const today = new Date();
-
                             let day = String(today.getDate()).padStart(2, '0');
                             let month = String(today.getMonth() + 1).padStart(2, '0');
                             let year = today.getFullYear();
-
                             return 'Technicians_' + day + month + year;
                         },
-                        title: 'Technicians',
+
                         exportOptions: {
-                            columns: ':not(:last-child)'
+                            columns: ':visible:not(:last-child)'
                         },
+
                         customize: function(doc) {
-                            doc.content[1].table.widths = ['15%', '15%', '15%', '15%', '20%', '20%'];
+
+                            /* FONT SIZE */
+                            doc.defaultStyle.fontSize = 7;
+
+                            /* HEADER STYLE */
+                            doc.styles.tableHeader = {
+                                bold: true,
+                                fontSize: 8,
+                                color: 'black',
+                                fillColor: '#a4d169',
+                                alignment: 'center'
+                            };
+
+                            /* PAGE MARGIN */
+                            doc.pageMargins = [10, 10, 10, 10];
+
+                            /* AUTO WIDTH */
+                            var table = doc.content[1].table;
+                            var colCount = table.body[0].length;
+                            table.widths = new Array(colCount).fill('*');
+
+                            /* ROW COLORS */
+                            doc.styles.tableBodyEven = {
+                                fillColor: '#f2f2f2'
+                            };
+                            doc.styles.tableBodyOdd = {
+                                fillColor: '#ffffff'
+                            };
+
+                            /* ===== TABLE BORDERS ===== */
+                            doc.content[1].layout = {
+                                hLineWidth: function() {
+                                    return 0.5;
+                                },
+                                vLineWidth: function() {
+                                    return 0.5;
+                                },
+                                hLineColor: function() {
+                                    return '#aaaaaa';
+                                },
+                                vLineColor: function() {
+                                    return '#aaaaaa';
+                                },
+                                paddingLeft: function() {
+                                    return 4;
+                                },
+                                paddingRight: function() {
+                                    return 4;
+                                },
+                                paddingTop: function() {
+                                    return 3;
+                                },
+                                paddingBottom: function() {
+                                    return 3;
+                                }
+                            };
                         }
                     }
+
                 ]
             });
         } catch (error) {

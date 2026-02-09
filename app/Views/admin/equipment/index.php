@@ -75,10 +75,7 @@
 
                     <div class="mb-2">
                         <label>Service Manual (PDF, Max 5MB)</label>
-                        <input type="file"
-                            name="service_manual"
-                            class="form-control"
-                            accept="application/pdf">
+                        <input type="file" name="service_manual" class="form-control" accept="application/pdf">
                     </div>
 
                     <div class="mb-2">
@@ -203,19 +200,83 @@
                     }
                 },
                 {
-                    extend: 'pdf',
-                    filename: function() {
-                        const today = new Date();
-                        let day = String(today.getDate()).padStart(2, '0');
-                        let month = String(today.getMonth() + 1).padStart(2, '0');
-                        let year = today.getFullYear();
-                        return 'Equipment_' + day + month + year;
-                    },
+                    extend: 'pdfHtml5',
                     title: 'Equipment',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+
+                    filename: function() {
+                        const d = new Date();
+                        return 'Equipment_' +
+                            String(d.getDate()).padStart(2, '0') +
+                            String(d.getMonth() + 1).padStart(2, '0') +
+                            d.getFullYear();
+                    },
+
                     exportOptions: {
                         columns: [0, 1, 2, 3]
+                    },
+
+                    customize: function(doc) {
+
+                        /* FONT SIZE */
+                        doc.defaultStyle.fontSize = 8;
+
+                        /* HEADER STYLE */
+                        doc.styles.tableHeader = {
+                            bold: true,
+                            fontSize: 9,
+                            color: 'black',
+                            fillColor: '#a4d169',
+                            alignment: 'center'
+                        };
+
+                        /* AUTO WIDTH */
+                        var table = doc.content[1].table;
+                        var colCount = table.body[0].length;
+                        table.widths = new Array(colCount).fill('*');
+
+                        /* ===== BORDER FIX ===== */
+                        doc.content[1].layout = {
+                            hLineWidth: function() {
+                                return 0.5;
+                            },
+                            vLineWidth: function() {
+                                return 0.5;
+                            },
+                            hLineColor: function() {
+                                return '#aaaaaa';
+                            },
+                            vLineColor: function() {
+                                return '#aaaaaa';
+                            },
+                            paddingLeft: function() {
+                                return 4;
+                            },
+                            paddingRight: function() {
+                                return 4;
+                            },
+                            paddingTop: function() {
+                                return 3;
+                            },
+                            paddingBottom: function() {
+                                return 3;
+                            }
+                        };
+
+                        /* MARGIN */
+                        doc.pageMargins = [10, 10, 10, 10];
+
+                        /* ROW COLORS */
+                        doc.styles.tableBodyEven = {
+                            fillColor: '#f2f2f2'
+                        };
+                        doc.styles.tableBodyOdd = {
+                            fillColor: '#ffffff'
+                        };
                     }
                 },
+
                 {
                     extend: 'print',
                     title: 'Equipment',
