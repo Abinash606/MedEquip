@@ -57,7 +57,6 @@ class ServiceHistoryController extends BaseController
 
         return view('technician/service/index', $data);
     }
-
     public function create()
     {
         if ($this->request->getMethod() === 'POST') {

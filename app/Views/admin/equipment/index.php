@@ -75,7 +75,10 @@
 
                     <div class="mb-2">
                         <label>Service Manual (PDF, Max 5MB)</label>
-                        <input type="file" name="service_manual" class="form-control" accept="application/pdf">
+                        <input type="file"
+                            name="service_manual"
+                            class="form-control"
+                            accept="application/pdf">
                     </div>
 
                     <div class="mb-2">
@@ -276,7 +279,6 @@
                         };
                     }
                 },
-
                 {
                     extend: 'print',
                     title: 'Equipment',

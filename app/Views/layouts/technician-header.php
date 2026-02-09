@@ -7,11 +7,9 @@
     <title>MedEquip Customer Portal | Service Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.11.5/css/jquery.dataTables.css">
-    <link rel="stylesheet" type="text/css"
-        href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
 
     <style>
         :root {
@@ -266,33 +264,27 @@
             <div class="flex-grow-1">
                 <p class="text-uppercase text-muted small fw-bold px-4 mb-2 mt-2">Main Menu</p>
                 <!-- Sidebar navigation links now call switchTab() to toggle between views -->
-                <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/dashboard') ?>">
+                <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>" href="<?= site_url('technician/dashboard') ?>">
                     <i class="fa-solid fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </a>
-                <a class="nav-link<?= url_is('technician/customers') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/customers') ?>">
+                <a class="nav-link<?= url_is('technician/customers') ? ' active' : '' ?>" href="<?= site_url('technician/customers') ?>">
                     <i class="fa-solid fa-users"></i>
                     <span>Customers</span>
                 </a>
-                <a class="nav-link<?= url_is('technician/sites') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/sites') ?>">
+                <a class="nav-link<?= url_is('technician/sites') ? ' active' : '' ?>" href="<?= site_url('technician/sites') ?>">
                     <i class="fa-solid fa-sitemap"></i>
                     <span>Sites</span>
                 </a>
-                <a class="nav-link<?= url_is('technician/inspections') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/inspections') ?>">
+                <a class="nav-link<?= url_is('technician/inspections') ? ' active' : '' ?>" href="<?= site_url('technician/inspections') ?>">
                     <i class="fa-solid fa-clipboard-check"></i> Inspections
                     <span class="badge bg-danger rounded-pill ms-auto">2</span>
                 </a>
-                <a class="nav-link<?= url_is('technician/service-history') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/service-history') ?>">
+                <a class="nav-link<?= url_is('technician/service-history') ? ' active' : '' ?>" href="<?= site_url('technician/service-history') ?>">
                     <i class="fa-solid fa-file-invoice"></i>
                     <span>Service History</span>
                 </a>
-                <a class="nav-link<?= url_is('technician/reports') ? ' active' : '' ?>"
-                    href="<?= site_url('technician/reports') ?>">
+                <a class="nav-link<?= url_is('technician/reports') ? ' active' : '' ?>" href="<?= site_url('technician/reports') ?>">
                     <i class="fa-solid fa-file-pdf"></i>
                     <span>Reports</span>
                 </a>
@@ -320,8 +312,7 @@
                 </div>
             </div>
             <div class="p-4 mb-5">
-                <div class="glass-card bg-primary text-white border-0 p-3"
-                    style="background: linear-gradient(135deg, #2563eb, #1e40af);">
+                <div class="glass-card bg-primary text-white border-0 p-3" style="background: linear-gradient(135deg, #2563eb, #1e40af);">
                     <div class="d-flex align-items-center gap-3 mb-2">
                         <div class="bg-white bg-opacity-25 p-2 rounded-circle">
                             <i class="fa-solid fa-headset"></i>
