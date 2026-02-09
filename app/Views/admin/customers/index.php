@@ -4,15 +4,13 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3 class="fw-bold mb-0">Customer Directory</h3>
-    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal"
-        data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
+    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal" data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
 </div>
 
 <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-        <input type="text" class="form-control border-start-0 ps-0" id="customer-search"
-            placeholder="Search for customers by name or address...">
+        <input type="text" class="form-control border-start-0 ps-0" id="customer-search" placeholder="Search for customers by name or address...">
         <button class="btn btn-outline-primary" id="searchBtn">Search</button>
     </div>
 </div>
@@ -64,12 +62,9 @@
                     <td><?= $customer['fax'] ?></td>
                     <td><?= $customer['website'] ?></td>
                     <td>
-                        <button data-id="<?= $customer['id'] ?>" data-modal-type="edit"
-                            class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
-                        <button data-id="<?= $customer['id'] ?>"
-                            class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
-                        <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal"
-                            data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
+                        <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
+                        <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
+                        <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal" data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
                     </td>
                 </tr>
             <?php endforeach; ?>
@@ -93,8 +88,7 @@
                     <!-- Customer Details -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="customer-name">Customer Name<span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label" for="customer-name">Customer Name<span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="customer-name" name="name" required>
                         </div>
                         <div class="col-md-6">
@@ -106,8 +100,7 @@
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
                             <label class="form-label" for="customer-billing-address">Customer Address</label>
-                            <input type="text" class="form-control" id="customer-billing-address"
-                                name="billing_address">
+                            <input type="text" class="form-control" id="customer-billing-address" name="billing_address">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label" for="customer-city">Billing City</label>
@@ -185,8 +178,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label for="admin-password-1" class="form-label">Admin password 1</label>
-                                <input type="password" class="form-control" id="admin-password-1"
-                                    name="portal_password[]">
+                                <input type="password" class="form-control" id="admin-password-1" name="portal_password[]">
                             </div>
                         </div>
                     </div>
@@ -196,8 +188,7 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save
-                        changes</button>
+                    <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save changes</button>
                     <span id="submitBtnProgress" class="text-muted" style="display:none;">Processing...</span>
                 </div>
             </div>
@@ -222,15 +213,12 @@
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="site-name">Site Name<span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="site-customer-name" name="customer_name"
-                                readonly> <!-- Readonly customer name field -->
+                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="site-customer-name" name="customer_name" readonly> <!-- Readonly customer name field -->
 
                         </div>
                     </div>
@@ -374,8 +362,7 @@
                             $('#submitBtn').text('Save');
 
                             // Force page reload after success
-                            location
-                                .reload(); // This reloads the page and shows the latest data
+                            location.reload(); // This reloads the page and shows the latest data
                         });
                     },
                     error: function() {
@@ -437,7 +424,6 @@
                 emptyTable: "No customers found matching your search criteria."
             }
         });
-
         // On page load, populate the table with all customers
         // Load all customers on page load
         function loadTable(customers) {
@@ -446,8 +432,7 @@
 
             // Add customers to the table
             customers.forEach(function(customer) {
-                var editUrl = "<?= site_url('admin/sites/add?customer_id='); ?>" + customer
-                    .id; // Correct way to get the URL
+                var editUrl = "<?= site_url('admin/sites/add?customer_id='); ?>" + customer.id; // Correct way to get the URL
                 var row = [
                     customer.name,
                     customer.billing_address,
@@ -487,8 +472,7 @@
                     }
                 },
                 error: function() {
-                    Swal.fire('Error', 'An error occurred while searching for customers.',
-                        'error');
+                    Swal.fire('Error', 'An error occurred while searching for customers.', 'error');
                 }
             });
         });
@@ -553,15 +537,13 @@
                                 return $("#customer-email").val();
                             },
                             id: function() {
-                                return $("#customer-id")
-                                    .val(); // Send the customer ID along with the email
+                                return $("#customer-id").val(); // Send the customer ID along with the email
                             }
                         },
                         dataType: "json",
                         dataFilter: function(data) {
                             var json = JSON.parse(data);
-                            return json.unique ===
-                                "true"; // Based on your backend logic (respond with {unique: "true/false"})
+                            return json.unique === "true"; // Based on your backend logic (respond with {unique: "true/false"})
                         }
                     }
                 },
@@ -631,9 +613,7 @@
             submitHandler: function(form, event) {
                 event.preventDefault(); // Prevent default form submission until validation is complete
                 var formData = new FormData(form);
-                var actionUrl = ($('#customer-id').val()) ?
-                    '<?php echo base_url(); ?>admin/customers/update/' + $('#customer-id').val() :
-                    '<?php echo base_url(); ?>admin/customers/add';
+                var actionUrl = ($('#customer-id').val()) ? '<?php echo base_url(); ?>admin/customers/update/' + $('#customer-id').val() : '<?php echo base_url(); ?>admin/customers/add';
 
                 $.ajax({
                     type: 'POST',
@@ -678,8 +658,7 @@
     $(document).ready(function() {
         $('#customerModal').on('show.bs.modal', function(e) {
             // Check if it's the 'Add' modal (not an 'Edit' modal)
-            var modalType = $(e.relatedTarget).data(
-                'modal-type'); // You can set this data in the button that opens the modal (add or edit)
+            var modalType = $(e.relatedTarget).data('modal-type'); // You can set this data in the button that opens the modal (add or edit)
 
             if (modalType === 'add') {
                 // Reset the form fields for 'Add' modal
@@ -703,8 +682,7 @@
 
             // Make AJAX call to fetch customer details
             $.ajax({
-                url: '<?php echo base_url(); ?>admin/customers/edit/' +
-                    customerId, // Controller action to fetch data
+                url: '<?php echo base_url(); ?>admin/customers/edit/' + customerId, // Controller action to fetch data
                 method: 'GET',
                 dataType: 'json',
                 success: function(response) {
@@ -728,9 +706,7 @@
 
                         // Show the customer logo image if it exists
                         if (imageUrl) {
-                            $("#logo-preview").html('<img src="' + imageUrl +
-                                '" alt="Logo" class="img-thumbnail" style="max-width: 100px;">'
-                            );
+                            $("#logo-preview").html('<img src="' + imageUrl + '" alt="Logo" class="img-thumbnail" style="max-width: 100px;">');
                         } else {
                             $("#logo-preview").html('<p>No logo uploaded</p>');
                         }
@@ -765,8 +741,7 @@
                     }
                 },
                 error: function() {
-                    Swal.fire('Error!', 'An error occurred while fetching customer data.',
-                        'error');
+                    Swal.fire('Error!', 'An error occurred while fetching customer data.', 'error');
                 }
             });
         });
@@ -788,8 +763,7 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Redirect to delete URL
-                    window.location.href = '<?php echo base_url(); ?>admin/customers/delete/' +
-                        customerId;
+                    window.location.href = '<?php echo base_url(); ?>admin/customers/delete/' + customerId;
                 }
             });
         });

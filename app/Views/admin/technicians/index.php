@@ -143,8 +143,6 @@
         feedback.textContent = '';
         return true;
     }
-
-
     // ─── Validate that at least one state checkbox is checked ─────────────
     function validateStates() {
         const checked = document.querySelectorAll('.state-checkbox:checked');
@@ -337,7 +335,6 @@
                             doc.content[1].table.widths = ['15%', '15%', '15%', '15%', '20%', '20%'];
                         }
                     }
-
                 ]
             });
         } catch (error) {

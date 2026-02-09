@@ -471,23 +471,15 @@
                 <div class="col-md-6">
                     <p><strong>Site Name:</strong> <span id="site-details-name"><?= esc($site['name']) ?></span></p>
                     <p><strong>Site ID:</strong> <span id="site-details-id"><?= esc($site['id']) ?></span></p>
-                    <p><strong>Site Contact Name:</strong> <span
-                            id="site-details-contact-name"><?= esc($site['contact_name'] ?? 'N/A') ?></span></p>
-                    <p><strong>Site Email:</strong> <span
-                            id="site-details-email"><?= esc($site['email'] ?? 'N/A') ?></span></p>
-                    <p><strong>Site Phone Number:</strong> <span
-                            id="site-details-phone"><?= esc($site['phone'] ?? 'N/A') ?></span></p>
+                    <p><strong>Site Contact Name:</strong> <span id="site-details-contact-name"><?= esc($site['contact_name'] ?? 'N/A') ?></span></p>
+                    <p><strong>Site Email:</strong> <span id="site-details-email"><?= esc($site['email'] ?? 'N/A') ?></span></p>
+                    <p><strong>Site Phone Number:</strong> <span id="site-details-phone"><?= esc($site['phone'] ?? 'N/A') ?></span></p>
                 </div>
                 <div class="col-md-6">
-                    <p><strong>Customer Name:</strong> <span
-                            id="site-details-customer-name"><?= esc($customer['name'] ?? 'N/A') ?></span></p>
-                    <p><strong>Site Address:</strong> <span
-                            id="site-details-address"><?= esc($site['address'] ?? 'N/A') ?>,
-                            <?= esc($site['city'] ?? '') ?></span></p>
-                    <p><strong>State:</strong> <span id="site-details-state"><?= esc($site['state'] ?? 'N/A') ?></span>
-                    </p>
-                    <p><strong>Zip code:</strong> <span id="site-details-zip"><?= esc($site['zip'] ?? 'N/A') ?></span>
-                    </p>
+                    <p><strong>Customer Name:</strong> <span id="site-details-customer-name"><?= esc($customer['name'] ?? 'N/A') ?></span></p>
+                    <p><strong>Site Address:</strong> <span id="site-details-address"><?= esc($site['address'] ?? 'N/A') ?>, <?= esc($site['city'] ?? '') ?></span></p>
+                    <p><strong>State:</strong> <span id="site-details-state"><?= esc($site['state'] ?? 'N/A') ?></span></p>
+                    <p><strong>Zip code:</strong> <span id="site-details-zip"><?= esc($site['zip'] ?? 'N/A') ?></span></p>
                 </div>
             </div>
         </div>
@@ -497,20 +489,17 @@
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs" id="site-details-tabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#equipment"
-            type="button" role="tab" aria-controls="equipment" aria-selected="true">
+        <button class="nav-link active" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#equipment" type="button" role="tab" aria-controls="equipment" aria-selected="true">
             <i class="fa fa-desktop me-2"></i> Equipment
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="inspections-tab" data-bs-toggle="tab" data-bs-target="#inspections" type="button"
-            role="tab" aria-controls="inspections" aria-selected="false">
+        <button class="nav-link" id="inspections-tab" data-bs-toggle="tab" data-bs-target="#inspections" type="button" role="tab" aria-controls="inspections" aria-selected="false">
             <i class="fa fa-clipboard-check me-2"></i> Inspections
         </button>
     </li>
     <li class="nav-item" role="presentation">
-        <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#work-orders" type="button"
-            role="tab" aria-controls="work-orders" aria-selected="false">
+        <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#work-orders" type="button" role="tab" aria-controls="work-orders" aria-selected="false">
             <i class="fa fa-wrench me-2"></i> Work Orders
         </button>
     </li>
@@ -568,7 +557,8 @@
                                     <span class="<?= $statusClass ?>"><?= esc($eq['status'] ?? 'Pending') ?></span>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-info btn-action edit-equipment-btn" data-id="<?= $eq['id'] ?>"
+                                    <button class="btn btn-sm btn-info btn-action edit-equipment-btn"
+                                        data-id="<?= $eq['id'] ?>"
                                         data-asset_tag="<?= esc($eq['asset_tag'], 'attr') ?>"
                                         data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
                                         data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
@@ -653,7 +643,8 @@
 
                                     <!-- View Button -->
                                     <button class="btn btn-sm btn-info btn-action view-inspection-btn"
-                                        data-group_id="<?= esc($insp['group_id']) ?>" data-id="<?= $insp['id'] ?>"
+                                        data-group_id="<?= esc($insp['group_id']) ?>"
+                                        data-id="<?= $insp['id'] ?>"
                                         data-equipment_id="<?= esc($insp['equipment_id']) ?>"
                                         data-scheduled_at="<?= esc($insp['scheduled_at']) ?>"
                                         data-completed_at="<?= esc($insp['completed_at'] ?? '') ?>"
@@ -746,7 +737,8 @@
                                 <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '-' ?></td>
                                 <td><?= $wo['end_date'] ? date('M d, Y', strtotime($wo['end_date'])) : '-' ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-info btn-action edit-workorder-btn" data-id="<?= $wo['id'] ?>"
+                                    <button class="btn btn-sm btn-info btn-action edit-workorder-btn"
+                                        data-id="<?= $wo['id'] ?>"
                                         data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
                                         data-serial_number="<?= $wo['serial_number'] ?? '' ?>"
                                         data-title="<?= esc($wo['title'], 'attr') ?>"
@@ -840,8 +832,7 @@
     </div>
 </div> -->
 
-<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="equipmentForm" method="post" action="<?= site_url('admin/equipment/create') ?>">
@@ -859,50 +850,43 @@
                         <!-- Asset Tag -->
                         <div class="col-md-6">
                             <label for="equipment-asset-tag" class="form-label">Asset Tag</label>
-                            <input type="text" class="form-control" id="equipment-asset-tag" name="asset_tag"
-                                placeholder=" add Asset Tag" required>
+                            <input type="text" class="form-control" id="equipment-asset-tag" name="asset_tag" placeholder=" add Asset Tag" required>
                         </div>
 
                         <!-- Serial Number -->
                         <div class="col-md-6">
                             <label for="equipment-serial-number" class="form-label">Serial Number</label>
-                            <input type="text" class="form-control" id="equipment-serial-number" name="serial_number"
-                                placeholder="" required>
+                            <input type="text" class="form-control" id="equipment-serial-number" name="serial_number" placeholder="" required>
                         </div>
 
                         <!-- Make -->
                         <div class="col-md-6">
                             <label for="equipment-make" class="form-label">Make</label>
-                            <input type="text" class="form-control" id="equipment-make" name="make"
-                                placeholder="e.g., Philips, GE" required>
+                            <input type="text" class="form-control" id="equipment-make" name="make" placeholder="e.g., Philips, GE" required>
                         </div>
 
                         <!-- Model -->
                         <div class="col-md-6">
                             <label for="equipment-model" class="form-label">Model</label>
-                            <input type="text" class="form-control" id="equipment-model" name="model"
-                                placeholder="Enter model" required>
+                            <input type="text" class="form-control" id="equipment-model" name="model" placeholder="Enter model" required>
                         </div>
 
                         <!-- Device Type -->
                         <div class="col-md-6">
                             <label for="equipment-device-type" class="form-label">Device Type</label>
-                            <input type="text" class="form-control" id="equipment-device-type" name="device_type"
-                                placeholder="e.g., MRI, CT, Ultrasound" required>
+                            <input type="text" class="form-control" id="equipment-device-type" name="device_type" placeholder="e.g., MRI, CT, Ultrasound" required>
                         </div>
 
                         <!-- Department -->
                         <div class="col-md-6">
                             <label for="equipment-department" class="form-label">Department</label>
-                            <input type="text" class="form-control" id="equipment-department" name="department"
-                                placeholder="e.g., Radiology">
+                            <input type="text" class="form-control" id="equipment-department" name="department" placeholder="e.g., Radiology">
                         </div>
 
                         <!-- Room/Location -->
                         <div class="col-md-6">
                             <label for="equipment-location" class="form-label">Room/Location</label>
-                            <input type="text" class="form-control" id="equipment-location" name="location"
-                                placeholder="e.g., Room 101">
+                            <input type="text" class="form-control" id="equipment-location" name="location" placeholder="e.g., Room 101">
                         </div>
 
                         <!-- Device Status -->
@@ -931,8 +915,7 @@
                         <!-- Fast Notes -->
                         <div class="col-md-12">
                             <label for="equipment-fast-notes" class="form-label">Fast Notes</label>
-                            <textarea class="form-control" id="equipment-fast-notes" name="fast_notes" rows="2"
-                                placeholder="Short note for fast entry"></textarea>
+                            <textarea class="form-control" id="equipment-fast-notes" name="fast_notes" rows="2" placeholder="Short note for fast entry"></textarea>
                         </div>
 
                         <!-- Customer Location -->
@@ -953,15 +936,13 @@
                         <!-- Installation Date -->
                         <div class="col-md-6">
                             <label for="equipment-installation-date" class="form-label">Installation Date</label>
-                            <input type="date" class="form-control" id="equipment-installation-date"
-                                name="installation_date">
+                            <input type="date" class="form-control" id="equipment-installation-date" name="installation_date">
                         </div>
 
                         <!-- Warranty Expires -->
                         <div class="col-md-6">
                             <label for="equipment-warranty-expires" class="form-label">Warranty Expires</label>
-                            <input type="date" class="form-control" id="equipment-warranty-expires"
-                                name="warranty_expires">
+                            <input type="date" class="form-control" id="equipment-warranty-expires" name="warranty_expires">
                         </div>
                     </div>
                 </div>
@@ -981,8 +962,7 @@
 <!-- ================================================
      3-STEP INSPECTION WIZARD MODAL (Updated for Serial Number & Multiple Inspections)
      ================================================ -->
-<div class="modal fade" id="inspectionWizardModal" tabindex="-1" aria-labelledby="inspectionWizardLabel"
-    aria-hidden="true">
+<div class="modal fade" id="inspectionWizardModal" tabindex="-1" aria-labelledby="inspectionWizardLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <!-- Wizard Header -->
@@ -1020,11 +1000,13 @@
                     <p class="site-label"><strong>Site:</strong> <?= esc($site['name']) ?></p>
 
                     <label for="wiz-serial-number" class="form-label">Serial Number</label>
-                    <input type="text" class="form-control" id="wiz-serial-number"
-                        placeholder="Enter or scan serial number" autocomplete="off">
+                    <input type="text"
+                        class="form-control"
+                        id="wiz-serial-number"
+                        placeholder="Enter or scan serial number"
+                        autocomplete="off">
                     <p class="helper-text">
-                        Enter the serial number from the equipment label. If found, details will be automatically
-                        filled.
+                        Enter the serial number from the equipment label. If found, details will be automatically filled.
                     </p>
 
                     <div class="wizard-footer">
@@ -1044,7 +1026,10 @@
                     </div>
 
                     <label for="wiz-search-model" class="form-label">Search Model</label>
-                    <input type="text" class="form-control mb-3" id="wiz-search-model" placeholder="Search for model..."
+                    <input type="text"
+                        class="form-control mb-3"
+                        id="wiz-search-model"
+                        placeholder="Search for model..."
                         autocomplete="off">
 
                     <div class="row g-3">
@@ -1154,8 +1139,7 @@
                         </div>
                         <div class="col-md-6">
                             <label for="wiz-s3-inspdate" class="form-label">Inspection Date</label>
-                            <input type="date" class="form-control" id="wiz-s3-inspdate" name="scheduled_at"
-                                value="<?= date('Y-m-d') ?>">
+                            <input type="date" class="form-control" id="wiz-s3-inspdate" name="scheduled_at" value="<?= date('Y-m-d') ?>">
                         </div>
                     </div>
 
@@ -1163,8 +1147,7 @@
                     <div class="row g-3 mt-1">
                         <div class="col-12">
                             <label for="wiz-s3-notes" class="form-label">Service Notes</label>
-                            <textarea class="form-control" id="wiz-s3-notes" name="notes" rows="3"
-                                placeholder=""></textarea>
+                            <textarea class="form-control" id="wiz-s3-notes" name="notes" rows="3" placeholder=""></textarea>
                         </div>
                     </div>
 
@@ -1200,8 +1183,7 @@
                     </div>
 
                     <!-- Enter Next Device button -->
-                    <button type="button" class="btn-next-device" id="wizBtnNextDevice">Add to Queue & Next
-                        Device</button>
+                    <button type="button" class="btn-next-device" id="wizBtnNextDevice">Add to Queue & Next Device</button>
 
                     <!-- Footer with Back / Cancel / Complete -->
                     <div class="wizard-footer">
@@ -1225,8 +1207,7 @@
 
 <!-- View Inspection Modal -->
 <!-- View Inspection Modal -->
-<div class="modal fade" id="viewInspectionModal" tabindex="-1" aria-labelledby="viewInspectionModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="viewInspectionModal" tabindex="-1" aria-labelledby="viewInspectionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -1278,8 +1259,7 @@
      EDIT INSPECTION 3-STEP WIZARD MODAL (NEW)
      This is separate from the add inspection wizard
      ================================================ -->
-<div class="modal fade" id="editInspectionWizardModal" tabindex="-1" aria-labelledby="editInspectionWizardLabel"
-    aria-hidden="true">
+<div class="modal fade" id="editInspectionWizardModal" tabindex="-1" aria-labelledby="editInspectionWizardLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <!-- Wizard Header -->
@@ -1306,8 +1286,7 @@
                     <!-- Site Selection -->
                     <div class="row g-3 mt-2">
                         <div class="col-12">
-                            <label for="edit-wiz-s1-site" class="form-label">Customer Site <span
-                                    class="text-danger">*</span></label>
+                            <label for="edit-wiz-s1-site" class="form-label">Customer Site <span class="text-danger">*</span></label>
                             <select class="form-select" id="edit-wiz-s1-site" name="site_id">
                                 <option value="<?= $site['id'] ?>" selected><?= esc($site['name']) ?></option>
                             </select>
@@ -1317,10 +1296,12 @@
                     <!-- Search by Serial Number -->
                     <div class="row g-3 mt-3">
                         <div class="col-12">
-                            <label for="edit-wiz-s1-serial" class="form-label">Search Equipment by Serial # <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="edit-wiz-s1-serial"
-                                placeholder="Enter serial number" autocomplete="off">
+                            <label for="edit-wiz-s1-serial" class="form-label">Search Equipment by Serial # <span class="text-danger">*</span></label>
+                            <input type="text"
+                                class="form-control"
+                                id="edit-wiz-s1-serial"
+                                placeholder="Enter serial number"
+                                autocomplete="off">
                             <div class="helper-text">Type the serial number and press Enter or click Search</div>
                         </div>
                         <div class="col-auto">
@@ -1680,8 +1661,7 @@
                         $('#edit-wiz-s3-pmfreq').val(data.pm_frequency || '');
                         $('#edit-wiz-s3-insptype').val(data.inspection_type || '');
                         $('#edit-wiz-s3-technician').val(data.technician_id || '');
-                        $('#edit-wiz-s3-inspdate').val(data.scheduled_at ? data.scheduled_at.split(' ')[
-                            0] : '');
+                        $('#edit-wiz-s3-inspdate').val(data.scheduled_at ? data.scheduled_at.split(' ')[0] : '');
                         $('#edit-wiz-s3-notes').val(data.notes || '');
                         $('#edit-wiz-s3-status').val(data.status || 'Pass');
                         $('#edit-wiz-s3-devicecomplete').val(data.device_complete || 'Yes');
@@ -1876,8 +1856,7 @@
 <!-- ================================================
      EDIT INSPECTION MODAL (legacy single-form, for editing existing records)
      ================================================ -->
-<div class="modal fade" id="editInspectionModal" tabindex="-1" aria-labelledby="editInspectionModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="editInspectionModal" tabindex="-1" aria-labelledby="editInspectionModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="editInspectionForm" method="post" action="">
@@ -1893,25 +1872,20 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="edit-inspection-equipment" class="form-label">Equipment <span
-                                    class="text-danger">*</span></label>
+                            <label for="edit-inspection-equipment" class="form-label">Equipment <span class="text-danger">*</span></label>
                             <select class="form-select" id="edit-inspection-equipment" name="equipment_id" required>
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
-                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?>
-                                        <?= esc($eq['model']) ?></option>
+                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?> <?= esc($eq['model']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="edit-inspection-scheduled-at" class="form-label">Scheduled Date <span
-                                    class="text-danger">*</span></label>
-                            <input type="datetime-local" class="form-control" id="edit-inspection-scheduled-at"
-                                name="scheduled_at" required>
+                            <label for="edit-inspection-scheduled-at" class="form-label">Scheduled Date <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control" id="edit-inspection-scheduled-at" name="scheduled_at" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="edit-inspection-status" class="form-label">Status <span
-                                    class="text-danger">*</span></label>
+                            <label for="edit-inspection-status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="edit-inspection-status" name="status" required>
                                 <option value="">-- Select Status --</option>
                                 <option value="pending">Pending</option>
@@ -1933,18 +1907,15 @@
                         </div>
                         <div class="col-md-6">
                             <label for="edit-inspection-completed-at" class="form-label">Completed Date</label>
-                            <input type="datetime-local" class="form-control" id="edit-inspection-completed-at"
-                                name="completed_at">
+                            <input type="datetime-local" class="form-control" id="edit-inspection-completed-at" name="completed_at">
                         </div>
                         <div class="col-md-6">
                             <label for="edit-inspection-next-due-date" class="form-label">Next Due Date</label>
-                            <input type="date" class="form-control" id="edit-inspection-next-due-date"
-                                name="next_due_date">
+                            <input type="date" class="form-control" id="edit-inspection-next-due-date" name="next_due_date">
                         </div>
                         <div class="col-12">
                             <label for="edit-inspection-findings" class="form-label">Findings</label>
-                            <textarea class="form-control" id="edit-inspection-findings" name="findings"
-                                rows="3"></textarea>
+                            <textarea class="form-control" id="edit-inspection-findings" name="findings" rows="3"></textarea>
                         </div>
                         <div class="col-12">
                             <label for="edit-inspection-notes" class="form-label">Notes</label>
@@ -1965,8 +1936,7 @@
 <!-- ================================================
      ADD WORK ORDER MODAL (unchanged)
      ================================================ -->
-<div class="modal fade" id="addWorkOrderModal" tabindex="-1" aria-labelledby="addWorkOrderModalLabel"
-    aria-hidden="true">
+<div class="modal fade" id="addWorkOrderModal" tabindex="-1" aria-labelledby="addWorkOrderModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="workOrderForm" method="post" action="<?= site_url('admin/work-orders/create') ?>">
@@ -1982,8 +1952,7 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">
-                            <label for="workorder-title" class="form-label">Title <span
-                                    class="text-danger">*</span></label>
+                            <label for="workorder-title" class="form-label">Title <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="workorder-title" name="title" required>
                         </div>
                         <div class="col-12">
@@ -1995,14 +1964,12 @@
                             <select class="form-select" id="workorder-equipment" name="equipment_id">
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
-                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?>
-                                        <?= esc($eq['model']) ?></option>
+                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?> <?= esc($eq['model']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="workorder-status" class="form-label">Status <span
-                                    class="text-danger">*</span></label>
+                            <label for="workorder-status" class="form-label">Status <span class="text-danger">*</span></label>
                             <select class="form-select" id="workorder-status" name="status" required>
                                 <option value="">-- Select Status --</option>
                                 <option value="open">Open</option>
@@ -2013,8 +1980,7 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label for="workorder-priority" class="form-label">Priority <span
-                                    class="text-danger">*</span></label>
+                            <label for="workorder-priority" class="form-label">Priority <span class="text-danger">*</span></label>
                             <select class="form-select" id="workorder-priority" name="priority" required>
                                 <option value="">-- Select Priority --</option>
                                 <option value="low">Low</option>
@@ -2044,8 +2010,7 @@
                         </div>
                         <div class="col-12">
                             <label for="workorder-description" class="form-label">Description</label>
-                            <textarea class="form-control" id="workorder-description" name="description"
-                                rows="4"></textarea>
+                            <textarea class="form-control" id="workorder-description" name="description" rows="4"></textarea>
                         </div>
                     </div>
                 </div>
@@ -2070,6 +2035,7 @@
     var WIZ_SITE_ID = '<?= $site['id'] ?>';
 
     $(document).ready(function() {
+
 
         // ─── DataTables Init ─────────────────────────────────
         function getTodayDate() {
@@ -2166,7 +2132,6 @@
             ]
         });
 
-
         // ─── Equipment Modal (unchanged) ─────────────────────
 
         // Handle Edit Equipment button click
@@ -2233,8 +2198,7 @@
             var formData = $(this).serialize();
             var actionUrl = $(this).attr('action');
 
-            $('#equipmentSubmitBtn').prop('disabled', true).html(
-                '<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
+            $('#equipmentSubmitBtn').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
 
             $.ajax({
                 url: actionUrl,
@@ -2401,8 +2365,7 @@
 
         // Generate unique group ID
         function generateGroupId() {
-            return 'INSP-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random()
-                .toString(36).substr(2, 9).toUpperCase();
+            return 'INSP-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random().toString(36).substr(2, 9).toUpperCase();
         }
 
         // ─── Helper: show only one step ─────────────────────
@@ -2475,11 +2438,9 @@
                 var $info = $('<div class="queue-item-info">');
                 var modelText = (item.make || '') + ' ' + (item.model || '');
                 $info.append('<div class="queue-item-model">' + modelText.trim() + '</div>');
-                $info.append('<div class="queue-item-details">S/N: ' + (item.serial_number || 'N/A') +
-                    ' | Status: ' + item.status + '</div>');
+                $info.append('<div class="queue-item-details">S/N: ' + (item.serial_number || 'N/A') + ' | Status: ' + item.status + '</div>');
 
-                var $removeBtn = $('<button class="queue-item-remove" data-index="' + index +
-                    '">Remove</button>');
+                var $removeBtn = $('<button class="queue-item-remove" data-index="' + index + '">Remove</button>');
 
                 $queueItem.append($info).append($removeBtn);
                 $container.append($queueItem);
@@ -2587,28 +2548,16 @@
                         var $wrap = $('#wiz-search-model').parent();
                         $wrap.css('position', 'relative');
 
-                        var html =
-                            '<div id="wiz-model-dropdown" style="position:absolute; top:100%; left:0; right:0; z-index:9999; background:#fff; border:1px solid #cbd5e1; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto; margin-top:2px;">';
+                        var html = '<div id="wiz-model-dropdown" style="position:absolute; top:100%; left:0; right:0; z-index:9999; background:#fff; border:1px solid #cbd5e1; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto; margin-top:2px;">';
 
                         $.each(results, function(i, item) {
-                            var label = (item.make || '') + ' ' + (item.model ||
-                                '');
-                            label = $.trim(label) || item.device_type ||
-                                'Unknown';
+                            var label = (item.make || '') + ' ' + (item.model || '');
+                            label = $.trim(label) || item.device_type || 'Unknown';
 
-                            html +=
-                                '<div class="wiz-model-option" data-make="' + (
-                                    item.make || '') + '" data-model="' + (item
-                                    .model || '') + '" data-serial_number="' + (
-                                    item.serial_number || '') +
-                                '" data-device_type="' + (item.device_type ||
-                                    '') +
-                                '" style="padding:0.55rem 0.75rem; cursor:pointer; border-bottom:1px solid #f1f5f9;" onmouseover="$(this).css(\'background\',\'#eef2ff\')" onmouseout="$(this).css(\'background\',\'#fff\')">';
+                            html += '<div class="wiz-model-option" data-make="' + (item.make || '') + '" data-model="' + (item.model || '') + '" data-serial_number="' + (item.serial_number || '') + '" data-device_type="' + (item.device_type || '') + '" style="padding:0.55rem 0.75rem; cursor:pointer; border-bottom:1px solid #f1f5f9;" onmouseover="$(this).css(\'background\',\'#eef2ff\')" onmouseout="$(this).css(\'background\',\'#fff\')">';
                             html += '<strong>' + label + '</strong>';
                             if (item.serial_number) {
-                                html +=
-                                    ' &nbsp;<span style="color:#64748b; font-size:0.82rem;">S/N: ' +
-                                    item.serial_number + '</span>';
+                                html += ' &nbsp;<span style="color:#64748b; font-size:0.82rem;">S/N: ' + item.serial_number + '</span>';
                             }
                             html += '</div>';
                         });
@@ -2631,8 +2580,7 @@
 
         // Close dropdown on outside click
         $(document).on('click', function(e) {
-            if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown')
-                .length) {
+            if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown').length) {
                 $('#wiz-model-dropdown').remove();
             }
         });
@@ -2681,8 +2629,7 @@
                 device_complete: $('#wiz-s3-devicecomplete').val(),
 
                 // Equipment details for display
-                make: wizardMatchedEquip ? (wizardMatchedEquip.make || '') : ($('#wiz-s2-manufacturer').val() ||
-                    ''),
+                make: wizardMatchedEquip ? (wizardMatchedEquip.make || '') : ($('#wiz-s2-manufacturer').val() || ''),
                 model: $('#wiz-s3-model').val(),
                 serial_number: $('#wiz-s3-serial').val(),
                 device_type: $('#wiz-s3-description').val(),
@@ -2705,23 +2652,17 @@
         // ─── STEP 3 ► Outcome Buttons (UPDATED) ───
         $('#wizBtnPass').on('click', function() {
             addToQueue('Pass');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
         });
 
         $('#wizBtnFail').on('click', function() {
             addToQueue('Fail');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
         });
 
         $('#wizBtnRepair').on('click', function() {
             addToQueue('Repair');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            alert('Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.');
         });
 
         // ─── Add to Queue & Next Device ───
@@ -2756,8 +2697,7 @@
                 inspection_items: JSON.stringify(inspectionQueue)
             });
 
-            $('#wizBtnComplete').prop('disabled', true).html(
-                '<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
+            $('#wizBtnComplete').prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
 
             $.ajax({
                 url: '<?= site_url('admin/inspections/create') ?>',
@@ -2774,8 +2714,7 @@
                     console.error('Failed to save inspections', xhr);
                     console.error('Response Text:', xhr.responseText);
                     alert('Failed to save inspections. Check console for details.');
-                    $('#wizBtnComplete').prop('disabled', false).html(
-                        '<i class="fa fa-check-double me-1"></i>Complete Inspections');
+                    $('#wizBtnComplete').prop('disabled', false).html('<i class="fa fa-check-double me-1"></i>Complete Inspections');
                 }
             });
         });
@@ -2797,24 +2736,15 @@
                 success: function(response) {
 
                     if (response.success) {
-                        var inspections = response
-                            .data; // Assume response contains the inspections data
+                        var inspections = response.data; // Assume response contains the inspections data
 
                         // Generate HTML for the inspections list
                         var inspectionHtml = '';
                         inspections.forEach(function(inspec) {
 
                             inspectionHtml += '<tr>';
-                            inspectionHtml +=
-                                '<td> <button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="' +
-                                inspec.inspections_id + '" data-group-id="' + inspec
-                                .group_id +
-                                '"><i class="fa fa-edit"></i> Edit</button></td>';
-                            inspectionHtml += '<td>' + (inspec.inspection_status ===
-                                    'Pass' ?
-                                    '<span class="badge bg-success">Pass</span>' :
-                                    '<span class="badge bg-danger">Fail</span>') +
-                                '</td>';
+                            inspectionHtml += '<td> <button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="' + inspec.inspections_id + '" data-group-id="' + inspec.group_id + '"><i class="fa fa-edit"></i> Edit</button></td>';
+                            inspectionHtml += '<td>' + (inspec.inspection_status === 'Pass' ? '<span class="badge bg-success">Pass</span>' : '<span class="badge bg-danger">Fail</span>') + '</td>';
                             inspectionHtml += '<td>' + inspec.customer_site + '</td>';
                             inspectionHtml += '<td>' + inspec.model + '</td>';
                             inspectionHtml += '<td>' + inspec.device_type + '</td>';
@@ -2827,8 +2757,7 @@
                             inspectionHtml += '<td>' + inspec.cal + '</td>';
                             inspectionHtml += '<td>' + inspec.technician_name + '</td>';
                             inspectionHtml += '<td>' + inspec.updated_at + '</td>';
-                            inspectionHtml += '<td>' + inspec.battery_expiration_date +
-                                '</td>';
+                            inspectionHtml += '<td>' + inspec.battery_expiration_date + '</td>';
                             inspectionHtml += '<td>' + inspec.notes + '</td>';
                             inspectionHtml += '</tr>';
                         });
@@ -2838,15 +2767,11 @@
                         // Show the modal
                         $('#viewInspectionModal').modal('show');
                     } else {
-                        $('#viewInspectionModal').find('.modal-body').html(
-                            '<div class="text-center text-danger">No inspections found for this group.</div>'
-                        );
+                        $('#viewInspectionModal').find('.modal-body').html('<div class="text-center text-danger">No inspections found for this group.</div>');
                     }
                 },
                 error: function() {
-                    $('#viewInspectionModal').find('.modal-body').html(
-                        '<div class="text-center text-danger">An error occurred while fetching the data.</div>'
-                    );
+                    $('#viewInspectionModal').find('.modal-body').html('<div class="text-center text-danger">An error occurred while fetching the data.</div>');
                 }
             });
         });

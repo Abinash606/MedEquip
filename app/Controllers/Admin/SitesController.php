@@ -21,10 +21,10 @@ class SitesController extends BaseController
         $siteModel = new SiteModel();
         $customerModel = new CustomerModel();
         $companyId = $this->session->get('company_id');
-        
+
         $data['sites'] = $siteModel->where('company_id', $companyId)->findAll();
         $data['customers'] = $customerModel->where('company_id', $companyId)->findAll();
-        
+
         return view('admin/sites/index', $data);
     }
 
@@ -35,7 +35,7 @@ class SitesController extends BaseController
     {
         $siteModel = new SiteModel();
         $companyId = $this->session->get('company_id');
-        
+
         $rules = [
             'name'        => 'required|max_length[255]',
             'customer_id' => 'required|integer',
@@ -43,15 +43,15 @@ class SitesController extends BaseController
             'city'        => 'permit_empty|max_length[100]',
             'state'       => 'permit_empty|max_length[50]',
             'zip'         => 'permit_empty|max_length[20]',
-            'contact_name'=> 'permit_empty|max_length[255]',
+            'contact_name' => 'permit_empty|max_length[255]',
             'email'       => 'permit_empty|valid_email|max_length[255]',
             'phone'       => 'permit_empty|max_length[50]',
         ];
-        
+
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        
+
         $siteData = [
             'company_id'   => $companyId,
             'customer_id'  => $this->request->getPost('customer_id'),
@@ -64,9 +64,9 @@ class SitesController extends BaseController
             'email'        => $this->request->getPost('email'),
             'phone'        => $this->request->getPost('phone'),
         ];
-        
+
         $siteModel->insert($siteData);
-        
+
         return redirect()->to('admin/sites')->with('success', 'Site added successfully');
     }
 
@@ -77,7 +77,7 @@ class SitesController extends BaseController
     public function update($id)
     {
         $model = new SiteModel();
-        
+
         // Validate input
         $rules = [
             'name' => 'required|max_length[255]',
@@ -90,11 +90,11 @@ class SitesController extends BaseController
             'email' => 'permit_empty|valid_email|max_length[255]',
             'phone' => 'permit_empty|max_length[50]',
         ];
-        
+
         if (!$this->validate($rules)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
         }
-        
+
         // Get the existing site data
         $siteData = [
             'name' => $this->request->getPost('name'),
@@ -107,10 +107,10 @@ class SitesController extends BaseController
             'email' => $this->request->getPost('email'),
             'phone' => $this->request->getPost('phone'),
         ];
-        
+
         // Update the site
         $model->update($id, $siteData);
-        
+
         return redirect()->to('admin/sites')->with('success', 'Site updated successfully');
     }
 
@@ -123,14 +123,14 @@ class SitesController extends BaseController
     {
         $siteModel = new SiteModel();
         $companyId = $this->session->get('company_id');
-        
+
         $site = $siteModel->where('company_id', $companyId)->find($id);
         if (!$site) {
             return redirect()->to('admin/sites')->with('error', 'Site not found');
         }
-        
+
         $siteModel->delete($id);
-        
+
         return redirect()->to('admin/sites')->with('success', 'Site deleted successfully');
     }
 
@@ -145,71 +145,83 @@ class SitesController extends BaseController
         $equipmentModel = new EquipmentModel();
         $inspectionModel = new InspectionModel();
         $workOrderModel = new WorkOrderModel();
-        $technicianModel = new TechnicianModel(); // Add TechnicianModel
+        $technicianModel = new TechnicianModel();
 
-        
         $companyId = $this->session->get('company_id');
-        
+
         // Get site details
         $site = $siteModel->where('company_id', $companyId)->find($id);
         if (!$site) {
             return redirect()->to('admin/sites')->with('error', 'Site not found');
         }
-        
-        // Get customer details
+
+        // Get customer details with null check
         $customer = $customerModel->find($site['customer_id']);
-        
+        if (!$customer) {
+            $customer = [
+                'name' => 'Unknown Customer',
+                'logo_path' => null
+            ];
+        }
+
+        // Get all sites for dropdown
+        $sites = $siteModel->where('company_id', $companyId)->findAll();
+
         // Get equipment for this site
-        $equipment = $equipmentModel->where('site_id', $id)
-                                     ->where('company_id', $companyId)
-                                     ->findAll();
-        
-        // Get inspections for this site
-        $inspections = $inspectionModel->select('inspections.*, users.full_name as technician_name, equipment.asset_tag')
+        $equipment = $equipmentModel
+            ->where('site_id', $id)
+            ->where('company_id', $companyId)
+            ->findAll();
+
+        // Get inspections for this site (fixed GROUP BY)
+        $allInspections = $inspectionModel
+            ->select('inspections.*, users.full_name as technician_name, equipment.asset_tag')
             ->join('users', 'users.id = inspections.technician_id', 'left')
             ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
             ->where('inspections.site_id', $id)
             ->where('inspections.company_id', $companyId)
-            ->groupBy('inspections.group_id')  // Group by group_id
+            ->orderBy('inspections.group_id DESC, inspections.id DESC')
             ->findAll();
- 
 
-        
+        // Filter to get unique group_ids
+        $inspections = [];
+        $seenGroups = [];
+        foreach ($allInspections as $inspection) {
+            if (!in_array($inspection['group_id'], $seenGroups)) {
+                $inspections[] = $inspection;
+                $seenGroups[] = $inspection['group_id'];
+            }
+        }
+
         // Get work orders for this site
-       $workOrders = $workOrderModel->select('
-                    work_orders.*,        
-                    equipment.asset_tag,
-                    equipment.serial_number,
-                    technician_user.full_name as assigned_to_name') // technician's full name from the users table
-                ->join('users', 'users.id = work_orders.assigned_to', 'left') // for the assigned_to_name
-                ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left') // for the asset_tag
-                ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left') // join technician table
-                ->join('users as technician_user', 'technician_user.id = technicians.user_id', 'left') // join users table for technician's full name
-                ->where('work_orders.site_id', $id)
-                ->where('work_orders.company_id', $companyId)
-                ->findAll();
+        $workOrders = $workOrderModel
+            ->select('work_orders.*, equipment.asset_tag, equipment.serial_number, 
+                  technician_user.full_name as assigned_to_name')
+            ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
+            ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')
+            ->join('users as technician_user', 'technician_user.id = technicians.user_id', 'left')
+            ->where('work_orders.site_id', $id)
+            ->where('work_orders.company_id', $companyId)
+            ->findAll();
 
-
-
-                                     // Fetch all technicians
+        // Fetch all technicians
         $technicians = $technicianModel
-        ->select('technicians.*, users.full_name as full_name')  // Select technician fields and join user full name
-        ->join('users', 'users.id = technicians.user_id', 'left')  // Adjust 'user_id' based on your actual schema
-        ->where('technicians.company_id', $companyId)  // Filter by company ID
-        ->findAll();  // Fetch all technicians
+            ->select('technicians.*, users.full_name')
+            ->join('users', 'users.id = technicians.user_id', 'left')
+            ->where('technicians.company_id', $companyId)
+            ->findAll();
 
-        
         $data = [
             'site'        => $site,
             'customer'    => $customer,
+            'sites'       => $sites,        // ADDED
             'equipment'   => $equipment,
             'inspections' => $inspections,
             'workOrders'  => $workOrders,
-            'technicians' => $technicians, // Add technicians to the data array
-            'users' => $technicians, // Add technicians to the data array
-
+            'technicians' => $technicians,
+            'users'       => $technicians,
         ];
-        
+
         return view('admin/sites/details', $data);
     }
-}   
+}

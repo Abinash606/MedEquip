@@ -33,8 +33,7 @@ foreach ($customers as $cust) {
 <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-        <input type="text" id="site-search" class="form-control border-start-0 ps-0"
-            placeholder="Search for sites by name or address...">
+        <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
     </div>
 </div>
 
@@ -88,7 +87,8 @@ foreach ($customers as $cust) {
                         <td class="text-center">
                             <!-- Edit button: populate modal with site data -->
                             <button type="button" class="btn btn-sm btn-outline-secondary edit-site-btn" title="Edit"
-                                data-id="<?= $site['id'] ?>" data-name="<?= esc($site['name'], 'attr') ?>"
+                                data-id="<?= $site['id'] ?>"
+                                data-name="<?= esc($site['name'], 'attr') ?>"
                                 data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
                                 data-address="<?= esc($site['address'] ?? '', 'attr') ?>"
                                 data-city="<?= esc($site['city'] ?? '', 'attr') ?>"
@@ -102,8 +102,8 @@ foreach ($customers as $cust) {
                             </button>
 
                             <!-- Delete button -->
-                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger"
-                                title="Delete" onclick="return confirm('Are you sure you want to delete this site?')">
+                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger" title="Delete"
+                                onclick="return confirm('Are you sure you want to delete this site?')">
                                 <i class="fa fa-trash"></i> Delete
                             </a>
                         </td>
@@ -132,13 +132,11 @@ foreach ($customers as $cust) {
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="site-name">Site Name<span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span
-                                    class="text-danger">*</span></label>
+                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
                             <select class="form-select" id="site-customer-id" name="customer_id" required>
                                 <option value="">-- Select Customer --</option>
                                 <?php foreach ($customers as $cust): ?>
@@ -249,7 +247,6 @@ foreach ($customers as $cust) {
             }
         });
 
-
         // Handle search by name or address (global search)
         $('#site-search').on('keyup', function() {
             table.search(this.value).draw(); // Trigger DataTable search
@@ -345,8 +342,7 @@ foreach ($customers as $cust) {
                             $('#submitBtn').text('Save');
 
                             // Force page reload after success
-                            location
-                                .reload(); // This reloads the page and shows the latest data
+                            location.reload(); // This reloads the page and shows the latest data
                         });
                     },
                     error: function() {
