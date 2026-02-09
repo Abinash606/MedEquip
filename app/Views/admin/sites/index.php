@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Admin Sites index view.
  *
@@ -13,11 +14,11 @@
 <?= $this->section('content') ?>
 
 <?php
-    // Build a lookup array of customer names keyed by ID for display
-    $customerMap = [];
-    foreach ($customers as $cust) {
-        $customerMap[$cust['id']] = $cust['name'];
-    }
+// Build a lookup array of customer names keyed by ID for display
+$customerMap = [];
+foreach ($customers as $cust) {
+    $customerMap[$cust['id']] = $cust['name'];
+}
 ?>
 
 
@@ -32,7 +33,8 @@
 <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-        <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
+        <input type="text" id="site-search" class="form-control border-start-0 ps-0"
+            placeholder="Search for sites by name or address...">
     </div>
 </div>
 
@@ -86,8 +88,7 @@
                         <td class="text-center">
                             <!-- Edit button: populate modal with site data -->
                             <button type="button" class="btn btn-sm btn-outline-secondary edit-site-btn" title="Edit"
-                                data-id="<?= $site['id'] ?>"
-                                data-name="<?= esc($site['name'], 'attr') ?>"
+                                data-id="<?= $site['id'] ?>" data-name="<?= esc($site['name'], 'attr') ?>"
                                 data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
                                 data-address="<?= esc($site['address'] ?? '', 'attr') ?>"
                                 data-city="<?= esc($site['city'] ?? '', 'attr') ?>"
@@ -101,8 +102,8 @@
                             </button>
 
                             <!-- Delete button -->
-                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger" title="Delete"
-                                onclick="return confirm('Are you sure you want to delete this site?')">
+                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger"
+                                title="Delete" onclick="return confirm('Are you sure you want to delete this site?')">
                                 <i class="fa fa-trash"></i> Delete
                             </a>
                         </td>
@@ -131,11 +132,13 @@
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <label class="form-label" for="site-name">Site Name<span class="text-danger">*</span></label>
+                            <label class="form-label" for="site-name">Site Name<span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
+                            <label class="form-label" for="site-customer-id">Customer<span
+                                    class="text-danger">*</span></label>
                             <select class="form-select" id="site-customer-id" name="customer_id" required>
                                 <option value="">-- Select Customer --</option>
                                 <?php foreach ($customers as $cust): ?>
@@ -198,168 +201,201 @@
 <?php endif; ?>
 
 <script>
+    $(document).ready(function() {
+        // Initialize DataTable with search and filter features
+        var table = $('#sitesTable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [{
+                    extend: 'copyHtml5',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'excelHtml5',
+                    filename: 'sites',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'csvHtml5',
+                    filename: 'sites',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    filename: function() {
+                        const today = new Date();
+
+                        let day = String(today.getDate()).padStart(2, '0');
+                        let month = String(today.getMonth() + 1).padStart(2, '0');
+                        let year = today.getFullYear();
+
+                        return 'Sites_' + day + month + year;
+                    },
+                    title: 'Sites',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                }
+            ],
+            responsive: true,
+            scrollX: true,
+            language: {
+                emptyTable: "No sites found matching your search criteria."
+            }
+        });
+
+
+        // Handle search by name or address (global search)
+        $('#site-search').on('keyup', function() {
+            table.search(this.value).draw(); // Trigger DataTable search
+        });
+
+        // Handle customer filter
+        $('#customer-filter').on('change', function() {
+            var selectedCustomer = this.value;
+
+            if (selectedCustomer === "") {
+                table.column(1).search('').draw(); // Show all rows if "All Customers" is selected
+            } else {
+                table.column(1).search(selectedCustomer).draw(); // Filter by customer name
+            }
+        });
+    });
+
+
 
     $(document).ready(function() {
-    // Initialize DataTable with search and filter features
-    var table = $('#sitesTable').DataTable({
-        dom: 'Bfrtip',  // Button options
-        buttons: [
-            'copyHtml5', 'excelHtml5', 'csvHtml5', 'pdfHtml5'
-        ],
-        responsive: true,
-        scrollX: true,  // Enables horizontal scroll
-        language: {
-            emptyTable: "No sites found matching your search criteria." // Custom message when no data is found
-        }
-    });
 
-    // Handle search by name or address (global search)
-    $('#site-search').on('keyup', function() {
-        table.search(this.value).draw();  // Trigger DataTable search
-    });
-
-    // Handle customer filter
-    $('#customer-filter').on('change', function() {
-        var selectedCustomer = this.value;
-
-        if (selectedCustomer === "") {
-            table.column(1).search('').draw();  // Show all rows if "All Customers" is selected
-        } else {
-            table.column(1).search(selectedCustomer).draw();  // Filter by customer name
-        }
-    });
-});
-
-
-
-$(document).ready(function() {
-    
-    // jQuery Validation for Add/Edit Site
-    $('#siteForm').validate({
-        rules: {
-            'name': {
-                required: true,
-                maxlength: 255
-            },
-            'customer_id': {
-                required: true
-            },
-            'address': {
-                maxlength: 255
-            },
-            'city': {
-                maxlength: 255
-            },
-            'state': {
-                maxlength: 255
-            },
-            'zip': {
-                maxlength: 20
-            },
-            'contact_name': {
-                maxlength: 255
-            },
-            'email': {
-                email: true,
-                maxlength: 255
-            },
-            'phone': {
-                maxlength: 50
-            }
-        },
-        messages: {
-            'name': {
-                required: "Site name is required.",
-                maxlength: "Site name cannot exceed 255 characters."
-            },
-            'customer_id': {
-                required: "Please select a customer."
-            },
-            'email': {
-                email: "Please enter a valid email address.",
-                maxlength: "Email cannot exceed 255 characters."
-            },
-            'phone': {
-                maxlength: "Phone number cannot exceed 50 characters."
-            }
-        },
-        submitHandler: function(form) {
-            var actionUrl = $(form).attr('action');
-            var formData = new FormData(form);
-
-            // AJAX request to submit the form
-            $.ajax({
-                type: 'POST',
-                url: actionUrl,
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Site saved successfully!',
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    }).then((result) => {
-                        // Close modal and reset form
-                        $('#siteModal').modal('hide');
-                        $('#siteForm')[0].reset(); // Clear form data
-                        $('#siteModalLabel').text('Add Site');
-                        $('#submitBtn').text('Save');
-
-                        // Force page reload after success
-                        location.reload();  // This reloads the page and shows the latest data
-                    });
+        // jQuery Validation for Add/Edit Site
+        $('#siteForm').validate({
+            rules: {
+                'name': {
+                    required: true,
+                    maxlength: 255
                 },
-                error: function() {
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'An error occurred. Please try again.',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
+                'customer_id': {
+                    required: true
+                },
+                'address': {
+                    maxlength: 255
+                },
+                'city': {
+                    maxlength: 255
+                },
+                'state': {
+                    maxlength: 255
+                },
+                'zip': {
+                    maxlength: 20
+                },
+                'contact_name': {
+                    maxlength: 255
+                },
+                'email': {
+                    email: true,
+                    maxlength: 255
+                },
+                'phone': {
+                    maxlength: 50
                 }
-            });
-        }
+            },
+            messages: {
+                'name': {
+                    required: "Site name is required.",
+                    maxlength: "Site name cannot exceed 255 characters."
+                },
+                'customer_id': {
+                    required: "Please select a customer."
+                },
+                'email': {
+                    email: "Please enter a valid email address.",
+                    maxlength: "Email cannot exceed 255 characters."
+                },
+                'phone': {
+                    maxlength: "Phone number cannot exceed 50 characters."
+                }
+            },
+            submitHandler: function(form) {
+                var actionUrl = $(form).attr('action');
+                var formData = new FormData(form);
+
+                // AJAX request to submit the form
+                $.ajax({
+                    type: 'POST',
+                    url: actionUrl,
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Site saved successfully!',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then((result) => {
+                            // Close modal and reset form
+                            $('#siteModal').modal('hide');
+                            $('#siteForm')[0].reset(); // Clear form data
+                            $('#siteModalLabel').text('Add Site');
+                            $('#submitBtn').text('Save');
+
+                            // Force page reload after success
+                            location
+                                .reload(); // This reloads the page and shows the latest data
+                        });
+                    },
+                    error: function() {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'An error occurred. Please try again.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            }
+        });
+
+        // Edit Site button functionality
+        $(document).on('click', '.edit-site-btn', function() {
+            var siteId = $(this).data('id');
+
+            // Populate modal fields with existing site data
+            $('#site-id').val(siteId);
+            $('#site-name').val($(this).data('name'));
+            $('#site-customer-id').val($(this).data('customer_id'));
+            $('#site-address').val($(this).data('address'));
+            $('#site-city').val($(this).data('city'));
+            $('#site-state').val($(this).data('state'));
+            $('#site-zip').val($(this).data('zip'));
+            $('#site-contact').val($(this).data('contact_name'));
+            $('#site-email').val($(this).data('email'));
+            $('#site-phone').val($(this).data('phone'));
+
+            // Change modal title and button text for editing
+            $('#siteModalLabel').text('Edit Site');
+            $('#submitBtn').text('Update Site');
+            $('#siteForm').attr('action', '<?= site_url('admin/sites/update/') ?>' + siteId);
+
+            // Open the modal
+            var modal = new bootstrap.Modal(document.getElementById('siteModal'));
+            modal.show();
+        });
+
+        // Reset modal when closed
+        $('#siteModal').on('hidden.bs.modal', function() {
+            $('#siteForm')[0].reset();
+            $('#site-id').val('');
+            $('#siteModalLabel').text('Add Site');
+            $('#submitBtn').text('Save');
+            $('#siteForm').attr('action', '/admin/sites/add');
+        });
     });
-
-    // Edit Site button functionality
-    $(document).on('click', '.edit-site-btn', function() {
-        var siteId = $(this).data('id');
-
-        // Populate modal fields with existing site data
-        $('#site-id').val(siteId);
-        $('#site-name').val($(this).data('name'));
-        $('#site-customer-id').val($(this).data('customer_id'));
-        $('#site-address').val($(this).data('address'));
-        $('#site-city').val($(this).data('city'));
-        $('#site-state').val($(this).data('state'));
-        $('#site-zip').val($(this).data('zip'));
-        $('#site-contact').val($(this).data('contact_name'));
-        $('#site-email').val($(this).data('email'));
-        $('#site-phone').val($(this).data('phone'));
-
-        // Change modal title and button text for editing
-        $('#siteModalLabel').text('Edit Site');
-        $('#submitBtn').text('Update Site');
-        $('#siteForm').attr('action', '<?= site_url('admin/sites/update/') ?>' + siteId);
-
-        // Open the modal
-        var modal = new bootstrap.Modal(document.getElementById('siteModal'));
-        modal.show();
-    });
-
-    // Reset modal when closed
-    $('#siteModal').on('hidden.bs.modal', function() {
-        $('#siteForm')[0].reset();
-        $('#site-id').val('');
-        $('#siteModalLabel').text('Add Site');
-        $('#submitBtn').text('Save');
-        $('#siteForm').attr('action', '/admin/sites/add');
-    });
-});
-
-
 </script>
 
 <?= $this->endSection() ?>

@@ -9,8 +9,8 @@
 
 <!-- PASS PHP DATA TO JS -->
 <script>
-    const BASE_URL = "<?= $BASE_URL ?>";
-    const equipmentData = <?= json_encode($equipment) ?>;
+const BASE_URL = "<?= $BASE_URL ?>";
+const equipmentData = <?= json_encode($equipment) ?>;
 </script>
 
 <div class="glass-card">
@@ -75,10 +75,7 @@
 
                     <div class="mb-2">
                         <label>Service Manual (PDF, Max 5MB)</label>
-                        <input type="file"
-                            name="service_manual"
-                            class="form-control"
-                            accept="application/pdf">
+                        <input type="file" name="service_manual" class="form-control" accept="application/pdf">
                     </div>
 
                     <div class="mb-2">
@@ -122,263 +119,258 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    let table;
+let table;
 
-    function initEquipmentTable() {
-        table = $('#equipmentTable').DataTable({
-            data: equipmentData,
-            destroy: true,
-            columns: [{
-                    data: 'make',
-                    defaultContent: '-'
-                },
-                {
-                    data: 'model',
-                    defaultContent: '-'
-                },
-                {
-                    data: 'device_type',
-                    defaultContent: '-'
-                },
-                {
-                    data: 'serial_number',
-                    defaultContent: '-'
-                },
-                // {
-                //     data: 'asset_tag',
-                //     defaultContent: '-'
-                // },
-                {
-                    data: 'service_manual_path',
-                    orderable: false,
-                    searchable: false,
-                    render: d => d ?
-                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
-                },
+function initEquipmentTable() {
 
-                {
-                    data: 'pm_manual_path',
-                    orderable: false,
-                    searchable: false,
-                    render: d => d ?
-                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
-                },
-                {
-                    data: 'photo_path',
-                    orderable: false,
-                    searchable: false,
-                    render: d => d ?
-                        `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '—'
-                },
-                {
-                    data: 'id',
-                    orderable: false,
-                    searchable: false,
-                    render: id => `
+    table = $('#equipmentTable').DataTable({
+        data: equipmentData,
+        destroy: true,
+
+        columns: [{
+                data: 'make',
+                defaultContent: '-'
+            },
+            {
+                data: 'model',
+                defaultContent: '-'
+            },
+            {
+                data: 'device_type',
+                defaultContent: '-'
+            },
+            {
+                data: 'serial_number',
+                defaultContent: '-'
+            },
+
+            {
+                data: 'service_manual_path',
+                orderable: false,
+                searchable: false,
+                render: d => d ?
+                    `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` :
+                    '—'
+            },
+            {
+                data: 'pm_manual_path',
+                orderable: false,
+                searchable: false,
+                render: d => d ?
+                    `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` :
+                    '—'
+            },
+            {
+                data: 'photo_path',
+                orderable: false,
+                searchable: false,
+                render: d => d ?
+                    `<a href="${BASE_URL}/${d}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` :
+                    '—'
+            },
+            {
+                data: 'id',
+                orderable: false,
+                searchable: false,
+                render: id => `
                     <button class="btn btn-sm btn-info editBtn" data-id="${id}">Edit</button>
                     <button class="btn btn-sm btn-danger deleteBtn" data-id="${id}">Delete</button>
                 `
+            }
+        ],
+
+        dom: 'Bfrtip',
+
+        buttons: [{
+                extend: 'copy',
+                filename: 'Equipment',
+                exportOptions: {
+                    columns: [0, 1, 2, 3]
                 }
-            ],
-            dom: 'Bfrtip',
-            buttons: [{
-                    extend: 'copy',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4],
-                        modifier: {
-                            page: 'all', // 🔥 ALL pages
-                            search: 'applied' // 🔥 search filter respected
-                        }
-                    }
-                },
-                {
-                    extend: 'csv',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4],
-                        modifier: {
-                            page: 'all',
-                            search: 'applied'
-                        }
-                    }
-                },
-                {
-                    extend: 'excel',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4],
-                        modifier: {
-                            page: 'all',
-                            search: 'applied'
-                        }
-                    }
-                },
-                {
-                    extend: 'pdf',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4],
-                        modifier: {
-                            page: 'all',
-                            search: 'applied'
-                        }
-                    }
-                },
-                {
-                    extend: 'print',
-                    exportOptions: {
-                        columns: [0, 1, 2, 3, 4],
-                        modifier: {
-                            page: 'all',
-                            search: 'applied'
-                        }
-                    }
+            },
+            {
+                extend: 'csv',
+                filename: 'Equipment',
+                exportOptions: {
+                    columns: [0, 1, 2, 3]
                 }
-            ],
+            },
+            {
+                extend: 'excel',
+                filename: 'Equipment',
+                exportOptions: {
+                    columns: [0, 1, 2, 3]
+                }
+            },
+            {
+                extend: 'pdf',
+                filename: function() {
+                    const today = new Date();
+                    let day = String(today.getDate()).padStart(2, '0');
+                    let month = String(today.getMonth() + 1).padStart(2, '0');
+                    let year = today.getFullYear();
+                    return 'Equipment_' + day + month + year;
+                },
+                title: 'Equipment',
+                exportOptions: {
+                    columns: [0, 1, 2, 3]
+                }
+            },
+            {
+                extend: 'print',
+                title: 'Equipment',
+                exportOptions: {
+                    columns: [0, 1, 2, 3]
+                }
+            }
+        ],
+
+        pageLength: 10,
+        responsive: true
+    });
+}
 
 
-            pageLength: 10,
-            responsive: true
+$(document).ready(() => initEquipmentTable());
+
+/* ADD */
+$('#addBtn').on('click', () => {
+    equipmentForm.reset();
+    equipment_id.value = '';
+    new bootstrap.Modal('#equipmentModal').show();
+});
+
+/* EDIT */
+$(document).on('click', '.editBtn', function() {
+    const id = $(this).data('id');
+    fetch(`${BASE_URL}/admin/equipment-db/${id}`)
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                const d = res.data;
+                equipment_id.value = d.id;
+                make.value = d.make ?? '';
+                model.value = d.model ?? '';
+                device_type.value = d.device_type ?? '';
+                serial_number.value = d.serial_number ?? '';
+                // asset_tag.value = d.asset_tag ?? '';
+                new bootstrap.Modal('#equipmentModal').show();
+            }
         });
-    }
+});
 
-    $(document).ready(() => initEquipmentTable());
+/* SAVE */
+// equipmentForm.onsubmit = e => {
+//     e.preventDefault();
+//     fetch(`${BASE_URL}/admin/equipment-db/save`, {
+//             method: 'POST',
+//             body: new FormData(equipmentForm)
+//         })
+//         .then(r => r.json())
+//         .then(res => {
+//             if (res.status === 'success') {
+//                 location.reload();
+//             } else {
+//                 Swal.fire({
+//                     icon: 'error',
+//                     title: 'Upload Error',
+//                     text: res.message ?? 'Save failed'
+//                 });
+//             }
+//         });
 
-    /* ADD */
-    $('#addBtn').on('click', () => {
-        equipmentForm.reset();
-        equipment_id.value = '';
-        new bootstrap.Modal('#equipmentModal').show();
-    });
+// };
+equipmentForm.onsubmit = e => {
+    e.preventDefault();
 
-    /* EDIT */
-    $(document).on('click', '.editBtn', function() {
-        const id = $(this).data('id');
-        fetch(`${BASE_URL}/admin/equipment-db/${id}`)
-            .then(r => r.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    const d = res.data;
-                    equipment_id.value = d.id;
-                    make.value = d.make ?? '';
-                    model.value = d.model ?? '';
-                    device_type.value = d.device_type ?? '';
-                    serial_number.value = d.serial_number ?? '';
-                    // asset_tag.value = d.asset_tag ?? '';
-                    new bootstrap.Modal('#equipmentModal').show();
-                }
-            });
-    });
+    const saveBtn = document.getElementById('saveBtn');
+    const loader = document.getElementById('saveLoader');
+    const text = saveBtn.querySelector('.btn-text');
 
-    /* SAVE */
-    // equipmentForm.onsubmit = e => {
-    //     e.preventDefault();
-    //     fetch(`${BASE_URL}/admin/equipment-db/save`, {
-    //             method: 'POST',
-    //             body: new FormData(equipmentForm)
-    //         })
-    //         .then(r => r.json())
-    //         .then(res => {
-    //             if (res.status === 'success') {
-    //                 location.reload();
-    //             } else {
-    //                 Swal.fire({
-    //                     icon: 'error',
-    //                     title: 'Upload Error',
-    //                     text: res.message ?? 'Save failed'
-    //                 });
-    //             }
-    //         });
+    // 🔒 Disable button & show loader
+    saveBtn.disabled = true;
+    loader.classList.remove('d-none');
+    text.textContent = 'Saving...';
 
-    // };
-    equipmentForm.onsubmit = e => {
-        e.preventDefault();
-
-        const saveBtn = document.getElementById('saveBtn');
-        const loader = document.getElementById('saveLoader');
-        const text = saveBtn.querySelector('.btn-text');
-
-        // 🔒 Disable button & show loader
-        saveBtn.disabled = true;
-        loader.classList.remove('d-none');
-        text.textContent = 'Saving...';
-
-        fetch(`${BASE_URL}/admin/equipment-db/save`, {
-                method: 'POST',
-                body: new FormData(equipmentForm)
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    location.reload();
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Upload Error',
-                        text: res.message ?? 'Save failed'
-                    });
-                }
-            })
-            .catch(() => {
-                Swal.fire('Error', 'Something went wrong', 'error');
-            })
-            .finally(() => {
-                // 🔓 Re-enable button if needed
-                saveBtn.disabled = false;
-                loader.classList.add('d-none');
-                text.textContent = 'Save';
-            });
-    };
-
-
-    /* DELETE */
-    $(document).on('click', '.deleteBtn', function() {
-        const id = $(this).data('id');
-        const row = $(this).closest('tr');
-
-        Swal.fire({
-            title: 'Delete?',
-            text: 'This equipment will be deleted',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33'
-        }).then(r => {
-            if (!r.isConfirmed) return;
-
-            fetch(`${BASE_URL}/admin/equipment-db/delete/${id}`, {
-                    method: 'POST'
-                })
-                .then(r => r.json())
-                .then(res => {
-                    if (res.status === 'success') {
-                        table.row(row).remove().draw();
-                        Swal.fire('Deleted', '', 'success');
-                    }
+    fetch(`${BASE_URL}/admin/equipment-db/save`, {
+            method: 'POST',
+            body: new FormData(equipmentForm)
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.status === 'success') {
+                location.reload();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Error',
+                    text: res.message ?? 'Save failed'
                 });
+            }
+        })
+        .catch(() => {
+            Swal.fire('Error', 'Something went wrong', 'error');
+        })
+        .finally(() => {
+            // 🔓 Re-enable button if needed
+            saveBtn.disabled = false;
+            loader.classList.add('d-none');
+            text.textContent = 'Save';
         });
-    });
+};
 
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
-    function checkFileSize(input) {
-        if (!input.files.length) return true;
+/* DELETE */
+$(document).on('click', '.deleteBtn', function() {
+    const id = $(this).data('id');
+    const row = $(this).closest('tr');
 
-        const file = input.files[0];
-        if (file.size > MAX_SIZE) {
-            Swal.fire({
-                icon: 'error',
-                title: 'File too large',
-                text: 'Maximum allowed size is 5MB'
+    Swal.fire({
+        title: 'Delete?',
+        text: 'This equipment will be deleted',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33'
+    }).then(r => {
+        if (!r.isConfirmed) return;
+
+        fetch(`${BASE_URL}/admin/equipment-db/delete/${id}`, {
+                method: 'POST'
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'success') {
+                    table.row(row).remove().draw();
+                    Swal.fire('Deleted', '', 'success');
+                }
             });
-            input.value = ''; // reset file input
-            return false;
-        }
-        return true;
-    }
-
-    // Attach to all file inputs
-    document.querySelectorAll('input[type="file"]').forEach(input => {
-        input.addEventListener('change', function() {
-            checkFileSize(this);
-        });
     });
+});
+
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+
+function checkFileSize(input) {
+    if (!input.files.length) return true;
+
+    const file = input.files[0];
+    if (file.size > MAX_SIZE) {
+        Swal.fire({
+            icon: 'error',
+            title: 'File too large',
+            text: 'Maximum allowed size is 5MB'
+        });
+        input.value = ''; // reset file input
+        return false;
+    }
+    return true;
+}
+
+// Attach to all file inputs
+document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function() {
+        checkFileSize(this);
+    });
+});
 </script>
 
 <?= $this->endSection() ?>
