@@ -184,7 +184,6 @@
 <script>
     $(document).ready(function() {
         // Get current date in DDMMYYYY format
-        // Get current date
         function getCurrentDate() {
             const today = new Date();
             const day = String(today.getDate()).padStart(2, '0');
@@ -344,7 +343,6 @@
                 }
             ]
         });
-
     });
 </script>
 

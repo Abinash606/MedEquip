@@ -2045,26 +2045,94 @@
             let year = today.getFullYear();
             return day + month + year;
         }
+        // ─── COMMON PDF DESIGN FUNCTION ─────────────────
+        function pdfCustomize(doc) {
+
+            // font size
+            doc.defaultStyle.fontSize = 7;
+
+            // header style
+            doc.styles.tableHeader = {
+                bold: true,
+                fontSize: 8,
+                color: 'black',
+                fillColor: '#a4d169',
+                alignment: 'center'
+            };
+
+            // margins
+            doc.pageMargins = [10, 10, 10, 10];
+
+            // borders
+            var objLayout = {};
+            objLayout.hLineWidth = function() {
+                return 0.5;
+            };
+            objLayout.vLineWidth = function() {
+                return 0.5;
+            };
+            objLayout.hLineColor = function() {
+                return "#aaaaaa";
+            };
+            objLayout.vLineColor = function() {
+                return "#aaaaaa";
+            };
+
+            doc.content[1].layout = objLayout;
+
+            // auto column width
+            var table = doc.content[1].table;
+            var colCount = table.body[0].length;
+            table.widths = [];
+
+            for (var i = 0; i < colCount; i++) {
+                table.widths.push('*');
+            }
+
+            // row colors
+            doc.styles.tableBodyEven = {
+                fillColor: '#f2f2f2'
+            };
+            doc.styles.tableBodyOdd = {
+                fillColor: '#ffffff'
+            };
+        }
+
 
         /* ================= EQUIPMENT ================= */
         $('#equipment-datatable').DataTable({
             dom: 'Bfrtip',
             buttons: [{
                     extend: 'copy',
-                    filename: 'Equipment'
+                    filename: 'Equipment',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'csv',
-                    filename: 'Equipment'
+                    filename: 'Equipment',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'excel',
-                    filename: 'Equipment'
+                    filename: 'Equipment',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
-                    extend: 'pdf',
+                    extend: 'pdfHtml5',
                     filename: 'Equipment_' + getTodayDate(),
-                    title: 'Equipment'
+                    title: 'Equipment',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)' // remove action column
+                    },
+                    customize: pdfCustomize
                 }
             ],
             responsive: true,
@@ -2080,20 +2148,35 @@
             dom: 'Bfrtip',
             buttons: [{
                     extend: 'copy',
-                    filename: 'Inspections'
+                    filename: 'Inspections',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'csv',
-                    filename: 'Inspections'
+                    filename: 'Inspections',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'excel',
-                    filename: 'Inspections'
+                    filename: 'Inspections',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
-                    extend: 'pdf',
+                    extend: 'pdfHtml5',
                     filename: 'Inspections_' + getTodayDate(),
-                    title: 'Inspections'
+                    title: 'Inspections',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+                    customize: pdfCustomize
                 }
             ],
             responsive: true,
@@ -2109,20 +2192,35 @@
             dom: 'Bfrtip',
             buttons: [{
                     extend: 'copy',
-                    filename: 'WorkOrders'
+                    filename: 'WorkOrders',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'csv',
-                    filename: 'WorkOrders'
+                    filename: 'WorkOrders',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'excel',
-                    filename: 'WorkOrders'
+                    filename: 'WorkOrders',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
-                    extend: 'pdf',
+                    extend: 'pdfHtml5',
                     filename: 'WorkOrders_' + getTodayDate(),
-                    title: 'Work Orders'
+                    title: 'Work Orders',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+                    customize: pdfCustomize
                 }
             ],
             responsive: true,

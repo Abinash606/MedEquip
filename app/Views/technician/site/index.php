@@ -14,7 +14,8 @@
             <span class="input-group-text bg-white">
                 <i class="fa-solid fa-search"></i>
             </span>
-            <input id="site-search" type="text" class="form-control border-start-0 ps-0"
+            <input id="site-search" type="text"
+                class="form-control border-start-0 ps-0"
                 placeholder="Search by site, address or customer name...">
         </div>
     </div>
@@ -249,7 +250,6 @@
                 }
             ]
         });
-
 
         // 🔍 Custom search input
         $('#site-search').on('keyup', function() {
