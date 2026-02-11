@@ -14,8 +14,7 @@
             <span class="input-group-text bg-white">
                 <i class="fa-solid fa-search"></i>
             </span>
-            <input id="site-search" type="text"
-                class="form-control border-start-0 ps-0"
+            <input id="site-search" type="text" class="form-control border-start-0 ps-0"
                 placeholder="Search by site, address or customer name...">
         </div>
     </div>
@@ -121,31 +120,136 @@
     $(document).ready(function() {
 
         const table = $('#sites-datatable').DataTable({
-            dom: 'Bfrtip', // Buttons + search + table
+            dom: 'Bfrtip',
             pageLength: 10,
             order: [
                 [0, 'asc']
             ],
+
             buttons: [{
                     extend: 'copy',
-                    text: 'Copy'
+                    text: 'Copy',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'excelHtml5',
                     text: 'Excel',
-                    filename: 'technician_sites',
-                    title: 'Technician Sites'
+                    filename: function() {
+                        const today = new Date();
+                        let d = String(today.getDate()).padStart(2, '0');
+                        let m = String(today.getMonth() + 1).padStart(2, '0');
+                        let y = today.getFullYear();
+                        return 'Technician_Sites_' + d + m + y;
+                    },
+                    title: 'Technician Sites',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    }
                 },
                 {
                     extend: 'pdfHtml5',
                     text: 'PDF',
-                    filename: 'technician_sites',
-                    title: 'Technician Sites',
                     orientation: 'landscape',
-                    pageSize: 'A4'
+                    pageSize: 'A4',
+                    title: 'Technician Sites',
+
+                    filename: function() {
+                        const today = new Date();
+                        let d = String(today.getDate()).padStart(2, '0');
+                        let m = String(today.getMonth() + 1).padStart(2, '0');
+                        let y = today.getFullYear();
+                        return 'Technician_Sites_' + d + m + y;
+                    },
+
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+
+                    customize: function(doc) {
+
+                        /* FONT */
+                        doc.styles.title.fontSize = 13;
+                        doc.styles.tableHeader.fontSize = 9;
+                        doc.defaultStyle.fontSize = 8;
+
+                        /* MARGIN */
+                        doc.pageMargins = [15, 30, 15, 20];
+
+                        const table = doc.content[1].table;
+                        const body = table.body;
+                        const colCount = body[0].length;
+
+                        /* AUTO WIDTH */
+                        table.widths = Array(colCount).fill('*');
+
+                        /* HEADER COLOR */
+                        doc.styles.tableHeader = {
+                            bold: true,
+                            fontSize: 9,
+                            color: 'black',
+                            fillColor: '#a4d169',
+                            alignment: 'left'
+                        };
+
+                        /* ROW COLORS */
+                        doc.styles.tableBodyEven = {
+                            fillColor: '#f3f3f3'
+                        };
+                        doc.styles.tableBodyOdd = {
+                            fillColor: '#ffffff'
+                        };
+
+                        /* BORDERS */
+                        table.layout = {
+                            hLineWidth: function() {
+                                return 0.8;
+                            },
+                            vLineWidth: function() {
+                                return 0.8;
+                            },
+                            hLineColor: function() {
+                                return '#cccccc';
+                            },
+                            vLineColor: function() {
+                                return '#cccccc';
+                            },
+                            paddingLeft: function() {
+                                return 4;
+                            },
+                            paddingRight: function() {
+                                return 4;
+                            },
+                            paddingTop: function() {
+                                return 3;
+                            },
+                            paddingBottom: function() {
+                                return 3;
+                            }
+                        };
+
+                        /* WORD WRAP */
+                        body.forEach(function(row, rowIndex) {
+                            row.forEach(function(cell) {
+
+                                if (rowIndex === 0) return;
+
+                                if (typeof cell.text === 'string') {
+                                    cell.text = cell.text.replace(/(.{35})/g,
+                                        '$1\n');
+                                }
+
+                                cell.noWrap = false;
+                                cell.alignment = 'left';
+                            });
+                        });
+
+                    }
                 }
             ]
         });
+
 
         // 🔍 Custom search input
         $('#site-search').on('keyup', function() {

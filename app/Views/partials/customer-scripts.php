@@ -12,11 +12,16 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
-<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+<script type="text/javascript" charset="utf8"
+  src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js">
+</script>
+<script type="text/javascript" charset="utf8"
+  src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js">
+</script>
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js">
+</script>
 
 <script>
   $(document).ready(function() {
@@ -28,11 +33,10 @@
       ordering: true,
       info: true,
       paging: true,
-
       scrollX: true,
       autoWidth: false,
 
-      dom: "<'row mb-3'<'col-md-6'B><'col-md-6 text-end'f>>" + // buttons LEFT, search RIGHT
+      dom: "<'row mb-3'<'col-md-6'B><'col-md-6 text-end'f>>" +
         "<'row'<'col-12'tr>>" +
         "<'row mt-3'<'col-md-6'i><'col-md-6 text-end'p>>",
 
@@ -40,14 +44,14 @@
           extend: 'copyHtml5',
           text: 'Copy',
           exportOptions: {
-            columns: ':visible'
+            columns: ':visible:not(:last-child)'
           }
         },
         {
           extend: 'excelHtml5',
           text: 'Excel',
           exportOptions: {
-            columns: ':visible'
+            columns: ':visible:not(:last-child)'
           }
         },
         {
@@ -57,20 +61,26 @@
           pageSize: 'A4',
           title: 'MedEquip Customer Portal | Service Management',
 
+          filename: function() {
+            const today = new Date();
+            let day = String(today.getDate()).padStart(2, '0');
+            let month = String(today.getMonth() + 1).padStart(2, '0');
+            let year = today.getFullYear();
+            return 'Customers_' + day + month + year;
+          },
+
           exportOptions: {
-            columns: ':visible'
+            columns: ':visible:not(:last-child)'
           },
 
           customize: function(doc) {
 
-            /* ========= FONT CONTROL ========= */
+            /* ========= FONT ========= */
             doc.styles.title.fontSize = 13;
-            doc.styles.tableHeader.fontSize = 8;
-            doc.defaultStyle.fontSize = 7;
+            doc.styles.tableHeader.fontSize = 9;
+            doc.defaultStyle.fontSize = 8;
 
-            doc.defaultStyle.alignment = 'left';
-
-            /* ========= PAGE ========= */
+            /* ========= PAGE MARGIN ========= */
             doc.pageMargins = [15, 35, 15, 25];
 
             const table = doc.content[1].table;
@@ -78,60 +88,101 @@
             const columnCount = body[0].length;
 
             /* ========= COLUMN WIDTHS ========= */
-            // Narrow + wide mix (IMPORTANT)
             table.widths = [
-              '10%', // Customer Name
-              '18%', // Address (WIDE)
-              '8%', // Billing City
-              '5%', // State
-              '6%', // Zip
-              '8%', // Contact Name
-              '20%', // Email (WIDEST)
-              '8%', // Phone
-              '5%', // Fax
-              '12%' // Website
+              '10%',
+              '18%',
+              '8%',
+              '5%',
+              '6%',
+              '8%',
+              '20%',
+              '8%',
+              '5%',
+              '12%'
             ];
 
-            /* ========= FORCE WORD WRAP ========= */
-            body.forEach(function(row, rowIndex) {
-              row.forEach(function(cell, colIndex) {
+            /* ========= HEADER STYLE ========= */
+            doc.styles.tableHeader = {
+              bold: true,
+              fontSize: 9,
+              color: 'black',
+              fillColor: '#a4d169',
+              alignment: 'left'
+            };
 
-                // Header row skip styling
+            /* ========= ROW COLORS ========= */
+            doc.styles.tableBodyEven = {
+              fillColor: '#f3f3f3'
+            };
+            doc.styles.tableBodyOdd = {
+              fillColor: '#ffffff'
+            };
+
+            /* ========= BORDERS ========= */
+            table.layout = {
+              hLineWidth: function() {
+                return 0.8;
+              },
+              vLineWidth: function() {
+                return 0.8;
+              },
+              hLineColor: function() {
+                return '#cccccc';
+              },
+              vLineColor: function() {
+                return '#cccccc';
+              },
+              paddingLeft: function() {
+                return 4;
+              },
+              paddingRight: function() {
+                return 4;
+              },
+              paddingTop: function() {
+                return 3;
+              },
+              paddingBottom: function() {
+                return 3;
+              }
+            };
+
+            /* ========= WORD WRAP ========= */
+            body.forEach(function(row, rowIndex) {
+              row.forEach(function(cell) {
+
                 if (rowIndex === 0) {
                   cell.alignment = 'left';
                   return;
                 }
 
                 if (typeof cell.text === 'string') {
-                  cell.text = cell.text
-                    .replace(/(.{30})/g, '$1\n'); // ⬅️ break every 30 chars
+                  cell.text = cell.text.replace(/(.{30})/g,
+                    '$1\n');
                 }
 
-                cell.alignment = 'left';
                 cell.noWrap = false;
+                cell.alignment = 'left';
               });
             });
 
-
-
           }
         }
-
       ]
     });
+
 
     /* ===============================
        CUSTOM TOP SEARCH WORKING
     =============================== */
 
     // Typing search (live)
-    $('#customerSearch').on('keyup', function () {
-        table.search(this.value).draw();
+    $('#customerSearch').on('keyup', function() {
+      table.search(this.value).draw();
     });
 
     // Button click search
-    $('#customerSearchBtn').on('click', function () {
-        table.search($('#customerSearch').val()).draw();
+    $('#customerSearchBtn').on('click', function() {
+      table.search($('#customerSearch').val()).draw();
     });
 
   });

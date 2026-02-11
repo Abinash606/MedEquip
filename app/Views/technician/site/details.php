@@ -2,13 +2,13 @@
 <?= $this->section('content') ?>
 
 <style>
-.glass-card {
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-    padding: 1.5rem;
-}
+    .glass-card {
+        background: #ffffff;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+        padding: 1.5rem;
+    }
 </style>
 
 <!-- Back Button -->
@@ -90,20 +90,20 @@
                 </thead>
                 <tbody>
                     <?php if (!empty($equipment)): ?>
-                    <?php foreach ($equipment as $eq): ?>
-                    <tr>
-                        <td><?= esc($eq['asset_tag'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['make'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['model'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
-                        <td>
-                            <button class="btn btn-sm btn-info">View</button>
-                            <!-- <button class="btn btn-sm btn-secondary">Edit</button>
+                        <?php foreach ($equipment as $eq): ?>
+                            <tr>
+                                <td><?= esc($eq['asset_tag'] ?? 'N/A') ?></td>
+                                <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
+                                <td><?= esc($eq['make'] ?? 'N/A') ?></td>
+                                <td><?= esc($eq['model'] ?? 'N/A') ?></td>
+                                <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-info">View</button>
+                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
                             <button class="btn btn-sm btn-danger">Delete</button> -->
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -125,20 +125,20 @@
                 </thead>
                 <tbody>
                     <?php if (!empty($inspections)): ?>
-                    <?php foreach ($inspections as $insp): ?>
-                    <tr>
-                        <td><?= esc($insp['group_id'] ?? 'N/A') ?></td>
-                        <td><?= !empty($insp['scheduled_at']) ? date('Y-m-d', strtotime($insp['scheduled_at'])) : 'N/A' ?>
-                        </td>
-                        <td><?= esc($insp['technician_name'] ?? 'Unassigned') ?></td>
-                        <td><?= esc($insp['status'] ?? 'Pending') ?></td>
-                        <td>
-                            <button class="btn btn-sm btn-info">View</button>
-                            <!-- <button class="btn btn-sm btn-secondary">Edit</button>
+                        <?php foreach ($inspections as $insp): ?>
+                            <tr>
+                                <td><?= esc($insp['group_id'] ?? 'N/A') ?></td>
+                                <td><?= !empty($insp['scheduled_at']) ? date('Y-m-d', strtotime($insp['scheduled_at'])) : 'N/A' ?>
+                                </td>
+                                <td><?= esc($insp['technician_name'] ?? 'Unassigned') ?></td>
+                                <td><?= esc($insp['status'] ?? 'Pending') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-info">View</button>
+                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
                             <button class="btn btn-sm btn-danger">Delete</button> -->
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -160,19 +160,19 @@
                 </thead>
                 <tbody>
                     <?php if (!empty($workOrders)): ?>
-                    <?php foreach ($workOrders as $wo): ?>
-                    <tr>
-                        <td>WO-<?= esc($wo['id']) ?></td>
-                        <td><?= !empty($wo['created_at']) ? date('Y-m-d', strtotime($wo['created_at'])) : 'N/A' ?></td>
-                        <td><?= esc($wo['technician_name'] ?? 'Unassigned') ?></td>
-                        <td><?= esc($wo['status'] ?? 'Open') ?></td>
-                        <td>
-                            <button class="btn btn-sm btn-info">View</button>
-                            <!-- <button class="btn btn-sm btn-secondary">Edit</button>
+                        <?php foreach ($workOrders as $wo): ?>
+                            <tr>
+                                <td>WO-<?= esc($wo['id']) ?></td>
+                                <td><?= !empty($wo['created_at']) ? date('Y-m-d', strtotime($wo['created_at'])) : 'N/A' ?></td>
+                                <td><?= esc($wo['technician_name'] ?? 'Unassigned') ?></td>
+                                <td><?= esc($wo['status'] ?? 'Open') ?></td>
+                                <td>
+                                    <button class="btn btn-sm btn-info">View</button>
+                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
                             <button class="btn btn-sm btn-danger">Delete</button> -->
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -182,78 +182,170 @@
 </div>
 
 <script>
-$(document).ready(function() {
-    // Get current date in DDMMYYYY format
-    function getCurrentDate() {
-        const today = new Date();
-        const day = String(today.getDate()).padStart(2, '0');
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const year = today.getFullYear();
-        return day + month + year;
-    }
+    $(document).ready(function() {
+        // Get current date in DDMMYYYY format
+        // Get current date
+        function getCurrentDate() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            return day + month + year;
+        }
 
-    const currentDate = getCurrentDate();
+        const currentDate = getCurrentDate();
 
-    // Initialize Equipment DataTable
-    $('#equipment-datatable').DataTable({
-        dom: 'Bfrtip',
-        buttons: [{
-                extend: 'copy',
-                title: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'excel',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'pdf',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            }
-        ]
+        /* COMMON PDF STYLE FUNCTION */
+        function pdfCustomize(doc) {
+
+            doc.styles.title.fontSize = 13;
+            doc.defaultStyle.fontSize = 8;
+
+            doc.pageMargins = [15, 30, 15, 20];
+
+            const table = doc.content[1].table;
+            const body = table.body;
+            const colCount = body[0].length;
+
+            /* AUTO WIDTH */
+            table.widths = Array(colCount).fill('*');
+
+            /* HEADER STYLE */
+            doc.styles.tableHeader = {
+                bold: true,
+                fontSize: 9,
+                color: 'black',
+                fillColor: '#a4d169',
+                alignment: 'left'
+            };
+
+            /* ROW COLORS */
+            doc.styles.tableBodyEven = {
+                fillColor: '#f3f3f3'
+            };
+            doc.styles.tableBodyOdd = {
+                fillColor: '#ffffff'
+            };
+
+            /* BORDERS */
+            table.layout = {
+                hLineWidth: function() {
+                    return 0.8;
+                },
+                vLineWidth: function() {
+                    return 0.8;
+                },
+                hLineColor: function() {
+                    return '#cccccc';
+                },
+                vLineColor: function() {
+                    return '#cccccc';
+                },
+                paddingLeft: function() {
+                    return 4;
+                },
+                paddingRight: function() {
+                    return 4;
+                },
+                paddingTop: function() {
+                    return 3;
+                },
+                paddingBottom: function() {
+                    return 3;
+                }
+            };
+
+            /* WORD WRAP */
+            body.forEach(function(row, rowIndex) {
+                row.forEach(function(cell) {
+                    if (rowIndex === 0) return;
+
+                    if (typeof cell.text === 'string') {
+                        cell.text = cell.text.replace(/(.{35})/g, '$1\n');
+                    }
+
+                    cell.noWrap = false;
+                    cell.alignment = 'left';
+                });
+            });
+        }
+
+        /* ================= EQUIPMENT ================= */
+        $('#equipment-datatable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [{
+                    extend: 'copy',
+                    title: 'Equipment_' + currentDate
+                },
+                {
+                    extend: 'excel',
+                    filename: 'Equipment_' + currentDate
+                },
+                {
+                    extend: 'pdfHtml5',
+                    title: 'Equipment',
+                    filename: 'Equipment_' + currentDate,
+                    orientation: 'landscape',
+                    pageSize: 'A4',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+                    customize: pdfCustomize
+                }
+            ]
+        });
+
+        /* ================= INSPECTIONS ================= */
+        $('#inspections-datatable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [{
+                    extend: 'copy',
+                    title: 'Inspections_' + currentDate
+                },
+                {
+                    extend: 'excel',
+                    filename: 'Inspections_' + currentDate
+                },
+                {
+                    extend: 'pdfHtml5',
+                    title: 'Inspections',
+                    filename: 'Inspections_' + currentDate,
+                    orientation: 'landscape',
+                    pageSize: 'A4',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+                    customize: pdfCustomize
+                }
+            ]
+        });
+
+        /* ================= WORK ORDERS ================= */
+        $('#work-orders-datatable').DataTable({
+            dom: 'Bfrtip',
+            buttons: [{
+                    extend: 'copy',
+                    title: 'WorkOrders_' + currentDate
+                },
+                {
+                    extend: 'excel',
+                    filename: 'WorkOrders_' + currentDate
+                },
+                {
+                    extend: 'pdfHtml5',
+                    title: 'Work Orders',
+                    filename: 'WorkOrders_' + currentDate,
+                    orientation: 'landscape',
+                    pageSize: 'A4',
+                    exportOptions: {
+                        columns: ':visible:not(:last-child)'
+                    },
+                    customize: pdfCustomize
+                }
+            ]
+        });
+
     });
-
-    // Initialize Inspections DataTable
-    $('#inspections-datatable').DataTable({
-        dom: 'Bfrtip',
-        buttons: [{
-                extend: 'copy',
-                title: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'excel',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'pdf',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            }
-        ]
-    });
-
-    // Initialize Work Orders DataTable
-    $('#work-orders-datatable').DataTable({
-        dom: 'Bfrtip',
-        buttons: [{
-                extend: 'copy',
-                title: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'excel',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            },
-            {
-                extend: 'pdf',
-                title: 'technician_sites_' + currentDate,
-                filename: 'technician_sites_' + currentDate
-            }
-        ]
-    });
-});
 </script>
 
 <?= $this->endSection() ?>
