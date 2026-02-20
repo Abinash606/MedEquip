@@ -6,6 +6,7 @@ use App\Controllers\BaseController;
 use App\Models\SystemSettingsModel;
 use App\Models\UserModel;
 use App\Models\IqNoteModel;
+use App\Models\EquipmentSettingModel;
 
 class SystemSettings extends BaseController
 {
@@ -234,13 +235,6 @@ class SystemSettings extends BaseController
         return $this->response->setJSON(['message' => 'Note added']);
     }
 
-    // ---------- IQ NOTE DELETE ----------
-    // public function iqNoteDelete($id)
-    // {
-    //     $model = new IqNoteModel();
-    //     $model->delete($id);
-    //     return $this->response->setJSON(['message' => 'Note deleted']);
-    // }
 
     public function iqNoteDelete()
     {
@@ -254,5 +248,47 @@ class SystemSettings extends BaseController
         $model->delete($id);
 
         return $this->response->setJSON(['message' => 'Note deleted']);
+    }
+
+    public function equipmentList()
+    {
+        $model = new EquipmentSettingModel();
+        return $this->response->setJSON([
+            'data' => $model->findAll()
+        ]);
+    }
+
+    public function equipmentSave()
+    {
+        $model = new EquipmentSettingModel();
+
+        $id = $this->request->getPost('id');
+
+        $data = [
+            'description' => $this->request->getPost('description'),
+            'est' => $this->request->getPost('est') ? 1 : 0,
+            'cal' => $this->request->getPost('cal') ? 1 : 0,
+        ];
+
+        if ($id) {
+            $model->update($id, $data);
+            $msg = "Equipment updated successfully";
+        } else {
+            $model->insert($data);
+            $msg = "Equipment added successfully";
+        }
+
+        return $this->response->setJSON(['status' => 'success', 'message' => $msg]);
+    }
+
+    public function equipmentDelete($id)
+    {
+        $model = new EquipmentSettingModel();
+        $model->delete($id);
+
+        return $this->response->setJSON([
+            'status' => 'success',
+            'message' => 'Equipment deleted'
+        ]);
     }
 }

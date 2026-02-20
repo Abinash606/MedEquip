@@ -18,43 +18,131 @@ class WorkOrdersController extends BaseController
 
      public function create()
     {
-        if ($this->request->getMethod() === 'POST') {
+        if ($this->request->getMethod() !== 'POST') {
+            return redirect()->to('/admin/sites');
+        }
+
             $companyId = $this->session->get('company_id');
             $workOrderModel = new WorkOrderModel();
+
             $data = [
-                'company_id' => $companyId,
-                'title' => $this->request->getPost('title'),
-                'equipment_id' => $this->request->getPost('equipment_id'),
-                'status' => $this->request->getPost('status'),
-                'priority' => $this->request->getPost('priority'),
-                'assigned_to' => $this->request->getPost('assigned_to'),
-                'start_date' => $this->request->getPost('start_date'),
-                'end_date' => $this->request->getPost('end_date'),
-                'description' => $this->request->getPost('description'),
-                'site_id' => $this->request->getPost('site_id')
-            ];
-            $workOrderModel->insert($data);
+            'company_id'  => $companyId,
+            'site_id'     => $this->request->getPost('site_id'),
+            'title'       => $this->request->getPost('title'),
+            'equipment_id'=> $this->request->getPost('equipment_id') ?: null,
+            'status'      => $this->request->getPost('status')   ?: 'open',
+            'priority'    => $this->request->getPost('priority') ?: 'medium',
+            'assigned_to' => $this->request->getPost('assigned_to') ?: null,
+            'start_date'  => $this->request->getPost('start_date') ?: null,
+            'end_date'    => $this->request->getPost('end_date')   ?: null,
+            'description' => $this->request->getPost('description') ?? '',
+        ];
+
+        $inserted = $workOrderModel->insert($data);
+
+        // Determine if client expects JSON (AJAX or Accept header)
+        $wantsJson = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+            || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+
+        if ($wantsJson) {
+            if ($inserted) {
+                $woId = $workOrderModel->getInsertID();
+                // Gather basic equipment details for convenience
+                $assetTag = '';
+                $serialNo = '';
+                if (!empty($data['equipment_id'])) {
+                    $eqModel = new \App\Models\EquipmentModel();
+                    $eqRow   = $eqModel->find($data['equipment_id']);
+                    if ($eqRow) {
+                        $assetTag = $eqRow['asset_tag'] ?? '';
+                        $serialNo = $eqRow['serial_number'] ?? '';
+                    }
+                }
+                return $this->response->setJSON([
+                    'success'            => true,
+                    'message'            => 'Work order created successfully',
+                    'work_order_id'      => $woId,
+                    'title'              => (string) $data['title'],
+                    'priority'           => (string) $data['priority'],
+                    'status'             => (string) $data['status'],
+                    'assigned_to_name'   => !empty($data['assigned_to']) ? (string) $data['assigned_to'] : 'N/A',
+                    'start_date'         => (string) $data['start_date'],
+                    'end_date'           => (string) $data['end_date'],
+                    'description'        => (string) $data['description'],
+                    'asset_tag'          => $assetTag,
+                    'serial_number'      => $serialNo,
+                    'csrf_hash'          => csrf_hash(),
+                ]);
+            }
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Failed to create work order',
+            ]);
+        }
+
+        // Non-AJAX: redirect to site page
             return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
         }
-    }
 
     public function update($id)
     {
         if ($this->request->getMethod() === 'POST') {
-            $companyId = $this->session->get('company_id');
+            $companyId = (int) $this->session->get('company_id');
             $workOrderModel = new WorkOrderModel();
             $data = [
-                'company_id' => $companyId,
-                'title' => $this->request->getPost('title'),
-                'equipment_id' => $this->request->getPost('equipment_id'),
-                'status' => $this->request->getPost('status'),
-                'priority' => $this->request->getPost('priority'),
+                'company_id'  => $companyId,
+                'title'       => $this->request->getPost('title'),
+                'equipment_id'=> $this->request->getPost('equipment_id') ?: null,
+                'status'      => $this->request->getPost('status'),
+                'priority'    => $this->request->getPost('priority'),
                 'assigned_to' => $this->request->getPost('assigned_to'),
-                'start_date' => $this->request->getPost('start_date'),
-                'end_date' => $this->request->getPost('end_date'),
+                'start_date'  => $this->request->getPost('start_date'),
+                'end_date'    => $this->request->getPost('end_date'),
                 'description' => $this->request->getPost('description'),
             ];
-            $workOrderModel->update($id, $data);
+            $updated = $workOrderModel->update($id, $data);
+
+            // Determine if client expects JSON
+            $wantsJson = $this->request->isAJAX()
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+                || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+            if ($wantsJson) {
+                if ($updated !== false) {
+                    // gather equipment info
+                    $assetTag = '';
+                    $serialNo = '';
+                    if (!empty($data['equipment_id'])) {
+                        $eqModel = new \App\Models\EquipmentModel();
+                        $eqRow   = $eqModel->find($data['equipment_id']);
+                        if ($eqRow) {
+                            $assetTag = $eqRow['asset_tag'] ?? '';
+                            $serialNo = $eqRow['serial_number'] ?? '';
+                        }
+                    }
+                    return $this->response->setJSON([
+                        'success'          => true,
+                        'message'          => 'Work order updated successfully',
+                        'work_order_id'    => (int) $id,
+                        'title'            => (string) $data['title'],
+                        'priority'         => (string) $data['priority'],
+                        'status'           => (string) $data['status'],
+                        'assigned_to_name' => !empty($data['assigned_to']) ? (string) $data['assigned_to'] : 'N/A',
+                        'start_date'       => (string) $data['start_date'],
+                        'end_date'         => (string) $data['end_date'],
+                        'description'      => (string) $data['description'],
+                        'asset_tag'        => $assetTag,
+                        'serial_number'    => $serialNo,
+                        'csrf_hash'        => csrf_hash(),
+                    ]);
+                }
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Failed to update work order',
+                ]);
+            }
+
+            // Non-AJAX: redirect to site page
             return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
         }
     }
@@ -62,7 +150,18 @@ class WorkOrdersController extends BaseController
     public function delete($id)
     {
         $workOrderModel = new WorkOrderModel();
-        $workOrderModel->delete($id);
+        $deleted = $workOrderModel->delete($id);
+        // Determine if client expects JSON
+        $wantsJson = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+            || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+        if ($wantsJson) {
+            return $this->response->setJSON([
+                'success' => (bool) $deleted,
+                'message' => $deleted ? 'Work order deleted' : 'Failed to delete work order',
+                'work_order_id' => (int) $id,
+            ]);
+        }
         return redirect()->back();
     }
 

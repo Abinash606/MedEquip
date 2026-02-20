@@ -7,6 +7,7 @@ use App\Models\InspectionModel;
 use App\Models\EquipmentModel;
 use App\Models\SiteModel;
 use App\Models\UserModel;
+use Dompdf\Dompdf;
 
 
 class InspectionsController extends BaseController
@@ -160,7 +161,15 @@ class InspectionsController extends BaseController
                     'status'          => $item['status'] ?? 'Pass',
                     'technician_id'   => $item['technician_id'] ?? null,
                     'completed_at'    => date('Y-m-d H:i:s'),
-                    'next_due_date'   => $item['next_due_date'] ?? null,
+                    'next_due_date'   => $item['next_due_date'] ?? (function() use ($item) {
+                        // Auto-calculate from pm_frequency if next_due_date not set
+                        $pmFreq = $item['pm_frequency'] ?? '';
+                        if ($pmFreq !== '' && preg_match('/^(\d+)/', $pmFreq, $m)) {
+                            $months = (int) $m[1];
+                            if ($months > 0) return date('Y-m-d', strtotime("+{$months} months"));
+                        }
+                        return null;
+                    })(),
             'findings'        => $findings,
                     'notes'           => $item['notes'] ?? '',
                     'inspection_type' => $item['inspection_type'] ?? 'PM',
@@ -399,84 +408,281 @@ class InspectionsController extends BaseController
     }
 
     /**
+     * Delete a single inspection record by ID (AJAX-friendly).
+     * Falls back to group delete if the ID is not purely numeric.
+     *
+     * POST /admin/inspections/delete/{id}
+     */
+    public function deleteById($id)
+    {
+        $inspectionModel = new InspectionModel();
+        $companyId = (int) session('company_id');
+
+        if (is_numeric($id)) {
+            // Delete the single inspection row
+            $inspectionModel
+                ->where('company_id', $companyId)
+                ->where('id', (int) $id)
+                ->delete();
+        } else {
+            // Treat as group_id
+            $inspectionModel
+                ->where('company_id', $companyId)
+                ->where('group_id', $id)
+                ->delete();
+        }
+
+        // Support both AJAX (JSON) and classic form POST (redirect)
+        if ($this->request->isAJAX() || strpos((string)($this->request->getHeader('Accept') ?? ''), 'application/json') !== false) {
+            return $this->response->setJSON(['success' => true, 'csrf_hash' => csrf_hash()]);
+        }
+
+        return redirect()->back();
+    }
+
+    /**
      * NEW METHOD: Update a single inspection
      * This handles the update after editing through the wizard
      */
     public function updateInspection()
     {
-        if ($this->request->getMethod() === 'POST') {
-            $companyId = (int) session('company_id');
-            $inspectionModel = new InspectionModel();
-            $equipmentModel = new EquipmentModel();
-            
-            $inspectionId = $this->request->getPost('inspection_id');
-            $equipmentId = $this->request->getPost('equipment_id');
-            
-            // Check if we need to create new equipment (asset not found scenario)
+        if ($this->request->getMethod() !== 'POST') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $companyId    = (int) session('company_id');
+        $inspectionId = (int) $this->request->getPost('inspection_id');
+
+        if ($inspectionId === 0) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing inspection_id']);
+        }
+
+        $inspectionModel = new InspectionModel();
+        $equipmentModel  = new EquipmentModel();
+
+        // ── Resolve equipment_id ──────────────────────────────────────────────
+        $equipmentId = (int) $this->request->getPost('equipment_id');
+
+        // Handle "asset not found" new equipment creation
             if ($this->request->getPost('asset_not_found') === '1') {
+            $siteId = (int) $this->request->getPost('site_id');
                 $newEquip = [
                     'company_id'    => $companyId,
-                    'site_id'       => $this->request->getPost('site_id'),
-                    'asset_tag'     => $this->request->getPost('asset_tag') ?? 'NEW-' . strtoupper(uniqid()),
-                    'make'          => $this->request->getPost('manufacturer') ?? '',
-                    'model'         => $this->request->getPost('model_name') ?? '',
-                    'serial_number' => $this->request->getPost('serial_number') ?? '',
-                    'device_type'   => $this->request->getPost('description') ?? '',
-                    'department'    => $this->request->getPost('department') ?? '',
-                    'location'      => $this->request->getPost('location') ?? '',
-                    'status'        => 'Pending',
+                'site_id'       => $siteId,
+                'asset_tag'     => $this->request->getPost('asset_tag') ?: ('NEW-' . strtoupper(uniqid())),
+                'make'          => (string)($this->request->getPost('manufacturer') ?? ''),
+                'model'         => (string)($this->request->getPost('model_name')   ?? ''),
+                'serial_number' => (string)($this->request->getPost('serial_number') ?? ''),
+                'device_type'   => (string)($this->request->getPost('description')  ?? ''),
+                'department'    => (string)($this->request->getPost('department')    ?? ''),
+                'location'      => (string)($this->request->getPost('location')      ?? ''),
+                'status'        => 'Pending',
                 ];
                 $equipmentModel->insert($newEquip);
-                $equipmentId = $equipmentModel->getInsertID();
+            $equipmentId = (int) $equipmentModel->getInsertID();
             }
             
-            // Build findings string
-            $findings = '';
-            if ($this->request->getPost('asset_not_found') === '1') {
-                $findings = 'Asset updated/created. '
-                    . 'Manufacturer: ' . ($this->request->getPost('manufacturer') ?? '') . '; '
-                    . 'Model: '        . ($this->request->getPost('model_name') ?? '')    . '; '
-                    . 'Description: '  . ($this->request->getPost('description') ?? '')   . '; '
-                    . 'Serial #: '     . ($this->request->getPost('serial_number') ?? '');
+        // ── Update equipment table fields if they were sent ───────────────────
+        $dept   = trim((string)($this->request->getPost('department')    ?? ''));
+        $room   = trim((string)($this->request->getPost('location')      ?? ''));
+        $serial = trim((string)($this->request->getPost('serial_number') ?? ''));
+
+        if ($equipmentId > 0 && ($dept !== '' || $room !== '' || $serial !== '')) {
+                $eqUpdate = [];
+                if ($dept   !== '') $eqUpdate['department']    = $dept;
+                if ($room   !== '') $eqUpdate['location']      = $room;
+                if ($serial !== '') $eqUpdate['serial_number'] = $serial;
+            $equipmentModel->where('company_id', $companyId)->where('id', $equipmentId)->set($eqUpdate)->update();
             }
-            
-            // Prepare update data
-            $data = [
-                'equipment_id'    => $equipmentId,
-                'site_id'         => $this->request->getPost('site_id'),
-                'scheduled_at'    => $this->request->getPost('scheduled_at') ?? date('Y-m-d'),
-                'status'          => $this->request->getPost('status') ?? 'Pass',
-                'technician_id'   => $this->request->getPost('technician_id') ?? null,
-                'next_due_date'   => $this->request->getPost('next_due_date') ?? null,
-                'notes'           => $this->request->getPost('notes') ?? '',
-                'inspection_type' => $this->request->getPost('inspection_type') ?? 'PM',
-                'pm_frequency'    => $this->request->getPost('pm_frequency') ?? '',
-                'device_complete' => $this->request->getPost('device_complete') ?? 'Yes',
-            ];
-            
-            // Only update findings if new equipment was created
-            if (!empty($findings)) {
-                $data['findings'] = $findings;
+
+        // ── Build inspection $data ONLY from fields actually posted ───────────
+        // This prevents overwriting DB values with nulls when the edit form
+        // only submits a subset of fields (e.g. the Edit Device modal).
+        $data = [];
+
+        $postMap = [
+            'site_id'         => 'site_id',
+            'equipment_id'    => null,          // handled separately below
+            'scheduled_at'    => 'scheduled_at',
+            'status'          => 'status',
+            'technician_id'   => 'technician_id',
+            'next_due_date'   => 'next_due_date',
+            'notes'           => 'notes',
+            'inspection_type' => 'inspection_type',
+            'pm_frequency'    => 'pm_frequency',
+            'device_complete' => 'device_complete',
+            'est'             => 'est',
+            'cal'             => 'cal',
+        ];
+
+        foreach ($postMap as $field => $postKey) {
+            if ($postKey === null) continue;
+            $val = $this->request->getPost($postKey);
+            if ($val !== null) {   // only include if actually sent in POST
+                $data[$field] = $val;
             }
-            
-            // Update the inspection
-            $inspectionModel->update($inspectionId, $data);
-            
-            // Check if this is an AJAX request
-            $isJsonRequest = strpos($this->request->getHeader('Content-Type'), 'application/json') !== false;
-            
-            if ($isJsonRequest || $this->request->isAJAX()) {
+        }
+
+        // Always include equipment_id if we resolved one
+        if ($equipmentId > 0) {
+            $data['equipment_id'] = $equipmentId;
+        }
+
+        // ── Auto-calculate next_due_date from pm_frequency if not provided ────
+        if (empty($data['next_due_date']) && !empty($data['pm_frequency'])) {
+            preg_match('/^(\d+)/', $data['pm_frequency'], $m);
+            $months = isset($m[1]) ? (int)$m[1] : 0;
+            if ($months > 0) {
+                $data['next_due_date'] = date('Y-m-d', strtotime("+{$months} months"));
+            }
+        }
+
+        // ── Add findings for new-equipment case ───────────────────────────────
+        if ($this->request->getPost('asset_not_found') === '1') {
+            $data['findings'] = 'Asset updated/created. '
+                . 'Manufacturer: ' . ($this->request->getPost('manufacturer')  ?? '') . '; '
+                . 'Model: '        . ($this->request->getPost('model_name')    ?? '') . '; '
+                . 'Description: '  . ($this->request->getPost('description')   ?? '') . '; '
+                . 'Serial #: '     . ($this->request->getPost('serial_number') ?? '');
+            }
+
+        if (empty($data)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No fields to update']);
+        }
+
+        // ── Perform update using CI4's update($id, $data) ──────────────────────
+        // First verify this inspection belongs to this company
+        $existing = $inspectionModel->where('company_id', $companyId)->find($inspectionId);
+        if (!$existing) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Inspection not found']);
+        }
+
+        try {
+            $updated = $inspectionModel->update($inspectionId, $data);
+        } catch (\Throwable $e) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Exception: ' . $e->getMessage(),
+            ]);
+        }
+
+        if ($updated === false) {
+            $errors = $inspectionModel->errors();
+            $dbErr  = $inspectionModel->db->error();
+            $msg    = !empty($errors) ? implode(', ', $errors)
+                    : (!empty($dbErr['message']) ? $dbErr['message'] : 'Update failed');
+            return $this->response->setJSON(['success' => false, 'message' => $msg]);
+        }
+
+        // ── Respond ───────────────────────────────────────────────────────────
+        $wantsJson = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'),       'application/json') !== false
+            || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+
+            if ($wantsJson) {
                 return $this->response->setJSON([
-                    'success' => true,
-                    'message' => 'Inspection updated successfully',
-                    'inspection_id' => $inspectionId
+                    'success'       => true,
+                    'message'       => 'Inspection updated successfully',
+                    'inspection_id' => $inspectionId,
+                    'csrf_hash'     => csrf_hash(),
                 ]);
             }
-            
-            // Redirect for non-AJAX requests
-            return redirect()->to('/admin/inspections');
-        }
+
+        $siteId = (int)($this->request->getPost('site_id') ?? 0);
+        return redirect()->to('/admin/sites/' . $siteId);
     }
 
+
+     /**
+     * Provide a JSON payload containing the latest device and full history
+     * rows for a given inspection group. This is the endpoint consumed by
+     * openInspectionReport() in the view. The response includes the
+     * `latest` device (the most recently created record in the group) and
+     * all rows sorted from newest to oldest. The model handles the heavy
+     * lifting of joining data across equipment, sites, and technicians.
+     *
+     * Route: GET /admin/inspections/reportData/{groupId}
+     *
+     * @param string $groupId The unique group identifier for the inspection
+     */
+    public function reportData($groupId = null)
+    {
+        $companyId = (int) session('company_id');
+        if (!$companyId) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Session expired',
+            ]);
+        }
+
+        // Accept group_id from URL segment OR from query string (?group_id=...)
+        if (empty($groupId)) {
+            $groupId = $this->request->getGet('group_id');
+        }
+
+        if (empty($groupId)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Missing group_id parameter',
+            ]);
+        }
+
+        $inspectionModel = new InspectionModel();
+        $rows   = $inspectionModel->getReportRowsByGroup($companyId, $groupId);
+        $latest = !empty($rows) ? $rows[0] : null;
+
+        return $this->response->setJSON([
+            'success'  => true,
+            'group_id' => $groupId,
+            'latest'   => $latest,
+            'rows'     => $rows,
+        ]);
+    }
+
+    /**
+     * Generate a PDF report for a given inspection group. Uses Dompdf to
+     * render the HTML template into a downloadable PDF file. The view
+     * `admin/inspections/report_pdf.php` should be created alongside this
+     * controller to define the markup and styling of the exported report.
+     *
+     * Route: GET /admin/inspections/reportPdf/{groupId}
+     *
+     * @param string $groupId The unique group identifier for the inspection
+     */
+    public function reportPdf($groupId)
+    {
+        $companyId = (int) session('company_id');
+        $inspectionModel = new InspectionModel();
+
+        $rows   = $inspectionModel->getReportRowsByGroup($companyId, $groupId);
+        $latest = !empty($rows) ? $rows[0] : null;
+
+        $html = view('admin/inspections/report_pdf', [
+            'latest'   => $latest,
+            'rows'     => $rows,
+            'groupId'  => $groupId,
+        ]);
+
+        // Attempt to use Dompdf if it is installed. If not, fall back to an
+        // HTML download so the feature does not hard-crash.
+        if (class_exists('\Dompdf\Dompdf')) {
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="inspection-report-' . $groupId . '.pdf"')
+            ->setBody($dompdf->output());
+    }
+    
+        // Fallback: serve HTML as a downloadable file
+        return $this->response
+            ->setHeader('Content-Type', 'text/html')
+            ->setHeader('Content-Disposition', 'attachment; filename="inspection-report-' . $groupId . '.html"')
+            ->setBody($html);
+    }
+    
 
 }

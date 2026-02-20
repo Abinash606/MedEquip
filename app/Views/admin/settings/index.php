@@ -12,7 +12,8 @@
         <a href="#" class="list-group-item list-group-item-action" data-target="notificationSettings">Notifications</a>
         <a href="#" class="list-group-item list-group-item-action"
           data-target="iqNotesSettings">IQ Notes</a>
-
+        <a href="#" class="list-group-item list-group-item-action"
+          data-target="equipmentSettings">Equipment Setting</a>
       </div>
     </div>
 
@@ -131,7 +132,7 @@
         </div>
 
         <div class="glass-card mb-3">
-          <table class="table table-sm" id="iqNotesTable">
+          <table class="table table-sm w-100" id="iqNotesTable">
             <thead>
               <tr>
                 <th>Note</th>
@@ -139,6 +140,31 @@
               </tr>
             </thead>
             <tbody></tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- Equipment Settings -->
+      <div id="equipmentSettings" class="settings-pane d-none">
+        <div class="table-container">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Equipment Inventory</h5>
+            <button class="btn btn-primary btn-sm" id="btnAddEquipment">
+              <i class="fas fa-plus"></i> Add Equipment
+            </button>
+          </div>
+
+          <table id="equipment-datatable" class="table table-bordered table-hover w-100">
+            <thead>
+              <tr>
+                <th>Description</th>
+                <th class="text-center checkbox-cell">EST</th>
+                <th class="text-center checkbox-cell">CAL</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="equipmentTable"></tbody>
           </table>
         </div>
 
@@ -244,6 +270,48 @@
   </div>
 </div>
 
+<!-- Euipment Setting Modal -->
+<div class="modal fade" id="equipmentModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <form id="equipmentForm">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" id="equipment-id">
+
+        <div class="modal-header">
+          <h5 class="modal-title">Equipment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>Description</label>
+            <input type="text" name="description" id="equipment-desc" class="form-control" required>
+          </div>
+
+          <div class="form-check">
+            <input type="checkbox" name="est" id="equipment-est" class="form-check-input">
+            <label class="form-check-label">EST</label>
+          </div>
+
+          <div class="form-check">
+            <input type="checkbox" name="cal" id="equipment-cal" class="form-check-input">
+            <label class="form-check-label">CAL</label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit">Save</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
 
 <script>
   $(function() {
@@ -276,18 +344,6 @@
       });
     }
 
-    // ---------------------------------------
-    // Settings navigation pane switching
-    // ---------------------------------------
-    // $('#settings-nav a').on('click', function(e) {
-    //   e.preventDefault();
-    //   $('#settings-nav a').removeClass('active');
-    //   $('.settings-pane').addClass('d-none');
-    //   $(this).addClass('active');
-    //   const targetId = $(this).data('target');
-    //   $('#' + targetId).removeClass('d-none');
-    // });
-
 
     $('#settings-nav a').on('click', function(e) {
       e.preventDefault();
@@ -307,9 +363,9 @@
       $('#' + targetId).removeClass('d-none');
 
       // ✅ Ensure IQ Notes always loads
-      if (targetId === 'iqNotesSettings') {
-        loadIqNotes();
-      }
+      // if (targetId === 'iqNotesSettings') {
+      //   loadIqNotes();
+      // }
     }
 
     // ---------------------------------------
@@ -576,30 +632,57 @@
     // IQ NOTES (MUST BE INSIDE document ready)
     // ---------------------------------------
 
-    function loadIqNotes() {
-      $.ajax({
+    // function loadIqNotes() {
+    //   $.ajax({
+    //     url: "<?= site_url('admin/settings/iq-notes') ?>",
+    //     type: "GET",
+    //     dataType: "json",
+    //     success: function(res) {
+    //       let rows = '';
+    //       if (res.data && res.data.length) {
+    //         res.data.forEach(r => {
+    //           rows += `
+    //         <tr>
+    //           <td>${r.note}</td>
+    //           <td>
+    //             <button class="btn btn-sm btn-outline-secondary edit-note" data-id="${r.id}">Edit</button>
+    //             <button class="btn btn-sm btn-outline-danger del-note" data-id="${r.id}">Delete</button>
+    //           </td>
+    //         </tr>
+    //       `;
+    //         });
+    //       }
+    //       $('#iqNotesTable tbody').html(rows);
+    //     }
+    //   });
+    // }
+
+    // ---------------------------------------
+    // IQ NOTES DATATABLE
+    // ---------------------------------------
+
+    const iqTable = $('#iqNotesTable').DataTable({
+      ajax: {
         url: "<?= site_url('admin/settings/iq-notes') ?>",
-        type: "GET",
-        dataType: "json",
-        success: function(res) {
-          let rows = '';
-          if (res.data && res.data.length) {
-            res.data.forEach(r => {
-              rows += `
-            <tr>
-              <td>${r.note}</td>
-              <td>
-                <button class="btn btn-sm btn-outline-secondary edit-note" data-id="${r.id}">Edit</button>
-                <button class="btn btn-sm btn-outline-danger del-note" data-id="${r.id}">Delete</button>
-              </td>
-            </tr>
-          `;
-            });
+        dataSrc: 'data'
+      },
+      pageLength: 10,
+      columns: [{
+          data: 'note'
+        },
+        {
+          data: null,
+          orderable: false,
+          render: function(row) {
+            return `
+          <button class="btn btn-sm btn-outline-secondary edit-note" data-id="${row.id}">Edit</button>
+          <button class="btn btn-sm btn-outline-danger del-note" data-id="${row.id}">Delete</button>
+        `;
           }
-          $('#iqNotesTable tbody').html(rows);
         }
-      });
-    }
+      ]
+    });
+
 
     // OPEN MODAL
     $('#btnAddIqNote').on('click', function() {
@@ -620,7 +703,8 @@
         success: function(res) {
           $('#iqNoteModal').modal('hide'); // ✅ FIX 1
           swalSuccess(res.message || 'Saved');
-          loadIqNotes(); // ✅ FIX 2
+          iqTable.ajax.reload(null, false);
+
         },
         error: function() {
           swalError('Save failed');
@@ -650,16 +734,6 @@
       }).then(r => {
         if (!r.isConfirmed) return;
 
-        // $.ajax({
-        //   url: "<?= site_url('admin/settings/iq-notes/delete') ?>/" + id,
-        //   type: "DELETE",
-        //   dataType: "json",
-        //   success: function(res) {
-        //     swalSuccess(res.message);
-        //     loadIqNotes(); // ✅ FIX 3
-        //   }
-        // });
-
         $.ajax({
           url: "<?= site_url('admin/settings/iq-notes/delete') ?>",
           type: "POST",
@@ -670,7 +744,8 @@
           dataType: "json",
           success: function(res) {
             swalSuccess(res.message);
-            loadIqNotes();
+            iqTable.ajax.reload(null, false);
+
           },
           error: function() {
             swalError('Delete failed');
@@ -681,8 +756,132 @@
     });
 
     // TAB CLICK → LOAD DATA
-    $('a[data-target="iqNotesSettings"]').on('click', function() {
-      loadIqNotes();
+    // $('a[data-target="iqNotesSettings"]').on('click', function() {
+    //   loadIqNotes();
+    // });
+
+
+    // ---------------------------------------
+    // Equipment DataTable
+    // ---------------------------------------
+
+    const equipmentTable = $('#equipment-datatable').DataTable({
+      ajax: {
+        url: "<?= site_url('admin/settings/equipment') ?>",
+        dataSrc: 'data'
+      },
+      columns: [{
+          data: 'description'
+        },
+        {
+          data: 'est',
+          className: 'text-center',
+          render: function(data) {
+            return `
+          <div class="form-check d-flex justify-content-center">
+            <input class="form-check-input"
+                   type="checkbox"
+                   ${data==1?'checked':''}
+                   onclick="return false;">
+          </div>
+        `;
+          }
+        },
+        {
+          data: 'cal',
+          className: 'text-center',
+          render: function(data) {
+            return `
+          <div class="form-check d-flex justify-content-center">
+            <input class="form-check-input"
+                   type="checkbox"
+                   ${data==1?'checked':''}
+                   onclick="return false;">
+          </div>
+        `;
+          }
+        },
+        {
+          data: null,
+          orderable: false,
+          className: 'text-center',
+          render: function(row) {
+            return `
+          <button class="btn btn-sm btn-outline-primary edit-equipment"
+            data-id="${row.id}"
+            data-desc="${row.description}"
+            data-est="${row.est}"
+            data-cal="${row.cal}">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger del-equipment"
+            data-id="${row.id}">
+            <i class="fas fa-trash"></i>
+          </button>
+        `;
+          }
+        }
+      ]
+    });
+
+    // ===============================
+    // EQUIPMENT CRUD
+    // ===============================
+
+    // Open modal
+    $('#btnAddEquipment').on('click', function() {
+      $('#equipmentForm')[0].reset();
+      $('#equipment-id').val('');
+      $('#equipmentModal').modal('show');
+    });
+
+    // Save
+    $('#equipmentForm').on('submit', function(e) {
+      e.preventDefault();
+      $.post("<?= site_url('admin/settings/equipment/save') ?>",
+        $(this).serialize(),
+        function(res) {
+          $('#equipmentModal').modal('hide');
+          swalSuccess(res.message);
+          equipmentTable.ajax.reload(null, false);
+        }, 'json'
+      );
+    });
+
+    // Edit
+    $(document).on('click', '.edit-equipment', function() {
+      $('#equipment-id').val($(this).data('id'));
+      $('#equipment-desc').val($(this).data('desc'));
+      $('#equipment-est').prop('checked', $(this).data('est') == 1);
+      $('#equipment-cal').prop('checked', $(this).data('cal') == 1);
+      $('#equipmentModal').modal('show');
+    });
+
+    // Delete
+    $(document).on('click', '.del-equipment', function() {
+      const id = $(this).data('id');
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Are you sure?',
+        text: 'This action cannot be undone.',
+        showCancelButton: true,
+        cancelButtonText: 'Cancel',
+        confirmButtonText: 'Delete',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d'
+      }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        $.ajax({
+          url: "<?= site_url('admin/settings/equipment/delete') ?>/" + id,
+          type: "DELETE",
+          success: function(res) {
+            swalSuccess(res.message);
+            equipmentTable.ajax.reload(null, false);;
+          }
+        });
+      });
     });
 
   });

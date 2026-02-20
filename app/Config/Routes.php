@@ -104,6 +104,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('inspections/create', 'Admin\InspectionsController::create');
     $routes->post('inspections/update/(:num)', 'Admin\InspectionsController::update/$1');
     $routes->get('inspections/delete/(:any)', 'Admin\InspectionsController::delete/$1');
+    $routes->post('inspections/deleteById/(:any)', 'Admin\InspectionsController::deleteById/$1');
 
     $routes->get('inspections/searchByAssetTag',  'Admin\InspectionsController::searchByAssetTag');
     $routes->get('inspections/searchByModel',     'Admin\InspectionsController::searchByModel');
@@ -117,6 +118,13 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     // In your admin routes section, add:
     $routes->get('inspections/getInspectionById/(:num)', 'Admin\InspectionsController::getInspectionById/$1');
     $routes->post('inspections/updateInspection', 'Admin\InspectionsController::updateInspection');
+
+   
+    $routes->get('inspections/reportData', 'Admin\InspectionsController::reportData');
+    $routes->get('inspections/reportData/(:any)', 'Admin\InspectionsController::reportData/$1');
+
+        // PDF endpoint for inspection reports
+    $routes->get('inspections/reportPdf/(:any)', 'Admin\InspectionsController::reportPdf/$1');
 
 
 
@@ -141,6 +149,12 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('settings/iq-notes/save', 'Admin\SystemSettings::iqNoteSave');
     // $routes->delete('iq-notes/delete/(:num)', 'Admin\SystemSettings::iqNoteDelete/$1');
     $routes->post('settings/iq-notes/delete', 'Admin\SystemSettings::iqNoteDelete');
+
+    $routes->get('settings/equipment', 'Admin\SystemSettings::equipmentList');
+    $routes->post('settings/equipment/save', 'Admin\SystemSettings::equipmentSave');
+    $routes->get('site-inspection/get-equipment', 'Admin\SiteInspectionWorkflowController::getEquipment');
+    $routes->post('site-inspection/record', 'Admin\SiteInspectionWorkflowController::recordInspection');
+    $routes->delete('settings/equipment/delete/(:num)', 'Admin\SystemSettings::equipmentDelete/$1');
 });
 
 // Routes for Customer role

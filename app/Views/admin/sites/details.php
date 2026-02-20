@@ -292,6 +292,177 @@
         gap: 0.5rem;
     }
 
+    /* -----------------------------------------------------------------
+       Custom Styles for the Site Inspection Workflow
+
+       These styles are scoped to the #site-inspection-workflow container
+       included in the Inspections tab.  They set up the colour palette,
+       card appearance, buttons, navigation tabs, table design and
+       utility classes needed to mirror the design of the provided
+       inspection workflow snippet.  Because they are prefixed with
+       #site-inspection-workflow, they will not leak into other parts
+       of the site details page.
+    ----------------------------------------------------------------- */
+    #site-inspection-workflow {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+        --bg-color: #f1f5f9;
+        --card-bg: #ffffff;
+        --border-radius: 12px;
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    #site-inspection-workflow {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg-color);
+        color: #1e293b;
+        padding-bottom: 50px;
+    }
+    #site-inspection-workflow .card-custom {
+        background: var(--card-bg);
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        transition: all 0.3s ease;
+    }
+    #site-inspection-workflow .btn-custom-primary {
+        background-color: var(--primary-color);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+    }
+    #site-inspection-workflow .btn-custom-primary:hover {
+        background-color: #1d4ed8;
+        box-shadow: var(--shadow-md);
+    }
+    #site-inspection-workflow .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        background: white;
+        color: var(--secondary-color);
+        transition: all 0.2s;
+    }
+    #site-inspection-workflow .btn-icon:hover {
+        background-color: #f8fafc;
+        color: var(--primary-color);
+    }
+    #site-inspection-workflow .export-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    #site-inspection-workflow .export-btn {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        color: var(--secondary-color);
+        font-weight: 500;
+    }
+    #site-inspection-workflow .status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    #site-inspection-workflow .status-in-progress {
+        background-color: #eff6ff;
+        color: var(--primary-color);
+        border: 1px solid #bfdbfe;
+    }
+    #site-inspection-workflow .status-closed {
+        background-color: #ecfdf5;
+        color: var(--success-color);
+        border: 1px solid #a7f3d0;
+    }
+    #site-inspection-workflow .asset-input-wrapper {
+        background: white;
+        padding: 30px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-lg);
+        text-align: center;
+        margin-bottom: 30px;
+        border: 1px solid #e2e8f0;
+    }
+    #site-inspection-workflow .big-input {
+        font-size: 1.25rem;
+        padding: 15px;
+        border-radius: 8px 0 0 8px;
+        border: 1px solid #cbd5e1;
+    }
+    #site-inspection-workflow .big-btn {
+        padding: 0 30px;
+        font-size: 1.1rem;
+        border-radius: 0 8px 8px 0;
+    }
+    #site-inspection-workflow .nav-tabs {
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 20px;
+    }
+    #site-inspection-workflow .nav-link {
+        color: var(--secondary-color);
+        font-weight: 500;
+        border: none;
+        padding: 12px 20px;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    #site-inspection-workflow .nav-link:hover {
+        color: var(--primary-color);
+        border-color: transparent;
+    }
+    #site-inspection-workflow .nav-link.active {
+        color: var(--primary-color) !important;
+        border-bottom: 2px solid var(--primary-color) !important;
+        background: transparent !important;
+    }
+    #site-inspection-workflow .table-custom th {
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        background-color: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 12px 8px;
+    }
+    #site-inspection-workflow .table-custom td {
+        vertical-align: middle;
+        font-size: 0.9rem;
+        padding: 12px 8px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    #site-inspection-workflow .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    #site-inspection-workflow .d-none-view {
+        display: none !important;
+    }
+
     /* Inspection Queue Styles */
     .inspection-queue {
         background: #f8fafc;
@@ -498,11 +669,11 @@
             <i class="fa fa-clipboard-check me-2"></i> Inspections
         </button>
     </li>
-    <li class="nav-item" role="presentation">
+    <!-- <li class="nav-item" role="presentation">
         <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#work-orders" type="button" role="tab" aria-controls="work-orders" aria-selected="false">
             <i class="fa fa-wrench me-2"></i> Work Orders
         </button>
-    </li>
+    </li> -->
 </ul>
 
 <!-- Tab Content -->
@@ -585,107 +756,17 @@
 
     <!-- Inspections Tab -->
     <div class="tab-pane fade" id="inspections" role="tabpanel" aria-labelledby="inspections-tab">
-        <div class="glass-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Inspections List</h5>
-                <button class="btn btn-primary" id="openInspectionWizardBtn">
-                    <i class="fa fa-plus me-2"></i> Add Inspection
-                </button>
-            </div>
-
-            <table id="inspections-datatable" class="table table-striped table-hover" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Inspection ID</th>
-                        <th>Scheduled Date</th>
-                        <!-- <th>Status</th> -->
-                        <th>Technician</th>
-                        <th>Next Due Date</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($inspections)): ?>
-                        <?php foreach ($inspections as $insp): ?>
-                            <tr>
-                                <!-- Equipment Name -->
-                                <td><?= esc($insp['group_id'] ?? 'N/A') ?></td>
-
-                                <!-- Scheduled Date -->
-                                <td><?= date('M d, Y', strtotime($insp['scheduled_at'])) ?></td>
-
-
-
-                                <!-- Status -->
-                                <!-- <td>
-                                    <?php
-                                    $statusClass = 'status-badge ';
-                                    $status = strtolower($insp['status']);
-                                    if ($status === 'completed') {
-                                        $statusClass .= 'status-completed';
-                                    } elseif ($status === 'scheduled') {
-                                        $statusClass .= 'status-scheduled';
-                                    } else {
-                                        $statusClass .= 'status-pending';
-                                    }
-                                    ?>
-                                    <span class="<?= $statusClass ?>"><?= esc($insp['status']) ?></span>
-                                </td> -->
-
-                                <!-- Technician -->
-                                <td><?= esc($insp['technician_name'] ?? 'Unassigned') ?></td>
-
-                                <!-- Next Due Date -->
-                                <td><?= $insp['next_due_date'] ? date('M d, Y', strtotime($insp['next_due_date'])) : '-' ?></td>
-
-                                <!-- Actions -->
-                                <td>
-
-                                    <!-- View Button -->
-                                    <button class="btn btn-sm btn-info btn-action view-inspection-btn"
-                                        data-group_id="<?= esc($insp['group_id']) ?>"
-                                        data-id="<?= $insp['id'] ?>"
-                                        data-equipment_id="<?= esc($insp['equipment_id']) ?>"
-                                        data-scheduled_at="<?= esc($insp['scheduled_at']) ?>"
-                                        data-completed_at="<?= esc($insp['completed_at'] ?? '') ?>"
-                                        data-status="<?= esc($insp['status'], 'attr') ?>"
-                                        data-technician_id="<?= esc($insp['technician_id'] ?? '') ?>"
-                                        data-findings="<?= esc($insp['findings'] ?? '', 'attr') ?>"
-                                        data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
-                                        data-next_due_date="<?= esc($insp['next_due_date'] ?? '') ?>">
-                                        <i class="fa fa-eye"></i> View
-                                    </button>
-
-                                    <!-- Edit Button -->
-                                    <!-- <button class="btn btn-sm btn-info btn-action edit-inspection-btn"
-                                        data-id="<?= $insp['id'] ?>"
-                                        data-equipment_id="<?= $insp['equipment_id'] ?>"
-                                        data-scheduled_at="<?= $insp['scheduled_at'] ?>"
-                                        data-completed_at="<?= $insp['completed_at'] ?? '' ?>"
-                                        data-status="<?= esc($insp['status'], 'attr') ?>"
-                                        data-technician_id="<?= $insp['technician_id'] ?? '' ?>"
-                                        data-findings="<?= esc($insp['findings'] ?? '', 'attr') ?>"
-                                        data-notes="<?= esc($insp['notes'] ?? '', 'attr') ?>"
-                                        data-next_due_date="<?= $insp['next_due_date'] ?? '' ?>">
-                                    <i class="fa fa-edit"></i> Edit
-                                </button> -->
-
-
-                                    <!-- Delete Button -->
-                                    <a href="<?= site_url('admin/inspections/delete/' . $insp['group_id']) ?>"
-                                        class="btn btn-sm btn-danger btn-action"
-                                        onclick="return confirm('Are you sure you want to delete this inspection?')">
-                                        <i class="fa fa-trash"></i> Delete
-                                    </a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-
-
-        </div>
+        <!--
+            The Inspections tab previously contained a DataTables listing of site
+            inspections.  This has been replaced by a custom inspection
+            workflow component.  The component markup lives in a partial view
+            (admin/sites/site_inspection_workflow.php) to keep this file
+            maintainable.  Including the partial here injects the entire
+            workflow UI into the tab.  CSS scoped to #site-inspection-workflow
+            and supporting JavaScript functions are defined elsewhere in this
+            file.
+        -->
+        <?= $this->include('admin/sites/site_inspection_workflow') ?>
     </div>
 
     <!-- Work Orders Tab -->
@@ -1609,6 +1690,23 @@
 
     $(document).ready(function() {
 
+        // ── Restore active main tab after page reload (e.g. after Add Inspection / Pass/Fail) ──
+        var savedTab = sessionStorage.getItem('siteDetailsActiveTab');
+        if (savedTab) {
+            sessionStorage.removeItem('siteDetailsActiveTab');
+            var tabEl = document.getElementById(savedTab);
+            if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
+        }
+        var savedSubTab = sessionStorage.getItem('siteDetailsActiveSubTab');
+        if (savedSubTab) {
+            sessionStorage.removeItem('siteDetailsActiveSubTab');
+            // Sub-tab lives inside site_inspection_workflow — delay slightly for it to render
+            setTimeout(function() {
+                var subTabEl = document.getElementById(savedSubTab);
+                if (subTabEl) bootstrap.Tab.getOrCreateInstance(subTabEl).show();
+            }, 300);
+        }
+
         // ─────────────────────────────────────────────
         // Handle Edit Button Click from View Modal
         // ─────────────────────────────────────────────
@@ -1849,6 +1947,659 @@
 
     });
 </script>
+
+<!-- Custom dynamic behaviour for inspection workflow and work orders -->
+<script>
+// Immediately invoked function to avoid global scope pollution
+(function() {
+    // Constants for API endpoints and settings
+    const SITE_ID = <?= (int) ($site['id'] ?? 0) ?>;
+    const REPORT_DATA_URL   = "<?= site_url('admin/inspections/reportData') ?>";
+    const REPORT_PDF_URL    = "<?= site_url('admin/inspections/reportPdf') ?>";
+    const GET_EQUIPMENT_URL = "<?= site_url('admin/site-inspection/get-equipment') ?>";
+    const WORK_ORDER_CREATE_URL = "<?= site_url('admin/work-orders/create') ?>";
+    const WORK_ORDER_UPDATE_URL = "<?= site_url('admin/work-orders/update') ?>";
+    const WORK_ORDER_DELETE_URL = "<?= site_url('admin/work-orders/delete') ?>";
+    const LOGO_BASE_URL = "<?= base_url('uploads/logos') ?>";
+
+    // Track the currently selected inspection group for report operations
+    let CURRENT_REPORT_GROUP_ID = null;
+
+    /**
+     * Show the inspection detail view for a given group.  Updates the
+     * header fields and triggers the report loading for the group.
+     *
+     * @param {string} groupId Unique group ID for the inspection session
+     * @param {string} siteName Name of the site (for header)
+     * @param {string} testName Name of the inspection test
+     * @param {string} inspIdLabel Human friendly inspection ID
+     * @param {string} techName Technician name
+     */
+    window.viewInspection = function viewInspection(groupId, siteName, testName, inspIdLabel, techName) {
+        // Update header elements
+        const siteLabel  = document.getElementById('insp-site-label');
+        const title      = document.getElementById('insp-title');
+        const idLabel    = document.getElementById('insp-id-label');
+        const techLabel  = document.getElementById('insp-technician');
+        if (siteLabel) siteLabel.textContent = 'Site: ' + (siteName || '—');
+        if (title)     title.textContent    = testName || '—';
+        if (idLabel)   idLabel.textContent  = inspIdLabel || '—';
+        if (techLabel) techLabel.textContent= techName || '—';
+        // Show inspection view and hide dashboard
+        const dashView = document.getElementById('view-dashboard');
+        const inspView = document.getElementById('view-inspection');
+        if (dashView) dashView.classList.add('d-none-view');
+        if (inspView) inspView.classList.remove('d-none-view');
+        // Load report for this group
+        openInspectionReport(groupId);
+    };
+
+    /**
+     * Fetch inspection report data for a group and render it in the
+     * report modal and reports tab.
+     *
+     * @param {string} groupId
+     */
+    window.openInspectionReport = function openInspectionReport(groupId) {
+        CURRENT_REPORT_GROUP_ID = groupId;
+        // Clear any previous content
+        const reportContentEl  = document.getElementById('reportContent');
+        const reportsTabEl     = document.getElementById('reportsTabContent');
+        if (reportContentEl)  reportContentEl.innerHTML = '<p class="text-muted">Loading report...</p>';
+        if (reportsTabEl)     reportsTabEl.innerHTML    = '<p class="text-muted">Loading report...</p>';
+        fetch(REPORT_DATA_URL + '/' + encodeURIComponent(groupId), {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(resp => resp.json())
+        .then(res => {
+            if (!res || !res.success) {
+                const msg = res && res.message ? res.message : 'Failed to load report';
+                if (reportContentEl) reportContentEl.innerHTML = '<div class="alert alert-danger">' + escapeHtml(msg) + '</div>';
+                if (reportsTabEl)    reportsTabEl.innerHTML    = '<div class="alert alert-danger">' + escapeHtml(msg) + '</div>';
+                return;
+            }
+            const latest = res.latest || null;
+            const rows   = res.rows   || [];
+            const html   = generateInspectionReportHTML(latest, rows, groupId);
+            if (reportContentEl) reportContentEl.innerHTML = html;
+            if (reportsTabEl)    reportsTabEl.innerHTML    = html;
+        })
+        .catch(err => {
+            const errMsg = err && err.message ? err.message : 'Unknown error';
+            if (reportContentEl) reportContentEl.innerHTML = '<div class="alert alert-danger">' + escapeHtml(errMsg) + '</div>';
+            if (reportsTabEl)    reportsTabEl.innerHTML    = '<div class="alert alert-danger">' + escapeHtml(errMsg) + '</div>';
+        });
+    };
+
+    /**
+     * Generate report HTML for the preview and tab display.  Includes
+     * header with site, logo and inspection details, plus latest and
+     * overview tables.
+     *
+     * @param {object|null} latest Latest inspection row (most recent)
+     * @param {Array} rows Full array of inspection rows
+     * @param {string} groupId The inspection group id
+     * @returns {string} HTML string
+     */
+    function generateInspectionReportHTML(latest, rows, groupId) {
+        // Header section
+        let siteName  = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name || latest.customer_name) : '';
+        let action    = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest.action_performed || latest.inspection_type) : '';
+        let technician= latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
+        let logoHTML  = '';
+        if (latest && latest.logo_path) {
+            const logoUrl = LOGO_BASE_URL + '/' + latest.logo_path;
+            logoHTML = '<img src="' + escapeHtml(logoUrl) + '" style="height:60px;">';
+        }
+        let headerHtml = `
+            <section class="mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>Site:</strong> ${siteName}<br>
+                        <em>${action}</em>
+                    </div>
+                    <div>${logoHTML}</div>
+                    <div class="text-end">
+                        <strong>Inspection #:</strong> ${escapeHtml(groupId)}<br>
+                        <em>Technician: ${technician}</em>
+                    </div>
+                </div>
+            </section>`;
+        // Latest added device table
+        let latestHtml = '<p class="text-muted">No devices available.</p>';
+        if (latest) {
+            latestHtml = `
+                <div class="table-responsive">
+                    <table class="table table-custom table-striped">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Type</th>
+                                <th>S/N</th>
+                                <th>Action Performed</th>
+                                <th>Asset #</th>
+                                <th>Department</th>
+                                <th>Room</th>
+                                <th>Tech</th>
+                                <th>EST</th>
+                                <th>CAL</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>${escapeHtml(latest.model || '')}</td>
+                                <td>${escapeHtml(latest.device_type || '')}</td>
+                                <td>${escapeHtml(latest.serial_number || 'N/A')}</td>
+                                <td>${escapeHtml(latest.action_performed || latest.inspection_type || '')}</td>
+                                <td>${escapeHtml(latest.asset_tag || '')}</td>
+                                <td>${escapeHtml(latest.dept || '')}</td>
+                                <td>${escapeHtml(latest.room || '')}</td>
+                                <td>${escapeHtml(latest.technician_name || 'N/A')}</td>
+                                <td>${yesNo(latest.est)}</td>
+                                <td>${yesNo(latest.cal)}</td>
+                                <td>${escapeHtml(latest.notes || '')}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+        // Overview table rows
+        const overviewRows = (rows || []).map(function(r) {
+            return `<tr>
+                <td>${resultBadge(r.result)}</td>
+                <td>${escapeHtml(r.site_name || r.customer_name || '')}</td>
+                <td>${escapeHtml(r.model || '')}</td>
+                <td>${escapeHtml(r.device_type || '')}</td>
+                <td>${escapeHtml(r.serial_number || 'N/A')}</td>
+                <td>${escapeHtml(r.action_performed || r.inspection_type || '')}</td>
+                <td>${escapeHtml(r.asset_tag || '')}</td>
+                <td>${escapeHtml(r.dept || '')}</td>
+                <td>${escapeHtml(r.room || '')}</td>
+                <td>${yesNo(r.est)}</td>
+                <td>${yesNo(r.cal)}</td>
+                <td>${escapeHtml(r.technician_name || 'N/A')}</td>
+                <td>${r.inspection_date ? formatInspectionDateHTML(r.inspection_date) : '<span class="text-muted">-</span>'}</td>
+                <td>${escapeHtml(r.notes || '')}</td>
+            </tr>`;
+        }).join('');
+        const overviewTable = `
+            <div class="table-responsive">
+                <table class="table table-custom table-striped">
+                    <thead>
+                        <tr>
+                            <th>Result</th>
+                            <th>Customer</th>
+                            <th>Model</th>
+                            <th>Type</th>
+                            <th>S/N</th>
+                            <th>Action Performed</th>
+                            <th>Asset #</th>
+                            <th>Dept</th>
+                            <th>Room</th>
+                            <th>EST</th>
+                            <th>CAL</th>
+                            <th>Tech</th>
+                            <th>Inspection Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${overviewRows || '<tr><td colspan="14" class="text-center text-muted">No inspections found for this report.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>`;
+        return headerHtml + `
+            <section class="mb-4">
+                <h5 class="fw-semibold">Latest Added Device</h5>
+                ${latestHtml}
+            </section>
+            <section>
+                <h5 class="fw-semibold">Inspection Report Overview</h5>
+                ${overviewTable}
+            </section>`;
+    }
+
+    /**
+     * Display the report preview in a new browser window and trigger the
+     * print dialog.  Uses the current content of the report modal.
+     */
+    window.previewReportPDF = function previewReportPDF() {
+        var sourceEl = document.getElementById('reportContent');
+        if (!sourceEl || !sourceEl.innerHTML.trim()) {
+            sourceEl = document.getElementById('reportsTabContent');
+        }
+        if (!sourceEl || !sourceEl.innerHTML.trim()) {
+            alert('Please click the report icon on an inspection row first.');
+            return;
+        }
+        const w = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes');
+        if (!w) { alert('Please allow pop-ups to preview the report.'); return; }
+        w.document.write(
+            '<html><head><title>Inspection Report Preview</title>'
+            + '<style>'
+            + 'body{font-family:Arial,sans-serif;margin:20px;font-size:12px;}'
+            + 'table{width:100%;border-collapse:collapse;margin-bottom:1em;}'
+            + 'th,td{border:1px solid #ccc;padding:6px;text-align:left;}'
+            + 'th{background:#f8f9fa;font-weight:bold;}'
+            + '.text-success{color:#198754;font-weight:bold;}'
+            + '.text-danger{color:#dc3545;font-weight:bold;}'
+            + '.text-muted{color:#6c757d;}'
+            + 'h4,h5{margin:0.5em 0;}'
+            + '@media print{button{display:none;}}'
+            + '</style>'
+            + '</head><body>'
+            + sourceEl.innerHTML
+            + '</body></html>'
+        );
+        w.document.close();
+        w.focus();
+    };
+
+    /**
+     * Trigger download of the PDF for the current report group.
+     */
+    window.exportReportPDF = function exportReportPDF() {
+        if (!CURRENT_REPORT_GROUP_ID) {
+            // Try to trigger print from current visible content as fallback
+            var sourceEl = document.getElementById('reportContent');
+            if (!sourceEl || !sourceEl.innerHTML.trim()) {
+                sourceEl = document.getElementById('reportsTabContent');
+            }
+            if (sourceEl && sourceEl.innerHTML.trim()) {
+                const w = window.open('', '_blank', 'width=1000,height=700');
+                if (!w) { alert('Please allow pop-ups to download the report.'); return; }
+                w.document.write(
+                    '<html><head><title>Inspection Report</title>'
+                    + '<style>'
+                    + 'body{font-family:Arial,sans-serif;margin:20px;font-size:12px;}'
+                    + 'table{width:100%;border-collapse:collapse;margin-bottom:1em;}'
+                    + 'th,td{border:1px solid #ccc;padding:6px;text-align:left;}'
+                    + 'th{background:#f8f9fa;font-weight:bold;}'
+                    + '.text-success{color:#198754;font-weight:bold;}'
+                    + '.text-danger{color:#dc3545;font-weight:bold;}'
+                    + '.text-muted{color:#6c757d;}'
+                    + '@media print{button{display:none;}}'
+                    + '</style>'
+                    + '</head><body>'
+                    + sourceEl.innerHTML
+                    + '</body></html>'
+                );
+                w.document.close();
+                setTimeout(function() { w.focus(); w.print(); }, 400);
+            } else {
+                alert('Please click the report icon on an inspection row first.');
+            }
+            return;
+        }
+        window.location.href = REPORT_PDF_URL + '/' + encodeURIComponent(CURRENT_REPORT_GROUP_ID);
+    };
+
+    // Helper: convert result to a badge
+    function resultBadge(res) {
+        const r = (res || '').trim();
+        if (r === 'Pass') return '<span class="text-success"><i class="fa-solid fa-check"></i> Pass</span>';
+        if (r === 'Fail') return '<span class="text-danger fw-bold"><i class="fa-solid fa-xmark"></i> Fail</span>';
+        if (r === 'Repair') return '<span class="text-warning fw-bold"><i class="fa-solid fa-wrench"></i> Repair</span>';
+        return '<span class="text-muted">-</span>';
+    }
+    // Helper: return Yes/No icon markup
+    function yesNo(val) {
+        const v = String(val || '').toLowerCase();
+        return (v === '1' || v === 'yes' || v === 'true')
+            ? '<span class="text-success"><i class="fa-solid fa-check"></i> Yes</span>'
+            : 'No';
+    }
+    // Helper: format datetime into date and time for overview table
+    function formatInspectionDateHTML(dt) {
+        const d = new Date((dt || '').replace(' ', 'T'));
+        if (isNaN(d.getTime())) return escapeHtml(dt || '');
+        const yyyy = d.getFullYear();
+        const mm   = String(d.getMonth() + 1).padStart(2, '0');
+        const dd   = String(d.getDate()).padStart(2, '0');
+        let hh     = d.getHours();
+        const ampm = hh >= 12 ? 'PM' : 'AM';
+        hh = hh % 12; hh = hh ? hh : 12;
+        const mi   = String(d.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}<br>${String(hh).padStart(2, '0')}:${mi} ${ampm}`;
+    }
+    // Helper: escape HTML entities
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // ---------------------------------------------------------------------
+    // Work Order modal and table logic
+    // ---------------------------------------------------------------------
+
+    /**
+     * Reset the work order modal fields to their default values.
+     */
+    function resetWorkOrderModal() {
+        const modalTitle = document.getElementById('workOrderModalTitle');
+        if (modalTitle) modalTitle.textContent = 'Add Work Order';
+        document.getElementById('woTitle').value = '';
+        document.getElementById('woAsset').value = '';
+        document.getElementById('woMake').value  = '';
+        document.getElementById('woModel').value = '';
+        document.getElementById('woSerial').value = '';
+        document.getElementById('woEquipment').value = '';
+        document.getElementById('woPriority').value = 'Medium';
+        document.getElementById('woStatus').value   = 'Open';
+        document.getElementById('woTech').value    = '';
+        document.getElementById('woStartDate').value = '';
+        document.getElementById('woEndDate').value   = '';
+        document.getElementById('woDescription').value = '';
+        const errBox = document.getElementById('workOrderError');
+        if (errBox) {
+            errBox.classList.add('d-none');
+            errBox.textContent = '';
+        }
+        // Hidden ids
+        document.getElementById('woId').value = '';
+        document.getElementById('woEquipmentId').value = '';
+    }
+
+    /**
+     * Load equipment details given an asset tag and fill the modal fields.
+     *
+     * @param {string} assetTag
+     */
+    function loadEquipmentDetails(assetTag) {
+        if (!assetTag) {
+            document.getElementById('woMake').value = '';
+            document.getElementById('woModel').value = '';
+            document.getElementById('woSerial').value = '';
+            document.getElementById('woEquipment').value = '';
+            document.getElementById('woEquipmentId').value = '';
+            return;
+        }
+        fetch(GET_EQUIPMENT_URL + '?asset_tag=' + encodeURIComponent(assetTag) + '&site_id=' + encodeURIComponent(SITE_ID), {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(resp => resp.json())
+        .then(res => {
+            if (!res.found) {
+                document.getElementById('woMake').value = '';
+                document.getElementById('woModel').value = '';
+                document.getElementById('woSerial').value = '';
+                document.getElementById('woEquipment').value = '';
+                document.getElementById('woEquipmentId').value = '';
+                return;
+            }
+            document.getElementById('woMake').value  = res.make || '';
+            document.getElementById('woModel').value = res.model || '';
+            document.getElementById('woSerial').value= res.serial_number || '';
+            document.getElementById('woEquipment').value = res.device_type || '';
+            document.getElementById('woEquipmentId').value = res.id;
+        })
+        .catch(() => {
+            // On failure, clear fields
+            document.getElementById('woMake').value = '';
+            document.getElementById('woModel').value = '';
+            document.getElementById('woSerial').value = '';
+            document.getElementById('woEquipment').value = '';
+            document.getElementById('woEquipmentId').value = '';
+        });
+    }
+
+    /**
+     * Open the work order modal for the given asset.  Pre-fills the
+     * asset field and loads equipment details.
+     *
+     * @param {string} assetTag
+     */
+    window.openWorkOrderModalFromInventory = function openWorkOrderModalFromInventory(assetTag) {
+        resetWorkOrderModal();
+        document.getElementById('woAsset').value = assetTag || '';
+        loadEquipmentDetails(assetTag || '');
+        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
+        modal.show();
+        // After opening, ensure we show Work Orders tab when saving
+    };
+
+    /**
+     * Open the work order modal without pre-filling.  Used for the Add
+     * Work Order button in the tab.
+     */
+    window.openWorkOrderModal = function openWorkOrderModal() {
+        resetWorkOrderModal();
+        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
+        modal.show();
+    };
+
+    /**
+     * Called when the asset number field changes in the modal.  Looks up
+     * details for the entered asset and fills related fields.
+     */
+    window.onWOAssetChange = function onWOAssetChange() {
+        const assetTag = document.getElementById('woAsset').value;
+        loadEquipmentDetails(assetTag);
+    };
+
+    /**
+     * Append a new row to the Work Orders table.  Accepts an object
+     * describing the work order fields.
+     *
+     * @param {object} row
+     */
+    function appendWorkOrderRow(row) {
+        const tbody = document.getElementById('workOrdersTableBody');
+        if (!tbody) return;
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-row-id', row.id);
+        tr.innerHTML = `
+            <td>
+                <button class="btn-icon btn-edit" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon text-danger btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+            </td>
+            <td>${row.id}</td>
+            <td>${escapeHtml(row.title || '')}</td>
+            <td>${row.asset_tag ? ('<span class="badge bg-light text-dark border">' + escapeHtml(row.asset_tag) + '</span>' + (row.serial_number ? '<br><span class="small text-muted">S/N: ' + escapeHtml(row.serial_number) + '</span>' : '')) : ''}</td>
+            <td>${escapeHtml(row.priority || '')}</td>
+            <td>${escapeHtml(row.status || '')}</td>
+            <td>${escapeHtml(row.assigned_to_name || 'N/A')}</td>
+            <td>${row.start_date ? escapeHtml(row.start_date) : '<span class="text-muted">-</span>'}</td>
+            <td>${row.end_date ? escapeHtml(row.end_date) : '<span class="text-muted">-</span>'}</td>
+            <td>${escapeHtml(row.description || '')}</td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    /**
+     * Update an existing row in the Work Orders table with new values.
+     *
+     * @param {object} row
+     */
+    function updateWorkOrderRow(row) {
+        const tr = document.querySelector('#workOrdersTableBody tr[data-row-id="' + row.id + '"]');
+        if (!tr) return;
+        // Column order: 0 Actions, 1 ID, 2 Title, 3 Equipment, 4 Priority, 5 Status, 6 Tech, 7 Start, 8 End, 9 Description
+        tr.children[1].textContent = row.id;
+        tr.children[2].textContent = row.title || '';
+        let equipHtml = '';
+        if (row.asset_tag) {
+            equipHtml += '<span class="badge bg-light text-dark border">' + escapeHtml(row.asset_tag) + '</span>';
+            if (row.serial_number) {
+                equipHtml += '<br><span class="small text-muted">S/N: ' + escapeHtml(row.serial_number) + '</span>';
+            }
+        }
+        tr.children[3].innerHTML = equipHtml;
+        tr.children[4].textContent = row.priority || '';
+        tr.children[5].textContent = row.status || '';
+        tr.children[6].textContent = row.assigned_to_name || 'N/A';
+        tr.children[7].innerHTML = row.start_date ? escapeHtml(row.start_date) : '<span class="text-muted">-</span>';
+        tr.children[8].innerHTML = row.end_date ? escapeHtml(row.end_date) : '<span class="text-muted">-</span>';
+        tr.children[9].textContent = row.description || '';
+    }
+
+    /**
+     * Event delegation for edit and delete buttons on the Work Orders table.
+     */
+    const woTableBody = document.getElementById('workOrdersTableBody');
+    if (woTableBody) {
+        woTableBody.addEventListener('click', function(e) {
+            const editBtn = e.target.closest('.btn-edit');
+            if (editBtn) {
+                e.preventDefault();
+                const tr = editBtn.closest('tr');
+                if (!tr) return;
+                const id = tr.getAttribute('data-row-id');
+                editWorkOrder(id, tr);
+                return;
+            }
+            const delBtn = e.target.closest('.btn-delete');
+            if (delBtn) {
+                e.preventDefault();
+                const tr = delBtn.closest('tr');
+                if (!tr) return;
+                const id = tr.getAttribute('data-row-id');
+                deleteWorkOrder(id, tr);
+            }
+        });
+    }
+
+    /**
+     * Edit a work order: populate the modal with values from the row and show it.
+     *
+     * @param {string} id
+     * @param {HTMLElement} tr
+     */
+    function editWorkOrder(id, tr) {
+        resetWorkOrderModal();
+        const modalTitle = document.getElementById('workOrderModalTitle');
+        if (modalTitle) modalTitle.textContent = 'Edit Work Order';
+        document.getElementById('woId').value = id;
+        document.getElementById('woTitle').value = tr.children[2].textContent.trim();
+        // Extract asset tag and serial from cell 3
+        const equipCell = tr.children[3];
+        const badge = equipCell.querySelector('.badge');
+        const sn = equipCell.querySelector('.small.text-muted');
+        document.getElementById('woAsset').value  = badge ? badge.textContent.trim() : '';
+        document.getElementById('woSerial').value = sn ? sn.textContent.replace('S/N:', '').trim() : '';
+        // Load equipment details to fill make/model/equipment_id
+        loadEquipmentDetails(document.getElementById('woAsset').value);
+        document.getElementById('woPriority').value = tr.children[4].textContent.trim() || 'Medium';
+        document.getElementById('woStatus').value   = tr.children[5].textContent.trim() || 'Open';
+        const techVal = tr.children[6].textContent.trim();
+        document.getElementById('woTech').value = techVal === 'N/A' ? '' : techVal;
+        const startVal = tr.children[7].textContent.trim();
+        document.getElementById('woStartDate').value = (startVal === '-' || startVal === '') ? '' : startVal;
+        const endVal = tr.children[8].textContent.trim();
+        document.getElementById('woEndDate').value = (endVal === '-' || endVal === '') ? '' : endVal;
+        document.getElementById('woDescription').value = tr.children[9].textContent.trim();
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
+        modal.show();
+    }
+
+    /**
+     * Delete a work order by id via AJAX and remove its row from the table.
+     *
+     * @param {string} id
+     * @param {HTMLElement} tr
+     */
+    function deleteWorkOrder(id, tr) {
+        if (!confirm('Are you sure you want to delete this work order?')) return;
+        fetch(WORK_ORDER_DELETE_URL + '/' + encodeURIComponent(id), {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(resp => resp.json().catch(() => ({ success: resp.ok })))
+        .then(res => {
+            if (res && res.success) {
+                tr.remove();
+            }
+        })
+        .catch(() => {
+            // On error, do nothing
+        });
+    }
+
+    // Handle work order form submission (create or update)
+    const workOrderForm = document.getElementById('workOrderForm');
+    if (workOrderForm) {
+        workOrderForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const woId   = document.getElementById('woId').value;
+            const url    = woId ? (WORK_ORDER_UPDATE_URL + '/' + encodeURIComponent(woId)) : WORK_ORDER_CREATE_URL;
+            const params = new URLSearchParams();
+            params.append('site_id', SITE_ID);
+            params.append('title', document.getElementById('woTitle').value);
+            params.append('equipment_id', document.getElementById('woEquipmentId').value);
+            params.append('status', document.getElementById('woStatus').value);
+            params.append('priority', document.getElementById('woPriority').value);
+            params.append('assigned_to', document.getElementById('woTech').value);
+            params.append('start_date', document.getElementById('woStartDate').value);
+            params.append('end_date', document.getElementById('woEndDate').value);
+            params.append('description', document.getElementById('woDescription').value);
+            // Submit via fetch
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: params.toString()
+            })
+            .then(resp => resp.json())
+            .then(res => {
+                if (!res || !res.success) {
+                    const errBox = document.getElementById('workOrderError');
+                    if (errBox) {
+                        errBox.classList.remove('d-none');
+                        errBox.textContent = res && res.message ? res.message : 'Failed to save work order';
+                    }
+                    return;
+                }
+                // Build row data from response and form fields
+                const row = {
+                    id: res.work_order_id || woId,
+                    title: document.getElementById('woTitle').value,
+                    priority: document.getElementById('woPriority').value,
+                    status: document.getElementById('woStatus').value,
+                    assigned_to_name: document.getElementById('woTech').value || 'N/A',
+                    start_date: document.getElementById('woStartDate').value,
+                    end_date: document.getElementById('woEndDate').value,
+                    description: document.getElementById('woDescription').value,
+                    asset_tag: res.asset_tag || document.getElementById('woAsset').value,
+                    serial_number: res.serial_number || document.getElementById('woSerial').value,
+                };
+                if (woId) {
+                    updateWorkOrderRow(row);
+                } else {
+                    appendWorkOrderRow(row);
+                }
+                // Hide modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('workOrderModal'));
+                if (modal) modal.hide();
+                // Switch to Work Orders tab
+                window.showWorkOrdersTab();
+            })
+            .catch(() => {
+                const errBox = document.getElementById('workOrderError');
+                if (errBox) {
+                    errBox.classList.remove('d-none');
+                    errBox.textContent = 'Error saving work order.';
+                }
+            });
+        });
+    }
+})();
+</script>
+
 
 <!-- end inspectionWizardModal -->
 
@@ -2144,7 +2895,11 @@
 
 
         /* ================= INSPECTIONS ================= */
-        $('#inspections-datatable').DataTable({
+        // The inspections listing in the Site Details page has been
+        // replaced by a custom inspection workflow.  Only initialise
+        // DataTables for the old table if it still exists on the page.
+        if ($('#inspections-datatable').length) {
+            $('#inspections-datatable').DataTable({
             dom: 'Bfrtip',
             buttons: [{
                     extend: 'copy',
@@ -2184,7 +2939,8 @@
             order: [
                 [1, 'desc']
             ]
-        });
+            });
+        }
 
 
         /* ================= WORK ORDERS ================= */
@@ -2279,6 +3035,321 @@
             });
         });
 
+    /**
+     * -------------------------------------------------------------------
+     * Custom Inspection Workflow Functions
+     *
+     * The site-inspection-workflow component included in the Inspections tab
+     * relies on a number of JavaScript helpers to toggle views, update
+     * statuses, and handle exports.  The following functions provide
+     * minimal implementations so the UI operates without errors.  They can
+     * be expanded upon to integrate with your backend and business logic.
+
+     * The dynamic inspection workflow requires the current site ID.  Capture
+     * it here from the server-side so AJAX requests know which site they
+     * are targeting.
+     */
+    const siteId = <?= (int)($site['id'] ?? 0) ?>;
+    // Switch view from dashboard to inspection.  Hide other views when
+    // starting an inspection and show the inspection detail view.
+    window.startInspection = function startInspection() {
+        const dashView = document.getElementById('view-dashboard');
+        const inspView = document.getElementById('view-inspection');
+        const woView = document.getElementById('view-workorders');
+        const reportsView = document.getElementById('view-reports');
+        if (dashView) dashView.classList.add('d-none-view');
+        if (woView) woView.classList.add('d-none-view');
+        if (reportsView) reportsView.classList.add('d-none-view');
+        if (inspView) inspView.classList.remove('d-none-view');
+        // focus the asset input after a slight delay
+        setTimeout(function() {
+            const input = document.getElementById('assetInput');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 100);
+    }
+
+    // Return to the dashboard view from any other section.
+    window.showDashboard = function showDashboard() {
+        const inspView = document.getElementById('view-inspection');
+        const woView = document.getElementById('view-workorders');
+        const reportsView = document.getElementById('view-reports');
+        const dashView = document.getElementById('view-dashboard');
+        if (inspView) inspView.classList.add('d-none-view');
+        if (woView) woView.classList.add('d-none-view');
+        if (reportsView) reportsView.classList.add('d-none-view');
+        if (dashView) dashView.classList.remove('d-none-view');
+    }
+
+    // Update the status badge based on selection from the dropdown.
+    window.updateStatus = function updateStatus(status) {
+        const btn = document.getElementById('statusDropdown');
+        if (!btn) return;
+        if (status === 'Closed/Complete') {
+            btn.className = 'btn btn-light dropdown-toggle status-badge status-closed';
+            btn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Closed/Complete';
+        } else {
+            btn.className = 'btn btn-light dropdown-toggle status-badge status-in-progress';
+            btn.innerHTML = '<i class="fa-solid fa-rotate"></i> In Progress';
+        }
+    }
+
+    // Handle asset submission.  For demonstration this simply enables
+    // the Pass/Fail tab and populates example values.  Integrate your
+    // actual asset lookup here.
+    window.handleAssetGo = function handleAssetGo() {
+        const assetInput = document.getElementById('assetInput');
+        const asset = assetInput ? assetInput.value.trim() : '';
+        if (!asset) {
+            alert('Please enter an Asset number.');
+            return;
+        }
+        // Query the backend for equipment details by asset tag and site ID.
+        $.get('<?= site_url('admin/site-inspection/get-equipment') ?>', { asset_tag: asset, site_id: siteId }, function(resp) {
+            if (!resp || resp.found === false) {
+                // Asset not found – trigger new equipment addition flow (Step 2–5)
+                // Pre-fill the Asset # field in the Add Device modal and open it
+                var addAssetInput = document.getElementById('addAsset');
+                if (addAssetInput) addAssetInput.value = asset;
+                // Clear other fields so the user fills them in fresh
+                ['addModel','addSerial','addManufacturer','addType','addDescription','addDept','addRoom','addNotes'].forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+                var addDeviceModalEl = document.getElementById('addDeviceModal');
+                if (addDeviceModalEl) {
+                    var addDeviceModal = bootstrap.Modal.getOrCreateInstance(addDeviceModalEl);
+                    addDeviceModal.show();
+                } else {
+                    alert('Device with Asset # ' + asset + ' was not found for this site. Please add it as new equipment.');
+                }
+                return;
+            }
+            // Enable the Pass/Fail tab and show the form
+        const tabButton = document.getElementById('inspect-device-tab');
+        const emptyView = document.getElementById('inspectDeviceEmpty');
+        const formWrapper = document.getElementById('inspectDeviceFormWrapper');
+            if (tabButton) {
+                tabButton.classList.remove('disabled');
+                // Use Bootstrap Tab API to activate the tab
+                var tabInstance = bootstrap.Tab.getOrCreateInstance(tabButton);
+                tabInstance.show();
+            }
+        if (emptyView) emptyView.classList.add('d-none');
+        if (formWrapper) formWrapper.classList.remove('d-none');
+
+            // Populate the form fields with the equipment details
+            $('#inspectAsset').val(resp.asset_tag || '');
+            // For display we prioritise model; fallback to make
+            var modelDisplay = resp.model && resp.model.length ? resp.model : (resp.make || '—');
+            $('#inspectModelDisplay').text(modelDisplay);
+            // Customer name is not returned; leave blank or set as needed
+            $('#inspectCustomerName').text('');
+            $('#inspectDept').val(resp.department || '');
+            $('#inspectRoom').val(resp.location || '');
+            $('#inspectSerial').val(resp.serial_number || '');
+            // Reset notes and checkboxes
+            $('#inspectNotes').val('');
+            $('#inspectEST').prop('checked', false);
+            $('#inspectCAL').prop('checked', false);
+            // Reset action performed and frequency to defaults
+            $('#inspectActionPerformed').val('Annual Performance Inspection');
+            $('#inspectPMFrequency').val('12 Month');
+        }, 'json')
+        .fail(function() {
+            alert('Error looking up equipment. Please try again.');
+        });
+    }
+
+    // When selecting Inspect from the Not Inspected list, show the Pass/Fail tab
+    window.inspectFromNotInspected = function inspectFromNotInspected(asset) {
+        const input = document.getElementById('assetInput');
+        if (input) {
+            input.value = asset;
+        }
+        handleAssetGo();
+    }
+
+    /**
+     * Record an inspection result via AJAX.
+     *
+     * This helper gathers values from the Pass/Fail form and posts them
+     * to the site-inspection/record endpoint.  Upon success the page
+     * reloads to reflect updated lists.  On failure a message is shown.
+     *
+     * @param {string} result Pass | Fail | Repair
+     */
+    function recordInspection(result) {
+        var payload = {
+            site_id: siteId,
+            asset_tag: $('#inspectAsset').val(),
+            result: result,
+            notes: $('#inspectNotes').val(),
+            department: $('#inspectDept').val(),
+            room: $('#inspectRoom').val(),
+            serial_number: $('#inspectSerial').val(),
+            action_performed: $('#inspectActionPerformed').val(),
+            pm_frequency: $('#inspectPMFrequency').val(),
+            est: $('#inspectEST').is(':checked') ? 'Yes' : 'No',
+            cal: $('#inspectCAL').is(':checked') ? 'Yes' : 'No'
+        };
+        if (!payload.asset_tag) {
+            alert('Asset tag is missing. Please enter a valid Asset #.');
+            return;
+        }
+
+        // Capture the currently active sub-tab BEFORE the AJAX call
+        var activeSubTabId = null;
+        var activeSubTabBtn = document.querySelector('#myTabContent')
+            ? null
+            : null;
+        // Find which inner tab is currently active inside view-inspection
+        var activeNavLink = document.querySelector(
+            '#view-inspection .nav-tabs .nav-link.active, #view-inspection [role="tablist"] .nav-link.active'
+        );
+        if (activeNavLink) activeSubTabId = activeNavLink.id;
+
+        $.post('<?= site_url('admin/site-inspection/record') ?>', payload, function(resp) {
+            if (resp && resp.success) {
+                // ── Background refresh: reload page HTML silently, then restore state ──
+                $.get(window.location.href, function(html) {
+                    var parser  = new DOMParser();
+                    var doc     = parser.parseFromString(html, 'text/html');
+
+                    // Refresh inspected items table body
+                    var newInspBody = doc.getElementById('inspectionTableBody');
+                    var curInspBody = document.getElementById('inspectionTableBody');
+                    if (newInspBody && curInspBody) curInspBody.innerHTML = newInspBody.innerHTML;
+
+                    // Refresh not-inspected table body
+                    var newNotInspBody = doc.getElementById('notInspectedTableBody');
+                    var curNotInspBody = document.getElementById('notInspectedTableBody');
+                    if (newNotInspBody && curNotInspBody) curNotInspBody.innerHTML = newNotInspBody.innerHTML;
+
+                    // Refresh device type counter
+                    var newCounter = doc.getElementById('deviceTypeCountsBody');
+                    var curCounter = document.getElementById('deviceTypeCountsBody');
+                    if (newCounter && curCounter) curCounter.innerHTML = newCounter.innerHTML;
+
+                    // Refresh tab badge counts (e.g. "Not Inspected 2", "Inspected Items 1")
+                    ['not-inspected-count', 'inspected-count', 'not-inspected-tab', 'inspected-tab'].forEach(function(id) {
+                        var newEl = doc.getElementById(id);
+                        var curEl = document.getElementById(id);
+                        if (newEl && curEl) curEl.innerHTML = newEl.innerHTML;
+                    });
+
+                    // ── Switch to "Inspected Items" sub-tab ──
+                    var inspectedTabBtn = document.getElementById('inspected-tab');
+                    if (inspectedTabBtn) bootstrap.Tab.getOrCreateInstance(inspectedTabBtn).show();
+
+                    // ── Clear the Pass/Fail form for next scan ──
+                    $('#inspectAsset').val('');
+                    $('#inspectNotes').val('');
+                    $('#inspectEST').prop('checked', false);
+                    $('#inspectCAL').prop('checked', false);
+                    // Return to not-inspected tab flow (re-enable scan input)
+                    var notInspTab = document.getElementById('not-inspected-tab');
+                    if (notInspTab) bootstrap.Tab.getOrCreateInstance(notInspTab).show();
+
+                    // Brief success toast
+                    if (typeof toast === 'function') {
+                        toast('Inspection recorded as <strong>' + result + '</strong>!', 'success');
+                    }
+                }).fail(function() {
+                    // Fallback: full reload staying on inspected tab
+                    sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');
+                    sessionStorage.setItem('siteDetailsActiveSubTab', 'inspected-tab');
+                location.reload();
+                });
+            } else {
+                var msg = resp && resp.message ? resp.message : 'Failed to record inspection.';
+                alert(msg);
+            }
+        }, 'json').fail(function() {
+            alert('Error recording inspection. Please try again.');
+        });
+    }
+
+    // Attach click handlers for inspection outcome buttons.  Use jQuery
+    // delegated events to ensure buttons inside dynamic content work.
+    $(document).ready(function() {
+        // Remove existing handlers to prevent duplicates
+        $('#btnPassInspection').off('click').on('click', function() {
+            recordInspection('Pass');
+        });
+        $('#btnFailInspection').off('click').on('click', function() {
+            recordInspection('Fail');
+        });
+        $('#btnRepairInspection').off('click').on('click', function() {
+            recordInspection('Repair');
+        });
+        $('#btnFailWOInspection').off('click').on('click', function() {
+            // First record a fail inspection, then switch to Work Orders tab and open modal
+            var assetId = $('#inspectAsset').val();
+            recordInspection('Fail');
+            // After a short delay (to let the inspection record + background refresh run),
+            // navigate to the Work Orders tab and open the Work Order modal
+            setTimeout(function() {
+                // Switch to the Work Orders tab inside the inspection workflow
+                var woTabBtn = document.getElementById('work-orders-tab');
+                if (woTabBtn) {
+                    bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
+                }
+                // Open the work order modal pre-filled with the asset
+                openWorkOrderModalFromInventory(assetId);
+            }, 700);
+        });
+    });
+
+    // Generic functions for exporting tables.  These are placeholders
+    // demonstrating how you might trigger a DataTables export.  They
+    // simply log to the console for now.
+    window.copyTable = function copyTable(tableId) {
+        console.log('Copy table', tableId);
+    }
+    window.exportTableCSV = function exportTableCSV(tableId) {
+        console.log('Export CSV', tableId);
+    }
+    window.exportTableExcel = function exportTableExcel(tableId) {
+        console.log('Export Excel', tableId);
+    }
+    window.exportTablePDF = function exportTablePDF(tableId) {
+        console.log('Export PDF', tableId);
+    }
+
+    // Show the Work Orders view inside the inspection workflow
+    window.showWorkOrdersTab = function showWorkOrdersTab() {
+        const inspView = document.getElementById('view-inspection');
+        const woView = document.getElementById('view-workorders');
+        const reportsView = document.getElementById('view-reports');
+        const dashView = document.getElementById('view-dashboard');
+        if (inspView) inspView.classList.add('d-none-view');
+        if (dashView) dashView.classList.add('d-none-view');
+        if (reportsView) reportsView.classList.add('d-none-view');
+        if (woView) woView.classList.remove('d-none-view');
+    }
+
+    // Show the Reports view inside the inspection workflow
+    window.showReportsView = function showReportsView() {
+        const inspView = document.getElementById('view-inspection');
+        const woView = document.getElementById('view-workorders');
+        const reportsView = document.getElementById('view-reports');
+        const dashView = document.getElementById('view-dashboard');
+        if (inspView) inspView.classList.add('d-none-view');
+        if (woView) woView.classList.add('d-none-view');
+        if (dashView) dashView.classList.add('d-none-view');
+        if (reportsView) reportsView.classList.remove('d-none-view');
+    }
+
+    
+
+    // NOTE: The functions openWorkOrderModalFromInventory, openWorkOrderModal,
+    // onWOAssetChange and renderWorkOrdersTable are implemented in the
+    // custom dynamic script defined earlier in this file. The following
+    // stub definitions have been removed to avoid overriding the dynamic
+    // implementations.
         // Reset form when adding new equipment
         $('#addEquipmentBtn').on('click', function() {
             $('#equipmentModalLabel').text('Add Equipment');
@@ -2806,6 +3877,8 @@
                 success: function(response) {
                     console.log('Success response:', response);
                     $('#inspectionWizardModal').modal('hide');
+                    // Remember to stay on Inspections tab after reload
+                    sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');
                     location.reload();
                 },
                 error: function(xhr) {
@@ -2873,6 +3946,27 @@
                 }
             });
         });
+
+
+    // ------------------------------------------------------------
+    // IMPORTANT: This page uses inline onclick handlers in the HTML
+    // (ex: onclick="handleAssetGo()" / onclick="inspectFromNotInspected('...')").
+    // Functions declared inside $(document).ready(...) are NOT global,
+    // so browsers won't find them from inline handlers.
+    // Expose the handlers on window so the buttons work.
+    // ------------------------------------------------------------
+    window.startInspection = startInspection;
+    window.showDashboard = showDashboard;
+    window.updateStatus = updateStatus;
+    window.handleAssetGo = handleAssetGo;
+    window.inspectFromNotInspected = inspectFromNotInspected;
+    window.openInspectionReport = openInspectionReport;
+    window.showWorkOrdersTab = showWorkOrdersTab;
+    window.showReportsView = showReportsView;
+    window.openWorkOrderModalFromInventory = openWorkOrderModalFromInventory;
+    window.openWorkOrderModal = openWorkOrderModal;
+    window.previewReportPDF = previewReportPDF;
+    window.exportReportPDF = exportReportPDF;
 
 
 

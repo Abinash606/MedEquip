@@ -173,9 +173,11 @@ class SitesController extends BaseController
             ->where('company_id', $companyId)
             ->findAll();
 
-        // Get inspections for this site (fixed GROUP BY)
+        // Get inspections for this site.  We join with equipment and users to
+        // retrieve additional columns needed for the dynamic inspection
+        // workflow (make, model, device type, serial number, etc.).
         $allInspections = $inspectionModel
-            ->select('inspections.*, users.full_name as technician_name, equipment.asset_tag')
+            ->select('inspections.*, users.full_name as technician_name, equipment.make as equipment_make, equipment.model as equipment_model, equipment.device_type, equipment.serial_number, equipment.asset_tag, equipment.department, equipment.location')
             ->join('users', 'users.id = inspections.technician_id', 'left')
             ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
             ->where('inspections.site_id', $id)
@@ -183,7 +185,8 @@ class SitesController extends BaseController
             ->orderBy('inspections.group_id DESC, inspections.id DESC')
             ->findAll();
 
-        // Filter to get unique group_ids
+        // Build a list of unique inspections based on group_id.  This array
+        // will be used for the dashboard view of the inspection workflow.
         $inspections = [];
         $seenGroups = [];
         foreach ($allInspections as $inspection) {
@@ -192,6 +195,66 @@ class SitesController extends BaseController
                 $seenGroups[] = $inspection['group_id'];
             }
         }
+
+        // Compute dynamic lists for the inspection workflow.  We
+        // categorize equipment into not inspected, inspected and archived.
+        $inspectionList = $inspections; // alias for clarity
+        $notInspected = [];
+        $inspectedItems = [];
+        $archivedItems = [];
+        // Index equipment by ID for quick lookup
+        $equipmentById = [];
+        foreach ($equipment as $eq) {
+            $equipmentById[$eq['id']] = $eq;
+        }
+        // Track equipment IDs that have at least one completed inspection
+        $inspectedEquipmentIds = [];
+        foreach ($allInspections as $record) {
+            // A completed inspection means completed_at is not null or status is completed
+            if (!empty($record['completed_at']) || strtolower($record['status']) === 'completed') {
+                $inspectedEquipmentIds[$record['equipment_id']] = true;
+                // Build inspected item row.  Each inspection record
+                // corresponds to one row in the Inspected Items list.
+                $inspectedItems[] = [
+                    'id'             => $record['id'],
+                    'equipment_id'   => $record['equipment_id'],
+                    'make'           => $record['equipment_make'],
+                    'model'          => $record['equipment_model'],
+                    'device_type'    => $record['device_type'],
+                    'serial_number'  => $record['serial_number'],
+                    'asset_tag'      => $record['asset_tag'],
+                    'department'     => $record['department'],
+                    'location'       => $record['location'],
+                    'technician'     => $record['technician_name'],
+                    'est'            => $record['est'], // placeholder for electrical safety test flag
+                    'cal'            => $record['cal'], // placeholder for calibration flag
+                    'result'         => $record['status'],
+                    'notes'          => $record['notes'],
+                    'inspection_date'=> $record['completed_at'] ?? $record['scheduled_at'],
+                ];
+            }
+        }
+        // Determine not inspected and archived items
+        // Also mark the inspection_status for each equipment for dynamic inventory display
+        foreach ($equipment as &$eq) {
+            // Flag archived if equipment is out of service
+            if (isset($eq['status']) && strtolower($eq['status']) === 'out_of_service') {
+                $archivedItems[] = $eq;
+                // Set a status flag for the inventory table
+                $eq['inspection_status'] = 'Archived';
+                continue;
+            }
+            if (isset($inspectedEquipmentIds[$eq['id']])) {
+                // Equipment has at least one completed inspection
+                $eq['inspection_status'] = 'Inspected';
+                // Already counted as inspected; skip adding to notInspected
+                continue;
+            }
+            // Otherwise, equipment has not been inspected yet
+            $notInspected[] = $eq;
+            $eq['inspection_status'] = 'Not Inspected';
+        }
+        unset($eq); // break reference
 
         // Get work orders for this site
         $workOrders = $workOrderModel
@@ -212,14 +275,18 @@ class SitesController extends BaseController
             ->findAll();
 
         $data = [
-            'site'        => $site,
-            'customer'    => $customer,
-            'sites'       => $sites,        // ADDED
-            'equipment'   => $equipment,
-            'inspections' => $inspections,
-            'workOrders'  => $workOrders,
-            'technicians' => $technicians,
-            'users'       => $technicians,
+            'site'            => $site,
+            'customer'        => $customer,
+            'sites'           => $sites,
+            'equipment'       => $equipment,
+            'inspections'     => $inspections,
+            'inspectionList'  => $inspectionList,
+            'notInspected'    => $notInspected,
+            'inspectedItems'  => $inspectedItems,
+            'archivedItems'   => $archivedItems,
+            'workOrders'      => $workOrders,
+            'technicians'     => $technicians,
+            'users'           => $technicians,
         ];
 
         return view('admin/sites/details', $data);
