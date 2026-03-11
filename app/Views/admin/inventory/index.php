@@ -1,13 +1,14 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 topbar">
     <h3 class="fw-bold mb-0">Inventory Management</h3>
     <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#inventoryModal">
         <i class="fa-solid fa-plus me-2"></i> Add Item
     </button>
 </div>
-
-<div class="glass-card">
+    <div class="content">
+<div class="glass-card p-3">
+    <div class="table-responsive">
     <table id="inventory-datatable" class="display" style="width:100%">
         <thead>
             <tr>
@@ -23,8 +24,9 @@
         <tbody>
         </tbody>
     </table>
+    </div>
 </div>
-
+</div>
 <!-- Inventory Modal -->
 <div class="modal fade" id="inventoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -308,8 +310,8 @@
                         data: 'id',
                         render: function(data) {
                             return `
-                            <button class="btn btn-sm btn-outline-secondary btn-edit-site" data-bs-toggle="modal" onclick="editInventory(${data})">Edit</button>
-                            <button class="btn btn-sm btn-outline-danger btn-delete-site" onclick="deleteInventory(${data})">Delete</button>
+                            <button class="btn btn-sm btn-primary btn-edit-site" data-bs-toggle="modal" onclick="editInventory(${data})">Edit</button>
+                            <button class="btn btn-sm btn-danger btn-delete-site" onclick="deleteInventory(${data})">Delete</button>
                         `;
                         },
                         orderable: false,

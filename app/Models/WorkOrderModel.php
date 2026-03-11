@@ -11,7 +11,7 @@ class WorkOrderModel extends Model
     protected $allowedFields = [
         'company_id', 'site_id', 'equipment_id', 'title', 'description', 'status',
         'priority', 'assigned_to', 'created_by', 'start_date', 'end_date',
-        'completed_at', 'created_at', 'updated_at', 'deleted_at',
+        'completed_at', 'group_id', 'created_at', 'updated_at', 'deleted_at',
     ];
     protected $useTimestamps = true;
     protected $useSoftDeletes = true;

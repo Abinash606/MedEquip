@@ -209,14 +209,35 @@ class SitesController extends BaseController
         }
         // Track equipment IDs that have at least one completed inspection
         $inspectedEquipmentIds = [];
+        // Build a map of equipment_id -> group_id so legacy records with NULL
+        // group_id can be back-filled from the unique inspection list.
+        $equipmentGroupMap = [];
+        foreach ($inspections as $insp) {
+            if (!empty($insp['equipment_id']) && !empty($insp['group_id'])) {
+                $equipmentGroupMap[$insp['equipment_id']] = $insp['group_id'];
+            }
+        }
+
         foreach ($allInspections as $record) {
-            // A completed inspection means completed_at is not null or status is completed
-            if (!empty($record['completed_at']) || strtolower($record['status']) === 'completed') {
+            // A completed inspection means completed_at is not null OR
+            // status is a known result value (Pass, Fail, Repair, completed).
+            $statusLower = strtolower($record['status'] ?? '');
+            $isDone = !empty($record['completed_at'])
+                   || $statusLower === 'completed'
+                   || $statusLower === 'pass'
+                   || $statusLower === 'fail'
+                   || $statusLower === 'repair';
+            if ($isDone) {
                 $inspectedEquipmentIds[$record['equipment_id']] = true;
+                // Back-fill group_id for legacy records that stored NULL in the DB.
+                $resolvedGroupId = !empty($record['group_id'])
+                    ? $record['group_id']
+                    : ($equipmentGroupMap[$record['equipment_id']] ?? '');
                 // Build inspected item row.  Each inspection record
                 // corresponds to one row in the Inspected Items list.
                 $inspectedItems[] = [
                     'id'             => $record['id'],
+                    'group_id'       => $resolvedGroupId,
                     'equipment_id'   => $record['equipment_id'],
                     'make'           => $record['equipment_make'],
                     'model'          => $record['equipment_model'],
@@ -258,7 +279,7 @@ class SitesController extends BaseController
 
         // Get work orders for this site
         $workOrders = $workOrderModel
-            ->select('work_orders.*, equipment.asset_tag, equipment.serial_number, 
+            ->select('work_orders.*, work_orders.group_id, equipment.asset_tag, equipment.serial_number, 
                   technician_user.full_name as assigned_to_name')
             ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
             ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')

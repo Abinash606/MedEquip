@@ -250,45 +250,155 @@ class SystemSettings extends BaseController
         return $this->response->setJSON(['message' => 'Note deleted']);
     }
 
+    /**
+     * Equipment Setting List — pulls unique Make/Model/Device Type combos
+     * from the equipment table. EST and CAL are now columns on equipment itself.
+     * Each unique combo gets one representative row_id (the lowest equipment.id
+     * in that group) so the toggle/save can UPDATE all matching rows at once.
+     */
     public function equipmentList()
     {
-        $model = new EquipmentSettingModel();
+        $companyId = $this->session->get('company_id');
+        $db = \Config\Database::connect();
+
+        // Aggregate: for each unique make+model+device_type combo, take the
+        // MIN(id) as a stable row identifier and the MAX of est/cal so that
+        // if ANY row in the group is flagged, the whole group shows as flagged.
+        $rows = $db->query("
+            SELECT
+                MIN(id)          AS id,
+                COALESCE(make,'')        AS make,
+                COALESCE(model,'')       AS model,
+                COALESCE(device_type,'') AS device_type,
+                MAX(est)         AS est,
+                MAX(cal)         AS cal
+            FROM equipment
+            WHERE company_id = ?
+              AND deleted_at IS NULL
+              AND (make != '' OR model != '' OR device_type != '')
+            GROUP BY make, model, device_type
+            ORDER BY make, model, device_type
+        ", [$companyId])->getResultArray();
+
+        $data = [];
+        foreach ($rows as $row) {
+                $data[] = [
+                'id'          => (int) $row['id'],
+                'make'        => $row['make'],
+                'model'       => $row['model'],
+                'device_type' => $row['device_type'],
+                'est'         => (int) ($row['est'] ?? 0),
+                'cal'         => (int) ($row['cal'] ?? 0),
+            ];
+        }
+
+        return $this->response->setJSON(['data' => $data]);
+    }
+
+    /**
+     * Toggle EST or CAL directly on the equipment table.
+     * Updates ALL rows that share the same make+model+device_type as the
+     * given id, so the whole device-type group stays in sync.
+     */
+    public function equipmentToggle()
+    {
+        $companyId = $this->session->get('company_id');
+        $db        = \Config\Database::connect();
+
+        $id    = (int) $this->request->getPost('id');
+        $field = $this->request->getPost('field'); // 'est' or 'cal'
+        $value = $this->request->getPost('value') == '1' ? 1 : 0;
+
+        if (!in_array($field, ['est', 'cal'], true)) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Invalid field']);
+        }
+
+        // Get the make/model/device_type of the representative row
+        $ref = $db->table('equipment')->select('make, model, device_type')
+            ->where('id', $id)->get()->getRowArray();
+
+        if (!$ref) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Equipment not found']);
+        }
+
+        // Update all matching rows in this company
+        $db->table('equipment')
+            ->where('company_id', $companyId)
+            ->where('make',        $ref['make'])
+            ->where('model',       $ref['model'])
+            ->where('device_type', $ref['device_type'])
+            ->update([$field => $value]);
+
         return $this->response->setJSON([
-            'data' => $model->findAll()
+            'status'  => 'success',
+            'message' => strtoupper($field) . ' updated',
+            'value'   => $value,
         ]);
     }
 
+    /**
+     * Save EST/CAL from edit modal — updates all rows in the same
+     * make+model+device_type group.
+     */
     public function equipmentSave()
     {
-        $model = new EquipmentSettingModel();
+        $companyId = $this->session->get('company_id');
+        $db        = \Config\Database::connect();
 
-        $id = $this->request->getPost('id');
+        $id  = (int) $this->request->getPost('id');
+        $est = $this->request->getPost('est') ? 1 : 0;
+        $cal = $this->request->getPost('cal') ? 1 : 0;
 
-        $data = [
-            'description' => $this->request->getPost('description'),
-            'est' => $this->request->getPost('est') ? 1 : 0,
-            'cal' => $this->request->getPost('cal') ? 1 : 0,
-        ];
-
-        if ($id) {
-            $model->update($id, $data);
-            $msg = "Equipment updated successfully";
-        } else {
-            $model->insert($data);
-            $msg = "Equipment added successfully";
+        if (!$id) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'No ID provided']);
         }
 
-        return $this->response->setJSON(['status' => 'success', 'message' => $msg]);
+        $ref = $db->table('equipment')->select('make, model, device_type')
+            ->where('id', $id)->get()->getRowArray();
+
+        if (!$ref) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Equipment not found']);
+        }
+
+        $db->table('equipment')
+            ->where('company_id', $companyId)
+            ->where('make',        $ref['make'])
+            ->where('model',       $ref['model'])
+            ->where('device_type', $ref['device_type'])
+            ->update(['est' => $est, 'cal' => $cal]);
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Equipment updated successfully']);
     }
 
+    /**
+     * "Delete" / Reset — sets est=0 and cal=0 for the whole group.
+     * Does NOT remove any records from the database.
+     */
     public function equipmentDelete($id)
     {
-        $model = new EquipmentSettingModel();
-        $model->delete($id);
+        $companyId = $this->session->get('company_id');
+        $db        = \Config\Database::connect();
+
+        $id  = (int) $id;
+        $ref = $db->table('equipment')->select('make, model, device_type')
+            ->where('id', $id)->get()->getRowArray();
+
+        if (!$ref) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Equipment not found']);
+        }
+
+        $db->table('equipment')
+            ->where('company_id', $companyId)
+            ->where('make',        $ref['make'])
+            ->where('model',       $ref['model'])
+            ->where('device_type', $ref['device_type'])
+            ->update(['est' => 0, 'cal' => 0]);
 
         return $this->response->setJSON([
-            'status' => 'success',
-            'message' => 'Equipment deleted'
+            'status'  => 'success',
+            'message' => 'EST & CAL reset to No for this device group',
         ]);
     }
 }
+
+

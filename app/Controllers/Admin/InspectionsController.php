@@ -298,7 +298,7 @@ class InspectionsController extends BaseController
             ->orLike('make', $keyword)
             ->orLike('device_type', $keyword)
             ->groupEnd()
-            ->select('id, asset_tag, make, model, serial_number, device_type, location, department')
+            ->select('id, asset_tag, make, model, serial_number, device_type, location, department, est, cal')
             ->findAll(20);
 
         // De-duplicate by make+model

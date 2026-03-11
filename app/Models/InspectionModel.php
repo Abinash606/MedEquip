@@ -47,6 +47,9 @@ class InspectionModel extends Model
         $builder->select([
             'i.id',
             'i.group_id',
+            'i.est',
+            'i.cal',
+            
             // Use 'status' column as the inspection result (Pass/Fail/Repair)
             'i.status AS result',
             // action_performed may not exist in all schemas — use inspection_type as fallback

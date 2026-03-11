@@ -2,8 +2,8 @@
 <?= $this->section('content') ?>
 
 <?php $BASE_URL = base_url(); ?>
-<div class="d-flex align-items-center mb-3">
-    <h1 class="me-auto">Equipment DB</h1>
+<div class="d-flex align-items-center mb-3 topbar">
+    <h3 class="me-auto">Equipment DB</h3>
     <button class="btn btn-primary" id="addBtn"><i class="fa-solid fa-plus"></i> Add Equipment</button>
 </div>
 
@@ -12,8 +12,9 @@
     const BASE_URL = "<?= $BASE_URL ?>";
     const equipmentData = <?= json_encode($equipment) ?>;
 </script>
-
-<div class="glass-card">
+ <div class="content">
+<div class="glass-card p-3">
+    <div class="table-responsive">
     <table class="table table-striped" id="equipmentTable">
         <thead>
             <tr>
@@ -30,6 +31,8 @@
         </thead>
         <tbody></tbody>
     </table>
+    </div>
+</div>
 </div>
 <!-- MODAL -->
 <div class="modal fade" id="equipmentModal" tabindex="-1">

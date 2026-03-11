@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-<div class="glass-card">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4  topbar">
         <h3 class="fw-bold mb-0">Technicians</h3>
         <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#technicianModal"
             onclick="resetTechnicianModal()">
@@ -10,9 +10,11 @@
 
     </div>
 
+      <div class="content">
     <div class="mb-3">
+        <div class="glass-card p-3">
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-12">
                 <div class="input-group">
                     <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
                     <input type="text" id="search-username" class="form-control" placeholder="Search by username...">
@@ -20,7 +22,9 @@
             </div>
         </div>
     </div>
-
+</div>
+<div class="glass-card p-3">
+    <div class="table-responsive">
     <table id="technicians-datatable" class="display" style="width:100%">
         <thead>
             <tr>
@@ -35,8 +39,9 @@
         </thead>
         <tbody></tbody>
     </table>
+    </div>
 </div>
-
+</div>
 <script>
     let technicianTable;
     let technicianModal;
@@ -276,14 +281,16 @@
                         data: 'id',
                         render: function(data, type, row) {
                             return `
-                                <button class="btn btn-sm btn-outline-secondary btn-edit-technician"
+                            <div class="action-btns">
+                                <button class="btn btn-sm btn-primary btn-edit-technician"
                                         data-bs-toggle="modal"
                                         data-bs-target="#technicianModal"
                                         onclick="editTechnician(${data})">Edit</button>
-                                <button class="btn btn-sm btn-outline-danger btn-delete-technician"
+                                <button class="btn btn-sm btn-danger btn-delete-technician"
                                         onclick="deleteTechnician(${data})">Delete</button>
-                                <button class="btn btn-sm btn-outline-info ms-1 btn-login-technician"
+                                <button class="btn btn-sm btn-info ms-1 btn-login-technician"
                                         onclick="loginAsTechnician('${row.username}')">Login as Technician</button>
+                                        </div>
                             `;
                         },
                         orderable: false

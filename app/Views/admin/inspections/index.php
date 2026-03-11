@@ -1,22 +1,23 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 topbar">
             <h3 class="fw-bold mb-0">Inspection Reports</h3>
             <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addInspectionModal"><i class="fa-solid fa-plus me-2"></i> New Inspection</button>
         </div>
         <!-- Download area for reports and history -->
-        <div class="glass-card mb-4">
+         <div class="content">
+        <div class="glass-card mb-4 p-3">
             <h5 class="fw-bold mb-2">Reports &amp; History</h5>
             <p class="text-muted small mb-3">Download inspection reports and repair work order history for each site.</p>
-            <button class="btn btn-outline-secondary"><i class="fa-solid fa-download me-2"></i> Download Site Reports</button>
+            <button class="btn btn-primary"><i class="fa-solid fa-download me-2"></i> Download Site Reports</button>
         </div>
         <!-- Latest added device summary -->
-        <div class="glass-card mb-4">
+        <div class="glass-card mb-4 p-3">
             <h5 class="fw-bold mb-2">Latest Added Device</h5>
             <p class="text-muted small mb-3">Review the most recently added device to an inspection and make edits.</p>
             <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle">
-                    <thead class="bg-light">
+                <table class="table table-sm table-hover service-table align-middle">
+                    <thead class="">
                         <tr>
                             <th>Action</th>
                             <th>Model</th>
@@ -52,12 +53,12 @@
             </div>
         </div>
         <!-- Inspection overview table -->
-        <div class="glass-card">
+        <div class="glass-card p-3">
             <h5 class="fw-bold mb-2">Inspection Report Overview</h5>
             <p class="text-muted small mb-3">Detailed summary of inspection reports for your records.</p>
             <div class="table-responsive">
-                <table class="table table-sm table-bordered align-middle">
-                    <thead class="bg-light">
+                <table class="table table-sm service-table align-middle">
+                    <thead class="">
                         <tr>
                             <th>Pass/Fail</th>
                             <th>Customer Site</th>
@@ -115,7 +116,7 @@
                 </table>
             </div>
         </div>
-		
+		</div>
 		<!-- Modal for Inspection Workflow -->
 <div class="modal fade" id="addInspectionModal" tabindex="-1">
     <div class="modal-dialog modal-lg">

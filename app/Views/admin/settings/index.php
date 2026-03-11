@@ -1,9 +1,10 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
-
+<div class=" mb-4 topbar">
 <h3 class="fw-bold mb-4">System Settings</h3>
-
-<div class="glass-card">
+</div>
+ <div class="content">
+<div class="glass-card p-3">
   <div class="row">
     <div class="col-md-3 border-end">
       <div class="list-group list-group-flush" id="settings-nav">
@@ -74,7 +75,8 @@
           </button>
         </div>
 
-        <div class="glass-card">
+        <div class="glass-card p-3">
+          <div class="table-responsive">
           <table id="admins-datatable" class="display" style="width:100%">
             <thead>
               <tr>
@@ -86,6 +88,7 @@
               </tr>
             </thead>
           </table>
+        </div>
         </div>
       </div>
 
@@ -131,7 +134,8 @@
           </button>
         </div>
 
-        <div class="glass-card mb-3">
+        <div class="glass-card mb-3 p-3">
+          <div class="table-responsive">
           <table class="table table-sm w-100" id="iqNotesTable">
             <thead>
               <tr>
@@ -141,6 +145,7 @@
             </thead>
             <tbody></tbody>
           </table>
+          </div>
         </div>
 
       </div>
@@ -148,33 +153,38 @@
       <!-- Equipment Settings -->
       <div id="equipmentSettings" class="settings-pane d-none">
         <div class="table-container">
-          <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
             <h5 class="fw-bold mb-0">Equipment Inventory</h5>
-            <button class="btn btn-primary btn-sm" id="btnAddEquipment">
+              <small class="text-muted">Dynamically populated from Equipment DB. Toggle EST &amp; CAL flags per device row.</small>
+            </div>
+            <!-- <button class="btn btn-primary btn-sm" id="btnAddEquipment">
               <i class="fas fa-plus"></i> Add Equipment
-            </button>
+            </button> -->
           </div>
-
-          <table id="equipment-datatable" class="table table-bordered table-hover w-100">
+        <div class="glass-card mb-3 p-3 mt-3">
+          <div class="table-responsive">
+          <table id="equipment-datatable" class="table  table-hover w-100">
             <thead>
               <tr>
                 <th>Description</th>
-                <th class="text-center checkbox-cell">EST</th>
-                <th class="text-center checkbox-cell">CAL</th>
-                <th class="text-center">Actions</th>
+                <th class="text-center" style="width:80px;">EST</th>
+                <th class="text-center" style="width:80px;">CAL</th>
+                <th class="text-center" style="width:100px;">Actions</th>
               </tr>
             </thead>
             <tbody id="equipmentTable"></tbody>
           </table>
+          </div>
+          </div>
         </div>
-
       </div>
 
 
     </div>
   </div>
 </div>
-
+</div>
 
 <!-- Admin Modal -->
 <div class="modal fade" id="adminModal" tabindex="-1" aria-hidden="true">
@@ -270,43 +280,42 @@
   </div>
 </div>
 
-<!-- Euipment Setting Modal -->
+<!-- Equipment Setting Edit Modal (EST/CAL only — description comes from Equipment DB) -->
 <div class="modal fade" id="equipmentModal">
   <div class="modal-dialog">
     <div class="modal-content">
-
       <form id="equipmentForm">
         <?= csrf_field() ?>
         <input type="hidden" name="id" id="equipment-id">
 
         <div class="modal-header">
-          <h5 class="modal-title">Equipment</h5>
+          <h5 class="modal-title">Edit Equipment Flags</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
         <div class="modal-body">
-          <div class="mb-3">
-            <label>Description</label>
-            <input type="text" name="description" id="equipment-desc" class="form-control" required>
+          <p class="mb-3">
+            <strong id="equipment-label-make"></strong>
+            &mdash; <span id="equipment-label-model"></span>
+            &mdash; <em class="text-muted" id="equipment-label-type"></em>
+          </p>
+
+          <div class="form-check form-switch mb-3">
+            <input type="checkbox" class="form-check-input" name="est" id="equipment-est" role="switch">
+            <label class="form-check-label fw-semibold" for="equipment-est">EST (Electrical Safety Test)</label>
           </div>
 
-          <div class="form-check">
-            <input type="checkbox" name="est" id="equipment-est" class="form-check-input">
-            <label class="form-check-label">EST</label>
-          </div>
-
-          <div class="form-check">
-            <input type="checkbox" name="cal" id="equipment-cal" class="form-check-input">
-            <label class="form-check-label">CAL</label>
+          <div class="form-check form-switch">
+            <input type="checkbox" class="form-check-input" name="cal" id="equipment-cal" role="switch">
+            <label class="form-check-label fw-semibold" for="equipment-cal">CAL (Calibration)</label>
           </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary" type="submit">Save</button>
+          <button class="btn btn-primary" type="submit">Save Changes</button>
         </div>
       </form>
-
     </div>
   </div>
 </div>
@@ -472,8 +481,10 @@
           orderable: false,
           render: function(row) {
             return `
-            <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-admin" data-id="${row.id}">Edit</button>
-            <button type="button" class="btn btn-sm btn-outline-danger btn-del-admin" data-id="${row.id}">Delete</button>
+            <div class="action-btns">
+            <button type="button" class="btn btn-sm btn-primary btn-edit-admin" data-id="${row.id}">Edit</button>
+            <button type="button" class="btn btn-sm btn-danger btn-del-admin" data-id="${row.id}">Delete</button>
+            </div>
           `;
           }
         }
@@ -675,8 +686,10 @@
           orderable: false,
           render: function(row) {
             return `
-          <button class="btn btn-sm btn-outline-secondary edit-note" data-id="${row.id}">Edit</button>
-          <button class="btn btn-sm btn-outline-danger del-note" data-id="${row.id}">Delete</button>
+            <div class="action-btns">
+          <button class="btn btn-sm btn-primary edit-note" data-id="${row.id}">Edit</button>
+          <button class="btn btn-sm btn-danger del-note" data-id="${row.id}">Delete</button>
+          </div>
         `;
           }
         }
@@ -765,121 +778,141 @@
     // Equipment DataTable
     // ---------------------------------------
 
+    // ── Equipment Setting DataTable ────────────────────────────────────────
+    // Columns: Make | Model | Device Type | EST (toggle) | CAL (toggle) | Actions
+    const EQUIP_TOGGLE_URL = "<?= site_url('admin/settings/equipment/toggle') ?>";
+    const EQUIP_SAVE_URL   = "<?= site_url('admin/settings/equipment/save') ?>";
+    const EQUIP_DEL_URL    = "<?= site_url('admin/settings/equipment/delete') ?>";
+
     const equipmentTable = $('#equipment-datatable').DataTable({
-      ajax: {
-        url: "<?= site_url('admin/settings/equipment') ?>",
-        dataSrc: 'data'
-      },
-      columns: [{
-          data: 'description'
-        },
-        {
-          data: 'est',
-          className: 'text-center',
-          render: function(data) {
-            return `
-          <div class="form-check d-flex justify-content-center">
-            <input class="form-check-input"
-                   type="checkbox"
-                   ${data==1?'checked':''}
-                   onclick="return false;">
-          </div>
-        `;
-          }
-        },
-        {
-          data: 'cal',
-          className: 'text-center',
-          render: function(data) {
-            return `
-          <div class="form-check d-flex justify-content-center">
-            <input class="form-check-input"
-                   type="checkbox"
-                   ${data==1?'checked':''}
-                   onclick="return false;">
-          </div>
-        `;
-          }
-        },
-        {
+      ajax: { url: "<?= site_url('admin/settings/equipment') ?>", dataSrc: 'data' },
+      columns: [
+        { 
           data: null,
-          orderable: false,
-          className: 'text-center',
           render: function(row) {
+            const make  = row.make        || '';
+            const model = row.model       || '';
+            const dtype = row.device_type || '';
+            const parts = [make, model, dtype].filter(p => p !== '');
+            return parts.join(' — ') || '<span class="text-muted">—</span>';
+          }
+        },
+        {
+          data: 'est', className: 'text-center', orderable: false,
+          render: function(data, type, row) {
+            return `<div class="form-check d-flex justify-content-center m-0">
+              <input class="form-check-input equip-cb" type="checkbox"
+                data-id="${row.id}" data-field="est"
+                style="cursor:pointer;width:1.2em;height:1.2em;"
+                ${data == 1 ? 'checked' : ''}>
+            </div>`;
+          }
+        },
+        {
+          data: 'cal', className: 'text-center', orderable: false,
+          render: function(data, type, row) {
+            return `<div class="form-check d-flex justify-content-center m-0">
+              <input class="form-check-input equip-cb" type="checkbox"
+                data-id="${row.id}" data-field="cal"
+                style="cursor:pointer;width:1.2em;height:1.2em;"
+                ${data == 1 ? 'checked' : ''}>
+            </div>`;
+          }
+        },
+        {
+          data: null, orderable: false, className: 'text-center',
+          render: function(row) {
+            const make  = (row.make  || '').replace(/"/g, '&quot;');
+            const model = (row.model || '').replace(/"/g, '&quot;');
+            const dtype = (row.device_type || '').replace(/"/g, '&quot;');
             return `
-          <button class="btn btn-sm btn-outline-primary edit-equipment"
-            data-id="${row.id}"
-            data-desc="${row.description}"
-            data-est="${row.est}"
-            data-cal="${row.cal}">
+              <button class="btn btn-sm btn-outline-primary edit-equipment me-1"
+                title="Edit EST/CAL"
+                data-id="${row.id}" data-make="${make}"
+                data-model="${model}" data-device_type="${dtype}"
+                data-est="${row.est}" data-cal="${row.cal}">
             <i class="fas fa-edit"></i>
           </button>
-          <button class="btn btn-sm btn-outline-danger del-equipment"
+              <button class="btn btn-sm btn-outline-warning del-equipment"
+                title="Reset EST &amp; CAL to No"
             data-id="${row.id}">
-            <i class="fas fa-trash"></i>
-          </button>
-        `;
+                <i class="fas fa-redo-alt"></i>
+              </button>`;
           }
         }
       ]
     });
 
-    // ===============================
-    // EQUIPMENT CRUD
-    // ===============================
+    // Inline checkbox toggle
+    $(document).on('change', '.equip-cb', function() {
+      const $cb = $(this);
+      const id    = $cb.data('id');
+      const field = $cb.data('field');
+      const value = this.checked ? 1 : 0;
+      const label = field.toUpperCase();
+      $.post(EQUIP_TOGGLE_URL,
+        { id, field, value, '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val() },
+        function(res) {
+          if (res.status === 'success') {
+            swalSuccess(label + (value ? ' enabled' : ' disabled') + ' successfully');
+          } else {
+            $cb.prop('checked', !$cb.prop('checked'));
+            swalError(res.message || 'Toggle failed');
+          }
+        },
+        'json'
+      ).fail(function() { $cb.prop('checked', !$cb.prop('checked')); swalError('Connection error'); });
+    });
 
-    // Open modal
-    $('#btnAddEquipment').on('click', function() {
-      $('#equipmentForm')[0].reset();
-      $('#equipment-id').val('');
+    // Open edit modal
+    $(document).on('click', '.edit-equipment', function() {
+      const $btn = $(this);
+      $('#equipment-id').val($btn.data('id'));
+      $('#equipment-label-make').text($btn.data('make')  || '—');
+      $('#equipment-label-model').text($btn.data('model') || '—');
+      $('#equipment-label-type').text($btn.data('device_type') || '—');
+      $('#equipment-est').prop('checked', $btn.data('est') == 1);
+      $('#equipment-cal').prop('checked', $btn.data('cal') == 1);
       $('#equipmentModal').modal('show');
     });
 
-    // Save
+    // Save modal
     $('#equipmentForm').on('submit', function(e) {
       e.preventDefault();
-      $.post("<?= site_url('admin/settings/equipment/save') ?>",
-        $(this).serialize(),
+      const id  = $('#equipment-id').val();
+      const est = $('#equipment-est').is(':checked') ? 1 : 0;
+      const cal = $('#equipment-cal').is(':checked') ? 1 : 0;
+      $.post(EQUIP_SAVE_URL,
+        { id, est, cal, '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val() },
         function(res) {
           $('#equipmentModal').modal('hide');
-          swalSuccess(res.message);
+          swalSuccess(res.message || 'Saved');
           equipmentTable.ajax.reload(null, false);
         }, 'json'
-      );
+      ).fail(function() { swalError('Save failed'); });
     });
 
-    // Edit
-    $(document).on('click', '.edit-equipment', function() {
-      $('#equipment-id').val($(this).data('id'));
-      $('#equipment-desc').val($(this).data('desc'));
-      $('#equipment-est').prop('checked', $(this).data('est') == 1);
-      $('#equipment-cal').prop('checked', $(this).data('cal') == 1);
-      $('#equipmentModal').modal('show');
-    });
-
-    // Delete
+    // Reset (soft-delete) — sets EST=0, CAL=0, does NOT delete the record
     $(document).on('click', '.del-equipment', function() {
       const id = $(this).data('id');
-
       Swal.fire({
         icon: 'warning',
-        title: 'Are you sure?',
-        text: 'This action cannot be undone.',
+        title: 'Reset flags?',
+        text: 'EST and CAL will be set to No. The record will not be deleted.',
         showCancelButton: true,
-        cancelButtonText: 'Cancel',
-        confirmButtonText: 'Delete',
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d'
-      }).then((result) => {
-        if (!result.isConfirmed) return;
-
+        confirmButtonText: 'Yes, Reset',
+        confirmButtonColor: '#e67e22',
+        cancelButtonColor:  '#6c757d'
+      }).then(function(r) {
+        if (!r.isConfirmed) return;
         $.ajax({
-          url: "<?= site_url('admin/settings/equipment/delete') ?>/" + id,
-          type: "DELETE",
+          url:  EQUIP_DEL_URL + '/' + id,
+          type: 'DELETE',
           success: function(res) {
-            swalSuccess(res.message);
-            equipmentTable.ajax.reload(null, false);;
-          }
+            swalSuccess(res.message || 'Flags reset');
+            equipmentTable.ajax.reload(null, false);
+          },
+          error: function() { swalError('Reset failed'); }
         });
       });
     });

@@ -153,6 +153,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('settings/equipment', 'Admin\SystemSettings::equipmentList');
     $routes->post('settings/equipment/save', 'Admin\SystemSettings::equipmentSave');
     $routes->get('site-inspection/get-equipment', 'Admin\SiteInspectionWorkflowController::getEquipment');
+    $routes->post('settings/equipment/toggle', 'Admin\SystemSettings::equipmentToggle');
     $routes->post('site-inspection/record', 'Admin\SiteInspectionWorkflowController::recordInspection');
     $routes->delete('settings/equipment/delete/(:num)', 'Admin\SystemSettings::equipmentDelete/$1');
 });

@@ -62,6 +62,8 @@ class SiteInspectionWorkflowController extends BaseController
             'serial_number' => $eq['serial_number'] ?? '',
             'department'    => $eq['department'] ?? '',
             'location'      => $eq['location'] ?? '',
+            'est'           => $eq['est'] ?? '0',
+            'cal'           => $eq['cal'] ?? '0',
         ]);
     }
 
@@ -113,6 +115,8 @@ class SiteInspectionWorkflowController extends BaseController
         $serial    = trim((string) $this->request->getPost('serial_number'));
         $action    = trim((string) $this->request->getPost('action_performed'));
         $pmFreq    = trim((string) $this->request->getPost('pm_frequency'));
+        $est        = trim((string) $this->request->getPost('est'));
+        $cal        = trim((string) $this->request->getPost('cal'));
 
         // Basic validation
         if ($assetTag === '' || $siteId === 0 || $result === '') {
@@ -155,8 +159,12 @@ class SiteInspectionWorkflowController extends BaseController
         }
 
         // Build inspection record
+        // Use an existing group_id if the client is already in an active inspection
+        // session (i.e. the user is viewing a report and adding more devices to it).
+        // Otherwise generate a fresh group id for a brand-new inspection session.
         $inspectionModel = new InspectionModel();
-        $groupId = 'INSP-' . date('YmdHis');
+        $existingGroupId = trim((string) $this->request->getPost('group_id'));
+        $groupId = ($existingGroupId !== '') ? $existingGroupId : ('INSP-' . date('YmdHis'));
         $now     = date('Y-m-d H:i:s');
         // Calculate next_due_date from pm_frequency (e.g. "12 Month", "6 Month", "3 Month", "1 Month")
         $nextDueDate = null;
@@ -180,6 +188,8 @@ class SiteInspectionWorkflowController extends BaseController
             'findings'        => '',
             'notes'           => $notes,
             'inspection_type' => $action,
+            'est'             => $est,
+            'cal'             => $cal,
             'pm_frequency'    => $pmFreq,
             'next_due_date'   => $nextDueDate,
             'device_complete' => 'Yes',
@@ -197,8 +207,10 @@ class SiteInspectionWorkflowController extends BaseController
         }
 
         return $this->response->setJSON([
-            'success' => true,
-            'message' => 'Inspection recorded successfully',
+            'success'          => true,
+            'message'          => 'Inspection recorded successfully',
+            'group_id'         => $groupId,
+            'inspection_type'  => $action,
         ]);
     }
 }

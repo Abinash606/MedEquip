@@ -2,21 +2,22 @@
 
 <?= $this->section('content') ?>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 topbar">
     <h3 class="fw-bold mb-0">Customer Directory</h3>
-    <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal" data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
+    <button class="btn btn-primary shadow-sm btn-new" data-bs-toggle="modal" data-bs-target="#customerModal" data-modal-type="add"><i class="fa-solid fa-building me-2"></i> Add Customer</button>
 </div>
-
-<div class="glass-card mb-4">
+<div class="content">
+<!-- <div class="glass-card mb-4">
     <div class="input-group">
         <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
         <input type="text" class="form-control border-start-0 ps-0" id="customer-search" placeholder="Search for customers by name or address...">
         <button class="btn btn-outline-primary" id="searchBtn">Search</button>
     </div>
-</div>
-
-<div class="glass-card">
-    <table id="customer-datatable" class="display" style="width:100%">
+</div> -->
+    
+    <div class="glass-card p-3">
+        <div class="table-responsive">
+    <table id="customer-datatable" class="display">
         <thead>
             <tr>
                 <th>Customer Name</th>
@@ -62,15 +63,20 @@
                     <td><?= $customer['fax'] ?></td>
                     <td><?= $customer['website'] ?></td>
                     <td>
-                        <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-outline-secondary btn-edit-customer">Edit</button>
-                        <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-outline-danger btn-delete-customer">Delete</button>
-                        <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal" data-bs-target="#siteModal" class="btn btn-sm btn-outline-info btn-add-site">Add Sites</button>
+                        <div class="action-btns">
+                            <button data-id="<?= $customer['id'] ?>" data-modal-type="edit" class="btn btn-sm btn-primary btn-edit-customer">Edit</button>
+                        <button data-id="<?= $customer['id'] ?>" class="btn btn-sm btn-danger btn-delete-customer">Delete</button>
+                        <button data-id="<?= $customer['id'] ?>" data-name="<?= $customer['name'] ?>" data-bs-toggle="modal" data-bs-target="#siteModal" class="btn btn-sm btn-info btn-add-site">Add Sites</button>
+                        </div>
+                       
                     </td>
                 </tr>
             <?php endforeach; ?>
         </tbody>
     </table>
+    </div>
 </div>
+ </div>
 
 <!-- Customer Modal -->
 <div class="modal fade" id="customerModal" tabindex="-1">

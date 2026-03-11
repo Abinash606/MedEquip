@@ -36,6 +36,7 @@ class WorkOrdersController extends BaseController
             'start_date'  => $this->request->getPost('start_date') ?: null,
             'end_date'    => $this->request->getPost('end_date')   ?: null,
             'description' => $this->request->getPost('description') ?? '',
+            'group_id'    => $this->request->getPost('group_id') ?: null,
         ];
 
         $inserted = $workOrderModel->insert($data);
@@ -72,6 +73,7 @@ class WorkOrdersController extends BaseController
                     'description'        => (string) $data['description'],
                     'asset_tag'          => $assetTag,
                     'serial_number'      => $serialNo,
+                    'group_id'           => (string) ($data['group_id'] ?? ''),
                     'csrf_hash'          => csrf_hash(),
                 ]);
             }

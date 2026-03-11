@@ -19,6 +19,8 @@ class EquipmentModel extends Model
         'department',
         'location',
         'status',
+        'est',
+        'cal',
         'pm_kit',
         'pm_manual_path',
         'service_manual_path',
@@ -29,7 +31,7 @@ class EquipmentModel extends Model
         'created_at',
         'updated_at',
         'deleted_at',
-    ];
+    ];    
     protected $useTimestamps = true;
     protected $useSoftDeletes = true;
     protected $returnType = 'array';

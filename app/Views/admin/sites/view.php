@@ -101,32 +101,21 @@
         gap: 0.5rem;
     }
     
-    .export-btn {
-        padding: 0.5rem 1rem;
-        border: 1px solid #d1d5db;
-        background: #fff;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.875rem;
-    }
     
-    .export-btn:hover {
-        background: #f9fafb;
-    }
     
-    .search-box {
+    /* .search-box {
         display: flex;
         align-items: center;
         gap: 0.5rem;
     }
-    
-    .search-box input {
+     */
+    /* .search-box input {
         padding: 0.5rem 1rem;
         border: 1px solid #d1d5db;
         border-radius: 4px;
         width: 300px;
     }
-    
+     */
     .btn-action {
         padding: 0.375rem 0.75rem;
         font-size: 0.875rem;
@@ -208,8 +197,8 @@
 </style>
 
 <!-- Back Button -->
-<div class="mb-3">
-    <a href="<?= site_url('admin/sites') ?>" class="btn btn-secondary">
+<div class="mb-3 topbar">
+    <a href="<?= site_url('admin/sites') ?>" class="btn btn-primary">
         <i class="fa fa-arrow-left me-2"></i> Back to Sites
     </a>
 </div>

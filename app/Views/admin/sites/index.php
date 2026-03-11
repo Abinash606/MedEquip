@@ -22,36 +22,43 @@ foreach ($customers as $cust) {
 ?>
 
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 topbar">
     <h3 class="fw-bold mb-0">Site Directory</h3>
     <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#siteModal">
         <i class="fa-solid fa-sitemap me-2"></i> Add Site
     </button>
 </div>
-
-<!-- Search Box -->
-<div class="glass-card mb-4">
-    <div class="input-group">
-        <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
+  <div class="content">
+<!-- Filter by Customer -->
+<div class="glass-card mb-4 p-3">
+    <div class="row align-items-end">
+        <div class="col-md-6 mb-2">
+             <div class="input-group">
+        <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
         <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
     </div>
-</div>
-
-<!-- Filter by Customer -->
-<div class="glass-card mb-4">
-    <label for="customer-filter" class="form-label fw-bold">Filter by Customer</label>
-    <select id="customer-filter" class="form-select" style="width: 25%;">
+        </div>
+      <div class="col-md-6 mb-2">
+        <div>
+              <label for="customer-filter" class="form-label fw-bold">Filter by Customer</label>
+    <select id="customer-filter" class="form-select">
         <option value="">All Customers</option>
         <?php foreach ($customers as $cust): ?>
             <option value="<?= esc($cust['name']) ?>"><?= esc($cust['name']) ?></option>
         <?php endforeach; ?>
     </select>
-</div>
+        </div>
+        </div>
+        </div>
+    </div>
+  
+
 
 <!-- Sites Table -->
-<div class="glass-card">
-    <table class="table table-bordered table-striped table-hover" id="sitesTable">
-        <thead class="table-light">
+<div class="glass-card p-3">
+    <div class="table-responsive">
+    <table class="table " id="sitesTable">
+        <thead class="">
             <tr>
                 <th>Site Name</th>
                 <th>Customer Name</th>
@@ -85,8 +92,9 @@ foreach ($customers as $cust) {
                         <td><?= esc($site['phone'] ?? '') ?></td>
                         <td><?= esc($site['email'] ?? '') ?></td>
                         <td class="text-center">
+                            <div class="action-btns">
                             <!-- Edit button: populate modal with site data -->
-                            <button type="button" class="btn btn-sm btn-outline-secondary edit-site-btn" title="Edit"
+                            <button type="button" class="btn btn-sm btn-primary edit-site-btn" title="Edit"
                                 data-id="<?= $site['id'] ?>"
                                 data-name="<?= esc($site['name'], 'attr') ?>"
                                 data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
@@ -102,19 +110,21 @@ foreach ($customers as $cust) {
                             </button>
 
                             <!-- Delete button -->
-                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-outline-danger" title="Delete"
+                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-danger" title="Delete"
                                 onclick="return confirm('Are you sure you want to delete this site?')">
                                 <i class="fa fa-trash"></i> Delete
                             </a>
+                            </div>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>
+    </div>
 </div>
-
-
+</div>
+</div>
 <!-- Site Modal -->
 <div class="modal fade" id="siteModal" tabindex="-1" aria-labelledby="siteModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">

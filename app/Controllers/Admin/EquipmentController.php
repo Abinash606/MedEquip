@@ -64,7 +64,6 @@ class EquipmentController extends BaseController
             $equipmentModel = new EquipmentModel();
             $companyId = (int) session('company_id');
             $data = [
-
                 'company_id' => $companyId,
                 'asset_tag' => $this->request->getPost('asset_tag'),
                 'make' => $this->request->getPost('make'),
@@ -73,10 +72,39 @@ class EquipmentController extends BaseController
                 'device_type' => $this->request->getPost('device_type'),
                 'location' => $this->request->getPost('location'),
                 'department' => $this->request->getPost('department'),
-                'status' => $this->request->getPost('status'),
+                'status' => $this->request->getPost('status') ?: 'active',
                 'site_id' => $this->request->getPost('site_id')
             ];
-            $equipmentModel->insert($data);
+            $inserted = $equipmentModel->insert($data);
+
+            // Return JSON for AJAX requests
+            $wantsJson = $this->request->isAJAX()
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+                || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+
+            if ($wantsJson) {
+                if ($inserted) {
+                    $newId = $equipmentModel->getInsertID();
+                    return $this->response->setJSON([
+                        'success'     => true,
+                        'message'     => 'Equipment added successfully',
+                        'id'          => $newId,
+                        'asset_tag'   => $data['asset_tag'],
+                        'make'        => $data['make'],
+                        'model'       => $data['model'],
+                        'serial_number' => $data['serial_number'],
+                        'device_type' => $data['device_type'],
+                        'department'  => $data['department'],
+                        'location'    => $data['location'],
+                        'site_id'     => $data['site_id'],
+                    ]);
+                }
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Failed to add equipment',
+                ]);
+            }
+
             return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
         }
     }

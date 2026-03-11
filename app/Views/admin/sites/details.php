@@ -17,14 +17,14 @@
         text-align: center;
     }
 
-
+/* 
     .glass-card {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 12px;
         padding: 1.5rem;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         margin-bottom: 1.5rem;
-    }
+    } */
 
     .site-avatar {
         width: 80px;
@@ -58,9 +58,9 @@
     }
 
     .nav-tabs .nav-link.active {
-        color: #2563eb;
+        color: #fff;
         border-bottom: 3px solid #2563eb;
-        background: transparent;
+            background: linear-gradient(90deg, rgba(34, 211, 238, .92), rgba(124, 58, 237, .70)) !important;
     }
 
     .status-badge {
@@ -120,19 +120,6 @@
 
     .dataTables_wrapper .dt-buttons {
         margin-bottom: 1rem;
-    }
-
-    .dt-button {
-        background: white !important;
-        border: 1px solid #d1d5db !important;
-        color: #374151 !important;
-        padding: 0.5rem 1rem !important;
-        border-radius: 6px !important;
-        margin-right: 0.5rem !important;
-    }
-
-    .dt-button:hover {
-        background: #f3f4f6 !important;
     }
 
     /* ─── Multi-Step Wizard Styles ─── */
@@ -314,19 +301,19 @@
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     }
-    #site-inspection-workflow {
+    /* #site-inspection-workflow {
         font-family: "Inter", sans-serif;
         background-color: var(--bg-color);
         color: #1e293b;
         padding-bottom: 50px;
-    }
-    #site-inspection-workflow .card-custom {
+    } */
+    /* #site-inspection-workflow .card-custom {
         background: var(--card-bg);
         border: none;
         border-radius: var(--border-radius);
         box-shadow: var(--shadow-md);
         transition: all 0.3s ease;
-    }
+    } */
     #site-inspection-workflow .btn-custom-primary {
         background-color: var(--primary-color);
         border: none;
@@ -347,9 +334,9 @@
         align-items: center;
         justify-content: center;
         border-radius: 6px;
-        border: 1px solid #e2e8f0;
+        /* border: 1px solid #e2e8f0;
         background: white;
-        color: var(--secondary-color);
+        color: var(--secondary-color); */
         transition: all 0.2s;
     }
     #site-inspection-workflow .btn-icon:hover {
@@ -361,7 +348,7 @@
         gap: 10px;
         margin-bottom: 20px;
     }
-    #site-inspection-workflow .export-btn {
+    /* #site-inspection-workflow .export-btn {
         background: white;
         border: 1px solid #e2e8f0;
         padding: 6px 12px;
@@ -369,7 +356,7 @@
         font-size: 0.85rem;
         color: var(--secondary-color);
         font-weight: 500;
-    }
+    } */
     #site-inspection-workflow .status-badge {
         padding: 6px 12px;
         border-radius: 20px;
@@ -389,7 +376,7 @@
         color: var(--success-color);
         border: 1px solid #a7f3d0;
     }
-    #site-inspection-workflow .asset-input-wrapper {
+    /* #site-inspection-workflow .asset-input-wrapper {
         background: white;
         padding: 30px;
         border-radius: var(--border-radius);
@@ -397,7 +384,7 @@
         text-align: center;
         margin-bottom: 30px;
         border: 1px solid #e2e8f0;
-    }
+    } */
     #site-inspection-workflow .big-input {
         font-size: 1.25rem;
         padding: 15px;
@@ -417,7 +404,8 @@
         color: var(--secondary-color);
         font-weight: 500;
         border: none;
-        padding: 12px 20px;
+        padding: 12px 14px;
+        font-size:14px;
         border-bottom: 2px solid transparent;
         transition: all 0.2s;
     }
@@ -426,9 +414,9 @@
         border-color: transparent;
     }
     #site-inspection-workflow .nav-link.active {
-        color: var(--primary-color) !important;
+        color:#fff !important;
         border-bottom: 2px solid var(--primary-color) !important;
-        background: transparent !important;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(34, 211, 238, 1))!important !important;
     }
     #site-inspection-workflow .table-custom th {
         font-weight: 600;
@@ -607,31 +595,47 @@
 </style>
 
 <!-- Back Button -->
-<button class="btn btn-secondary mb-3" onclick="window.location.href='<?= site_url('admin/sites') ?>'">
+ <div class="mb-3 topbar">
+<button class="btn btn-primary mb-3" onclick="window.location.href='<?= site_url('admin/sites') ?>'">
     <i class="fa fa-arrow-left me-2"></i> Back to Sites
 </button>
+</div>
+<div class="content">
+<!-- Site Information Card (collapsible) -->
+<div class="glass-card mb-4 p-0" id="siteInfoCard">
 
-<!-- Site Information Card -->
-<div class="glass-card mb-4">
+    <!-- Clickable header bar — always visible, toggles the body -->
+    <div id="siteInfoToggleBar"
+         style="cursor:pointer; padding:10px 18px; display:flex; align-items:center; justify-content:space-between; border-radius:inherit;"
+         onclick="toggleSiteInfo()">
+        <span class="fw-semibold text-secondary" style="font-size:0.85rem; letter-spacing:0.04em;">
+            <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+            Site Information &mdash; <span style="font-weight:400;"><?= esc($site['name']) ?></span>
+        </span>
+        <span id="siteInfoChevron" style="transition:transform 0.3s ease; display:inline-block;">
+            <i class="fa-solid fa-chevron-up"></i>
+        </span>
+    </div>
+
+    <!-- Collapsible body -->
+    <div id="siteInfoBody" style="overflow:hidden; transition:max-height 0.35s ease, opacity 0.3s ease; max-height:400px; opacity:1; padding:0 18px 16px;">
     <div class="row align-items-center">
         <div class="col-md-auto me-4">
             <div class="site-avatar" id="site-details-logo">
                 <?php
-                $logoPath = $customer['logo_path']; // Get the logo file name
-                $logoUrl = base_url('uploads/logos/' . $logoPath); // Construct the URL assuming the logos are in the 'uploads/logos' directory
-
-                // Check if the logo exists (optional)
+                    $logoPath = $customer['logo_path'];
+                    $logoUrl  = base_url('uploads/logos/' . $logoPath);
                 if (file_exists(FCPATH . 'uploads/logos/' . $logoPath) && !empty($logoPath)) {
-                    echo '<img src="' . $logoUrl . '" alt="Customer Logo" />'; // Display the logo image
+                        echo '<img src="' . $logoUrl . '" alt="Customer Logo" />';
                 } else {
                     $nameParts = explode(' ', $customer['name']);
-                    $initials = '';
+                        $initials  = '';
                     if (count($nameParts) >= 2) {
                         $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
                     } else {
                         $initials = strtoupper(substr($customer['name'], 0, 2));
                     }
-                    echo $initials; // Display initials if logo doesn't exist
+                        echo $initials;
                 }
                 ?>
             </div>
@@ -651,11 +655,41 @@
                     <p><strong>Site Address:</strong> <span id="site-details-address"><?= esc($site['address'] ?? 'N/A') ?>, <?= esc($site['city'] ?? '') ?></span></p>
                     <p><strong>State:</strong> <span id="site-details-state"><?= esc($site['state'] ?? 'N/A') ?></span></p>
                     <p><strong>Zip code:</strong> <span id="site-details-zip"><?= esc($site['zip'] ?? 'N/A') ?></span></p>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var _siteInfoOpen = true; // default: open
+
+    window.toggleSiteInfo = function() {
+        var body    = document.getElementById('siteInfoBody');
+        var chevron = document.getElementById('siteInfoChevron');
+        if (!body) return;
+        if (_siteInfoOpen) {
+            // Collapse: measure current height, then animate to 0
+            body.style.maxHeight = body.scrollHeight + 'px';
+            requestAnimationFrame(function() {
+                body.style.maxHeight = '0px';
+                body.style.opacity   = '0';
+                body.style.paddingBottom = '0';
+            });
+            chevron.style.transform = 'rotate(180deg)';
+        } else {
+            // Expand
+            body.style.maxHeight    = body.scrollHeight + 400 + 'px'; // generous ceiling
+            body.style.opacity      = '1';
+            body.style.paddingBottom = '16px';
+            chevron.style.transform = 'rotate(0deg)';
+        }
+        _siteInfoOpen = !_siteInfoOpen;
+    };
+})();
+</script>
 
 <!-- Tabs Navigation -->
 <ul class="nav nav-tabs" id="site-details-tabs" role="tablist">
@@ -669,11 +703,11 @@
             <i class="fa fa-clipboard-check me-2"></i> Inspections
         </button>
     </li>
-    <!-- <li class="nav-item" role="presentation">
-        <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#work-orders" type="button" role="tab" aria-controls="work-orders" aria-selected="false">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#work-orders-main" type="button" role="tab" aria-controls="work-orders" aria-selected="false">
             <i class="fa fa-wrench me-2"></i> Work Orders
         </button>
-    </li> -->
+    </li>
 </ul>
 
 <!-- Tab Content -->
@@ -681,7 +715,7 @@
 
     <!-- Equipment Tab -->
     <div class="tab-pane fade show active" id="equipment" role="tabpanel" aria-labelledby="equipment-tab">
-        <div class="glass-card">
+        <div class="glass-card p-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Equipment List</h5>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
@@ -770,8 +804,8 @@
     </div>
 
     <!-- Work Orders Tab -->
-    <div class="tab-pane fade" id="work-orders" role="tabpanel" aria-labelledby="work-orders-tab">
-        <div class="glass-card">
+    <div class="tab-pane fade" id="work-orders-main" role="tabpanel" aria-labelledby="work-orders-main-tab">
+        <div class="glass-card p-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Work Orders List</h5>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWorkOrderModal">
@@ -818,6 +852,7 @@
                                 <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '-' ?></td>
                                 <td><?= $wo['end_date'] ? date('M d, Y', strtotime($wo['end_date'])) : '-' ?></td>
                                 <td>
+                                    <div class="action-btns">
                                     <button class="btn btn-sm btn-info btn-action edit-workorder-btn"
                                         data-id="<?= $wo['id'] ?>"
                                         data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
@@ -836,6 +871,7 @@
                                         onclick="return confirm('Are you sure you want to delete this work order?')">
                                         <i class="fa fa-trash"></i> Delete
                                     </a>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1314,8 +1350,6 @@
                                     <th>Department</th>
                                     <th>Room</th>
                                     <th>Tech</th>
-                                    <th>EST</th>
-                                    <th>CAL</th>
                                     <th>Inspection Date</th>
                                     <th>Battery Expiration Date</th>
                                     <th>Notes</th>
@@ -1707,6 +1741,31 @@
             }, 300);
         }
 
+        // ── Inspections tab click: always refresh all data & re-filter ──────
+        // When the user clicks the main "Inspections" tab, fetch fresh HTML from
+        // the server and rebuild the table bodies, tab badges, and device counter.
+        // If an inspection group is already open, re-apply the group filter after
+        // the refresh so counts and rows stay correct.
+        var inspTabBtn = document.getElementById('inspections-tab');
+        if (inspTabBtn) {
+            inspTabBtn.addEventListener('shown.bs.tab', function() {
+                if (typeof backgroundRefreshTabs === 'function') {
+                    backgroundRefreshTabs(function() {
+                        // If currently viewing an inspection (not the dashboard list),
+                        // re-apply the group filter to restore filtered state.
+                        if (window.CURRENT_INSPECTION_GROUP_ID && typeof filterInspectedByGroup === 'function') {
+                            filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
+                        }
+                        // If reports tab is active and a group is loaded, re-render report
+                        var reportsTabActive = document.querySelector('#inspection-reports.active, #inspection-reports.show');
+                        if (reportsTabActive && window.CURRENT_REPORT_GROUP_ID && typeof openInspectionReport === 'function') {
+                            openInspectionReport(window.CURRENT_REPORT_GROUP_ID);
+                        }
+                    });
+                }
+            });
+        }
+
         // ─────────────────────────────────────────────
         // Handle Edit Button Click from View Modal
         // ─────────────────────────────────────────────
@@ -1957,6 +2016,7 @@
     const REPORT_DATA_URL   = "<?= site_url('admin/inspections/reportData') ?>";
     const REPORT_PDF_URL    = "<?= site_url('admin/inspections/reportPdf') ?>";
     const GET_EQUIPMENT_URL = "<?= site_url('admin/site-inspection/get-equipment') ?>";
+    const EQUIPMENT_CREATE_URL = "<?= site_url('admin/equipment/create') ?>";
     const WORK_ORDER_CREATE_URL = "<?= site_url('admin/work-orders/create') ?>";
     const WORK_ORDER_UPDATE_URL = "<?= site_url('admin/work-orders/update') ?>";
     const WORK_ORDER_DELETE_URL = "<?= site_url('admin/work-orders/delete') ?>";
@@ -1985,12 +2045,33 @@
         if (title)     title.textContent    = testName || '—';
         if (idLabel)   idLabel.textContent  = inspIdLabel || '—';
         if (techLabel) techLabel.textContent= techName || '—';
+
+        // Store the active group_id in BOTH variables so that every
+        // Pass / Fail / Repair record inside this session is appended to the
+        // SAME inspection group rather than creating a brand-new one each time.
+        window.CURRENT_INSPECTION_GROUP_ID = groupId;
+        window.CURRENT_REPORT_GROUP_ID     = groupId;
+
         // Show inspection view and hide dashboard
         const dashView = document.getElementById('view-dashboard');
         const inspView = document.getElementById('view-inspection');
         if (dashView) dashView.classList.add('d-none-view');
         if (inspView) inspView.classList.remove('d-none-view');
-        // Load report for this group
+
+        // KEY FIX: Refresh all tab data from server, then filter to current group.
+        // backgroundRefreshTabs fetches fresh HTML, replaces table bodies,
+        // then calls filterInspectedByGroup to show only this inspection's rows.
+        if (typeof backgroundRefreshTabs === 'function') {
+            backgroundRefreshTabs(function() {
+                if (typeof filterInspectedByGroup === 'function') {
+                    filterInspectedByGroup(groupId);
+                }
+            });
+        } else if (typeof filterInspectedByGroup === 'function') {
+            filterInspectedByGroup(groupId);
+        }
+
+        // Load report into Reports tab (non-blocking)
         openInspectionReport(groupId);
     };
 
@@ -2002,11 +2083,22 @@
      */
     window.openInspectionReport = function openInspectionReport(groupId) {
         CURRENT_REPORT_GROUP_ID = groupId;
+        // If we are currently on the dashboard view, switch to the inspection view
+        // and activate the Inspection Reports tab so the report is visible inline
+        const dashView = document.getElementById('view-dashboard');
+        const inspView = document.getElementById('view-inspection');
+        if (dashView && !dashView.classList.contains('d-none-view')) {
+            dashView.classList.add('d-none-view');
+            if (inspView) inspView.classList.remove('d-none-view');
+            // Activate reports tab
+            var reportsTabBtn = document.getElementById('reports-tab');
+            if (reportsTabBtn) bootstrap.Tab.getOrCreateInstance(reportsTabBtn).show();
+        }
         // Clear any previous content
         const reportContentEl  = document.getElementById('reportContent');
         const reportsTabEl     = document.getElementById('reportsTabContent');
         if (reportContentEl)  reportContentEl.innerHTML = '<p class="text-muted">Loading report...</p>';
-        if (reportsTabEl)     reportsTabEl.innerHTML    = '<p class="text-muted">Loading report...</p>';
+        if (reportsTabEl)     reportsTabEl.innerHTML    = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report data…</p></div>';
         fetch(REPORT_DATA_URL + '/' + encodeURIComponent(groupId), {
             headers: {
                 'Accept': 'application/json',
@@ -2026,6 +2118,24 @@
             const html   = generateInspectionReportHTML(latest, rows, groupId);
             if (reportContentEl) reportContentEl.innerHTML = html;
             if (reportsTabEl)    reportsTabEl.innerHTML    = html;
+
+            // ── Populate the inspection header elements if they are currently empty ──
+            // This happens when the user clicks the report icon from the list directly
+            // without going through viewInspection() first.
+            const titleEl = document.getElementById('insp-title');
+            const idLabel = document.getElementById('insp-id-label');
+            const techEl  = document.getElementById('insp-technician');
+            const siteEl  = document.getElementById('insp-site-label');
+            if (latest) {
+                if (titleEl && (!titleEl.textContent || titleEl.textContent === '—'))
+                    titleEl.textContent = latest.action_performed || latest.inspection_type || 'Inspection';
+                if (idLabel && (!idLabel.textContent || idLabel.textContent === '—'))
+                    idLabel.textContent = 'Inspection #: ' + groupId;
+                if (techEl && (!techEl.textContent || techEl.textContent === '—'))
+                    techEl.textContent = latest.technician_name || 'N/A';
+                if (siteEl && (!siteEl.textContent || siteEl.textContent.trim() === 'Site: —'))
+                    siteEl.textContent = 'Site: ' + (latest.site_name || latest.customer_name || '');
+            }
         })
         .catch(err => {
             const errMsg = err && err.message ? err.message : 'Unknown error';
@@ -2045,197 +2155,208 @@
      * @returns {string} HTML string
      */
     function generateInspectionReportHTML(latest, rows, groupId) {
-        // Header section
-        let siteName  = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name || latest.customer_name) : '';
-        let action    = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest.action_performed || latest.inspection_type) : '';
-        let technician= latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
-        let logoHTML  = '';
+        // Header section (hidden — page header already shows this info)
+        let siteName   = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name || latest.customer_name) : '';
+        let action     = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest.action_performed || latest.inspection_type) : '';
+        let technician = latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
+        let logoHTML   = '';
         if (latest && latest.logo_path) {
             const logoUrl = LOGO_BASE_URL + '/' + latest.logo_path;
             logoHTML = '<img src="' + escapeHtml(logoUrl) + '" style="height:60px;">';
         }
-        let headerHtml = `
-            <section class="mb-4">
+        // let headerHtml = `
+        //     <section class="mb-4">
+        //         <div class="d-flex justify-content-between align-items-center">
+        //             <div>
+        //                 <strong>Site:</strong> ${siteName}<br>
+        //                 <em>${action}</em>
+        //             </div>
+        //             <div>${logoHTML}</div>
+        //             <div class="text-end">
+        //                 <strong>Inspection #:</strong> ${escapeHtml(groupId)}<br>
+        //                 <em>Technician: ${technician}</em>
+        //             </div>
+        //         </div>
+        //     </section>`;
+            
+            let headerHtml = `
+        <section class="mb-4" style="display:none;">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong>Site:</strong> ${siteName}<br>
-                        <em>${action}</em>
-                    </div>
+                <div><strong>Site:</strong> ${siteName}<br><em>${action}</em></div>
                     <div>${logoHTML}</div>
                     <div class="text-end">
-                        <strong>Inspection #:</strong> ${escapeHtml(groupId)}<br>
+                    <strong>Inspection #:</strong> ${escapeHtml(groupId || '')}<br>
                         <em>Technician: ${technician}</em>
                     </div>
                 </div>
             </section>`;
-        // Latest added device table
-        let latestHtml = '<p class="text-muted">No devices available.</p>';
-        if (latest) {
-            latestHtml = `
-                <div class="table-responsive">
-                    <table class="table table-custom table-striped">
-                        <thead>
-                            <tr>
-                                <th>Model</th>
-                                <th>Type</th>
-                                <th>S/N</th>
-                                <th>Action Performed</th>
-                                <th>Asset #</th>
-                                <th>Department</th>
-                                <th>Room</th>
-                                <th>Tech</th>
-                                <th>EST</th>
-                                <th>CAL</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>${escapeHtml(latest.model || '')}</td>
-                                <td>${escapeHtml(latest.device_type || '')}</td>
-                                <td>${escapeHtml(latest.serial_number || 'N/A')}</td>
-                                <td>${escapeHtml(latest.action_performed || latest.inspection_type || '')}</td>
-                                <td>${escapeHtml(latest.asset_tag || '')}</td>
-                                <td>${escapeHtml(latest.dept || '')}</td>
-                                <td>${escapeHtml(latest.room || '')}</td>
-                                <td>${escapeHtml(latest.technician_name || 'N/A')}</td>
-                                <td>${yesNo(latest.est)}</td>
-                                <td>${yesNo(latest.cal)}</td>
-                                <td>${escapeHtml(latest.notes || '')}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>`;
-        }
-        // Overview table rows
-        const overviewRows = (rows || []).map(function(r) {
+
+        // ── Shared table columns (EST/CAL removed per meeting notes) ─────────
+        const tableHead = `<thead><tr>
+            <th>Result</th><th>Model</th><th>Type</th><th>S/N</th>
+            <th>Action Performed</th><th>Asset #</th><th>Dept</th>
+            <th>Room</th><th>Tech</th><th>Inspection Date</th><th>Notes</th>
+        </tr></thead>`;
+
+        function makeRow(r) {
             return `<tr>
-                <td>${resultBadge(r.result)}</td>
-                <td>${escapeHtml(r.site_name || r.customer_name || '')}</td>
+                <td>${resultBadge(r.result || r.status)}</td>
                 <td>${escapeHtml(r.model || '')}</td>
                 <td>${escapeHtml(r.device_type || '')}</td>
                 <td>${escapeHtml(r.serial_number || 'N/A')}</td>
                 <td>${escapeHtml(r.action_performed || r.inspection_type || '')}</td>
                 <td>${escapeHtml(r.asset_tag || '')}</td>
-                <td>${escapeHtml(r.dept || '')}</td>
-                <td>${escapeHtml(r.room || '')}</td>
-                <td>${yesNo(r.est)}</td>
-                <td>${yesNo(r.cal)}</td>
+                <td>${escapeHtml(r.dept || r.department || '')}</td>
+                <td>${escapeHtml(r.room || r.location || '')}</td>
                 <td>${escapeHtml(r.technician_name || 'N/A')}</td>
                 <td>${r.inspection_date ? formatInspectionDateHTML(r.inspection_date) : '<span class="text-muted">-</span>'}</td>
                 <td>${escapeHtml(r.notes || '')}</td>
             </tr>`;
-        }).join('');
-        const overviewTable = `
-            <div class="table-responsive">
-                <table class="table table-custom table-striped">
-                    <thead>
-                        <tr>
-                            <th>Result</th>
-                            <th>Customer</th>
-                            <th>Model</th>
-                            <th>Type</th>
-                            <th>S/N</th>
-                            <th>Action Performed</th>
-                            <th>Asset #</th>
-                            <th>Dept</th>
-                            <th>Room</th>
-                            <th>EST</th>
-                            <th>CAL</th>
-                            <th>Tech</th>
-                            <th>Inspection Date</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${overviewRows || '<tr><td colspan="14" class="text-center text-muted">No inspections found for this report.</td></tr>'}
-                    </tbody>
+        }
+
+        function makeTable(rowsArr, emptyMsg) {
+            const body = rowsArr.length > 0
+                ? rowsArr.map(makeRow).join('')
+                : `<tr><td colspan="11" class="text-center text-muted py-3">${emptyMsg}</td></tr>`;
+            return `<div class="table-responsive mb-2">
+                <table class="table table-custom table-striped table-sm">
+                    ${tableHead}<tbody>${body}</tbody>
                 </table>
             </div>`;
-        return headerHtml + `
+        }
+
+        // ── Split rows into Needs Attention vs Passed ─────────────────────────
+        const allRows = rows || [];
+        const needsRows = allRows.filter(function(r) {
+            const res = String(r.result || r.status || '').trim();
+            return res === 'Fail' || res === 'Repair' || res === 'Fail + WO';
+        });
+        const passRows = allRows.filter(function(r) {
+            const res = String(r.result || r.status || '').trim();
+            return res === 'Pass';
+        });
+        const otherRows = allRows.filter(function(r) {
+            const res = String(r.result || r.status || '').trim();
+            return res !== 'Fail' && res !== 'Repair' && res !== 'Fail + WO' && res !== 'Pass';
+        });
+
+        const needsSection = `
             <section class="mb-4">
-                <h5 class="fw-semibold">Latest Added Device</h5>
-                ${latestHtml}
-            </section>
-            <section>
-                <h5 class="fw-semibold">Inspection Report Overview</h5>
-                ${overviewTable}
+            <h5 class="fw-semibold text-danger">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>Needs Attention
+                <span class="badge bg-danger ms-2">${needsRows.length}</span>
+            </h5>
+            <p class="text-muted small mb-2">Devices that failed or require repair.</p>
+            ${makeTable(needsRows, 'No failed or repair items — all devices passed!')}
             </section>`;
+
+        const passSection = `
+        <section class="mb-4">
+            <h5 class="fw-semibold text-success">
+                <i class="fa-solid fa-circle-check me-2"></i>Passed
+                <span class="badge bg-success ms-2">${passRows.length}</span>
+            </h5>
+            <p class="text-muted small mb-2">Devices that passed inspection.</p>
+            ${makeTable(passRows, 'No passed items yet.')}
+        </section>`;
+
+        const otherSection = otherRows.length > 0 ? `
+        <section class="mb-4">
+            <h5 class="fw-semibold text-secondary">Other</h5>
+            ${makeTable(otherRows, '')}
+        </section>` : '';
+
+        return headerHtml + needsSection + passSection + otherSection;
     }
 
     /**
      * Display the report preview in a new browser window and trigger the
      * print dialog.  Uses the current content of the report modal.
      */
+    /**
+     * Build an HTML string for the report header (site, logo, inspection #, tech).
+     * Reads live data from the page elements populated by openInspectionReport().
+     * Returns an HTML string safe to inject into a new window.
+     */
+    function buildReportHeaderForPrint() {
+        var getText = function(id) {
+            var el = document.getElementById(id);
+            return el ? escapeHtml(el.textContent.trim()) : '';
+        };
+        var siteName  = getText('insp-site-label') || 'Site';
+        var inspTitle = getText('insp-title')       || '';
+        var inspId    = getText('insp-id-label')    || (CURRENT_REPORT_GROUP_ID ? escapeHtml(CURRENT_REPORT_GROUP_ID) : '');
+        var tech      = getText('insp-technician')  || '';
+        // Build logo HTML using the latest report data
+        var logoHtml = '';
+        // Try to get logo from the rendered report content
+        var logoImg = document.querySelector('#reportsTabContent img[src*="logos"], #reportContent img[src*="logos"]');
+        if (logoImg) {
+            logoHtml = '<img src="' + escapeHtml(logoImg.src) + '" style="height:60px;max-width:200px;" alt="Logo">';
+        }
+        return '<table style="width:100%;border-collapse:collapse;margin-bottom:16px;border-bottom:2px solid #e2e8f0;">'
+            + '<tr>'
+            + '<td style="vertical-align:top;padding:8px 0;">'
+            + '<strong>' + siteName + '</strong><br>'
+            + '<em style="color:#555;">' + inspTitle + '</em>'
+            + '</td>'
+            + '<td style="text-align:center;vertical-align:middle;padding:8px;">' + logoHtml + '</td>'
+            + '<td style="text-align:right;vertical-align:top;padding:8px 0;">'
+            + '<strong>Inspection #:</strong> ' + inspId + '<br>'
+            + '<em style="color:#555;">Technician: ' + tech + '</em>'
+            + '</td>'
+            + '</tr></table>';
+    }
+
     window.previewReportPDF = function previewReportPDF() {
-        var sourceEl = document.getElementById('reportContent');
-        if (!sourceEl || !sourceEl.innerHTML.trim()) {
-            sourceEl = document.getElementById('reportsTabContent');
+        var sourceEl = document.getElementById('reportsTabContent');
+        if (!sourceEl || !sourceEl.innerHTML.trim() || (sourceEl.querySelector && sourceEl.querySelector('p.fst-italic'))) {
+            sourceEl = document.getElementById('reportContent');
         }
         if (!sourceEl || !sourceEl.innerHTML.trim()) {
             alert('Please click the report icon on an inspection row first.');
             return;
         }
-        const w = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes');
-        if (!w) { alert('Please allow pop-ups to preview the report.'); return; }
-        w.document.write(
-            '<html><head><title>Inspection Report Preview</title>'
-            + '<style>'
-            + 'body{font-family:Arial,sans-serif;margin:20px;font-size:12px;}'
-            + 'table{width:100%;border-collapse:collapse;margin-bottom:1em;}'
-            + 'th,td{border:1px solid #ccc;padding:6px;text-align:left;}'
-            + 'th{background:#f8f9fa;font-weight:bold;}'
-            + '.text-success{color:#198754;font-weight:bold;}'
-            + '.text-danger{color:#dc3545;font-weight:bold;}'
-            + '.text-muted{color:#6c757d;}'
-            + 'h4,h5{margin:0.5em 0;}'
-            + '@media print{button{display:none;}}'
-            + '</style>'
-            + '</head><body>'
-            + sourceEl.innerHTML
-            + '</body></html>'
-        );
-        w.document.close();
-        w.focus();
+        var win = window.open('', '_blank', 'width=900,height=650,scrollbars=yes');
+        if (!win) { alert('Please allow pop-ups to preview the report.'); return; }
+        var doc = win.document;
+        doc.write('<html><head><title>Inspection Report Preview</title>');
+        doc.write('<style>body{font-family:Arial,sans-serif;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#f8f9fa;font-weight:bold;}.text-danger{color:#dc3545;font-weight:bold;}.text-primary{color:#0d6efd;font-weight:bold;}.text-success{color:#198754;font-weight:bold;}.fw-bold{font-weight:bold;}h4,h5{margin:0.5em 0;}</style>');
+        doc.write('</head><body>');
+        var headerHtml = buildReportHeaderForPrint();
+        if (headerHtml) doc.write(headerHtml);
+        doc.write(sourceEl.innerHTML);
+        doc.write('</body></html>');
+        doc.close();
+        win.focus();
     };
 
     /**
      * Trigger download of the PDF for the current report group.
      */
     window.exportReportPDF = function exportReportPDF() {
-        if (!CURRENT_REPORT_GROUP_ID) {
-            // Try to trigger print from current visible content as fallback
-            var sourceEl = document.getElementById('reportContent');
-            if (!sourceEl || !sourceEl.innerHTML.trim()) {
-                sourceEl = document.getElementById('reportsTabContent');
-            }
-            if (sourceEl && sourceEl.innerHTML.trim()) {
-                const w = window.open('', '_blank', 'width=1000,height=700');
-                if (!w) { alert('Please allow pop-ups to download the report.'); return; }
-                w.document.write(
-                    '<html><head><title>Inspection Report</title>'
-                    + '<style>'
-                    + 'body{font-family:Arial,sans-serif;margin:20px;font-size:12px;}'
-                    + 'table{width:100%;border-collapse:collapse;margin-bottom:1em;}'
-                    + 'th,td{border:1px solid #ccc;padding:6px;text-align:left;}'
-                    + 'th{background:#f8f9fa;font-weight:bold;}'
-                    + '.text-success{color:#198754;font-weight:bold;}'
-                    + '.text-danger{color:#dc3545;font-weight:bold;}'
-                    + '.text-muted{color:#6c757d;}'
-                    + '@media print{button{display:none;}}'
-                    + '</style>'
-                    + '</head><body>'
-                    + sourceEl.innerHTML
-                    + '</body></html>'
-                );
-                w.document.close();
-                setTimeout(function() { w.focus(); w.print(); }, 400);
-            } else {
-                alert('Please click the report icon on an inspection row first.');
-            }
+        // Choose best source: reportsTabContent first, then modal reportContent
+        var sourceEl = document.getElementById('reportsTabContent');
+        if (!sourceEl || !sourceEl.innerHTML.trim() || sourceEl.querySelector('p.fst-italic, p.text-muted')) {
+            sourceEl = document.getElementById('reportContent');
+        }
+        if (!sourceEl || !sourceEl.innerHTML.trim()) {
+            alert('Please click the report icon on an inspection row first.');
             return;
         }
-        window.location.href = REPORT_PDF_URL + '/' + encodeURIComponent(CURRENT_REPORT_GROUP_ID);
+        var win = window.open('', '_blank', 'width=900,height=650');
+        if (!win) { alert('Please allow pop-ups to download the report.'); return; }
+        var doc = win.document;
+        doc.write('<html><head><title>Inspection Report</title>');
+        doc.write('<style>body{font-family:Arial,sans-serif;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#f8f9fa;font-weight:bold;}.text-danger{color:#dc3545;font-weight:bold;}.text-primary{color:#0d6efd;font-weight:bold;}.text-success{color:#198754;font-weight:bold;}.fw-bold{font-weight:bold;}h4,h5{margin:0.5em 0;}@media print{button{display:none;}}</style>');
+        doc.write('</head><body>');
+        // Write report header with logo (built from live page data)
+        var reportHeaderEl = buildReportHeaderForPrint();
+        if (reportHeaderEl) doc.write(reportHeaderEl);
+        doc.write(sourceEl.innerHTML);
+        doc.write('</body></html>');
+        doc.close();
+        setTimeout(function() { win.focus(); win.print(); }, 300);
     };
 
     // Helper: convert result to a badge
@@ -2361,9 +2482,9 @@
         resetWorkOrderModal();
         document.getElementById('woAsset').value = assetTag || '';
         loadEquipmentDetails(assetTag || '');
-        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
-        modal.show();
-        // After opening, ensure we show Work Orders tab when saving
+        // Use getOrCreateInstance to avoid Bootstrap errors when the modal
+        // was previously shown and not fully disposed.
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
     };
 
     /**
@@ -2372,8 +2493,7 @@
      */
     window.openWorkOrderModal = function openWorkOrderModal() {
         resetWorkOrderModal();
-        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
-        modal.show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
     };
 
     /**
@@ -2396,6 +2516,7 @@
         if (!tbody) return;
         const tr = document.createElement('tr');
         tr.setAttribute('data-row-id', row.id);
+        tr.setAttribute('data-group-id', row.group_id || (window.CURRENT_INSPECTION_GROUP_ID || ''));
         tr.innerHTML = `
             <td>
                 <button class="btn-icon btn-edit" title="Edit"><i class="fa-solid fa-pen"></i></button>
@@ -2497,8 +2618,7 @@
         document.getElementById('woEndDate').value = (endVal === '-' || endVal === '') ? '' : endVal;
         document.getElementById('woDescription').value = tr.children[9].textContent.trim();
         // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('workOrderModal'));
-        modal.show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
     }
 
     /**
@@ -2527,8 +2647,113 @@
         });
     }
 
+    // ── Add Device Form (from "asset not found" flow) ────────────────────────
+    // Handles saving a new device to site inventory and adds it to the
+    // Not Inspected tab without a page reload.
+    const addDeviceFormEl = document.getElementById('addDeviceForm');
+    if (addDeviceFormEl) {
+        addDeviceFormEl.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const errBox = document.getElementById('addDeviceError');
+            if (errBox) errBox.classList.add('d-none');
+
+            const assetTag = (document.getElementById('addAsset')?.value || '').trim();
+            if (!assetTag) {
+                if (errBox) { errBox.textContent = 'Asset # is required.'; errBox.classList.remove('d-none'); }
+                return;
+            }
+
+            const params = new URLSearchParams();
+            params.append('site_id',      SITE_ID);
+            params.append('asset_tag',    assetTag);
+            params.append('model',        document.getElementById('addModel')?.value || '');
+            params.append('make',         document.getElementById('addManufacturer')?.value || '');
+            params.append('serial_number',document.getElementById('addSerial')?.value || '');
+            params.append('device_type',  document.getElementById('addType')?.value || '');
+            params.append('department',   document.getElementById('addDept')?.value || '');
+            params.append('location',     document.getElementById('addRoom')?.value || '');
+            params.append('status',       'active');
+
+            const saveBtn = addDeviceFormEl.querySelector('[type="submit"]');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
+
+            fetch(EQUIPMENT_CREATE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: params.toString()
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (!res || !res.success) {
+                    if (errBox) { errBox.textContent = (res && res.message) || 'Failed to save device.'; errBox.classList.remove('d-none'); }
+                    return;
+                }
+
+                // ── Close the modal ──────────────────────────────────────────
+                const modalEl = document.getElementById('addDeviceModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+
+                // ── Inject the new device into the Not Inspected table body ─
+                const tbody = document.getElementById('notInspectedTableBody');
+                if (tbody) {
+                    // Remove the "no equipment" placeholder row if present
+                    const emptyRow = tbody.querySelector('td[colspan]');
+                    if (emptyRow) emptyRow.closest('tr').remove();
+
+                    const model = escapeHtml(res.model || '');
+                    const deptRoom = escapeHtml(res.department || '') + (res.location ? ' / ' + escapeHtml(res.location) : '');
+                    const newRow = document.createElement('tr');
+                    newRow.setAttribute('data-asset', escapeHtml(res.asset_tag));
+                    newRow.innerHTML =
+                        '<td><button class="btn btn-sm btn-primary" type="button" onclick="inspectFromNotInspected(\'' + escapeHtml(res.asset_tag) + '\')">'
+                        + '<i class="fa-solid fa-arrow-right me-1"></i> Inspect</button></td>'
+                        + '<td>' + escapeHtml(res.asset_tag) + '</td>'
+                        + '<td>' + model + '</td>'
+                        + '<td>' + escapeHtml(res.device_type || '') + '</td>'
+                        + '<td>' + deptRoom + '</td>'
+                        + '<td><span class="badge bg-secondary">Not Inspected</span></td>';
+                    tbody.prepend(newRow);
+                }
+
+                // ── Update the Not Inspected count badge ─────────────────────
+                const countBadge = document.getElementById('not-inspected-count');
+                if (countBadge) {
+                    const current = parseInt(countBadge.textContent || '0', 10);
+                    countBadge.textContent = current + 1;
+                }
+                const msgEl = document.getElementById('not-inspected-message');
+                if (msgEl) {
+                    const badge = document.getElementById('not-inspected-count');
+                    const n = badge ? badge.textContent : '';
+                    msgEl.textContent = n + ' item(s) remaining in site inventory pending inspection.';
+                }
+
+                // ── Switch to the Not Inspected tab ──────────────────────────
+                const notInspTabBtn = document.getElementById('not-inspected-tab');
+                if (notInspTabBtn) bootstrap.Tab.getOrCreateInstance(notInspTabBtn).show();
+
+                // ── Auto-open the Pass/Fail form for the new device ──────────
+                if (typeof inspectFromNotInspected === 'function') {
+                    setTimeout(function() { inspectFromNotInspected(res.asset_tag); }, 250);
+                }
+
+                if (typeof showToast === 'function') showToast('Device added and ready to inspect.', 'success');
+            })
+            .catch(err => {
+                if (errBox) { errBox.textContent = 'Error: ' + (err.message || 'Unknown error'); errBox.classList.remove('d-none'); }
+            })
+            .finally(() => {
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '+ Save Device'; }
+            });
+        });
+    }
+
     // Handle work order form submission (create or update)
-    const workOrderForm = document.getElementById('workOrderForm');
+    const workOrderForm = document.getElementById('inspectionWorkOrderForm');
     if (workOrderForm) {
         workOrderForm.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -2544,6 +2769,10 @@
             params.append('start_date', document.getElementById('woStartDate').value);
             params.append('end_date', document.getElementById('woEndDate').value);
             params.append('description', document.getElementById('woDescription').value);
+            // Pass current inspection group_id so work orders are scoped to the inspection
+            if (window.CURRENT_INSPECTION_GROUP_ID) {
+                params.append('group_id', window.CURRENT_INSPECTION_GROUP_ID);
+            }
             // Submit via fetch
             fetch(url, {
                 method: 'POST',
@@ -2683,7 +2912,7 @@
         </div>
     </div>
 </div>
-
+</div>
 <!-- ================================================
      ADD WORK ORDER MODAL (unchanged)
      ================================================ -->
@@ -3053,21 +3282,60 @@
     // Switch view from dashboard to inspection.  Hide other views when
     // starting an inspection and show the inspection detail view.
     window.startInspection = function startInspection() {
+        // ── Reset all state so this is a completely NEW inspection ────────────
+        // Clear group IDs — the backend will auto-create a new group_id when
+        // the first Pass/Fail is recorded.
+        window.CURRENT_INSPECTION_GROUP_ID = null;
+        window.CURRENT_REPORT_GROUP_ID     = null;
+
+        // Clear the inspection header labels
+        var siteLabel = document.getElementById('insp-site-label');
+        var titleEl   = document.getElementById('insp-title');
+        var idLabel   = document.getElementById('insp-id-label');
+        var techEl    = document.getElementById('insp-technician');
+        var siteName  = '<?= esc($site['name'] ?? '—') ?>';
+        if (siteLabel) siteLabel.textContent = 'Site: ' + siteName;
+        if (titleEl)   titleEl.textContent   = 'New Inspection';
+        if (idLabel)   idLabel.textContent   = '—';
+        if (techEl)    techEl.textContent    = '—';
+
+        // Reset the status badge to "In Progress"
+        var statusBtn = document.getElementById('statusDropdown');
+        if (statusBtn) {
+            statusBtn.className = 'btn btn-light dropdown-toggle status-badge status-in-progress';
+            statusBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> In Progress';
+        }
+
+        // Clear the asset barcode input and pass/fail form
+        var assetInput = document.getElementById('assetInput');
+        if (assetInput) { assetInput.value = ''; }
+        var inspectAsset = document.getElementById('inspectAsset');
+        if (inspectAsset) inspectAsset.value = '';
+        var inspectNotes = document.getElementById('inspectNotes');
+        if (inspectNotes) inspectNotes.value = '';
+
+        // Switch Pass/Fail tab back to "Not Inspected" tab by default
+        var notInspTabBtn = document.getElementById('not-inspected-tab');
+        if (notInspTabBtn) bootstrap.Tab.getOrCreateInstance(notInspTabBtn).show();
+
+        // Clear the reports tab so it doesn't show a previous inspection's report
+        var reportsTabContent = document.getElementById('reportsTabContent');
+        if (reportsTabContent) reportsTabContent.innerHTML = '<p class="text-muted text-center py-4">Inspect devices and the report will appear here.</p>';
+
+        // Show the inspection view
         const dashView = document.getElementById('view-dashboard');
         const inspView = document.getElementById('view-inspection');
         const woView = document.getElementById('view-workorders');
         const reportsView = document.getElementById('view-reports');
-        if (dashView) dashView.classList.add('d-none-view');
-        if (woView) woView.classList.add('d-none-view');
+        if (dashView)    dashView.classList.add('d-none-view');
+        if (woView)      woView.classList.add('d-none-view');
         if (reportsView) reportsView.classList.add('d-none-view');
-        if (inspView) inspView.classList.remove('d-none-view');
-        // focus the asset input after a slight delay
+        if (inspView)    inspView.classList.remove('d-none-view');
+
+        // Focus the asset input
         setTimeout(function() {
-            const input = document.getElementById('assetInput');
-            if (input) {
-                input.focus();
-                input.select();
-            }
+            var input = document.getElementById('assetInput');
+            if (input) { input.focus(); input.select(); }
         }, 100);
     }
 
@@ -3152,10 +3420,9 @@
             $('#inspectSerial').val(resp.serial_number || '');
             // Reset notes and checkboxes
             $('#inspectNotes').val('');
-            $('#inspectEST').prop('checked', false);
-            $('#inspectCAL').prop('checked', false);
+           // EST/CAL are managed in Add Device / Equipment Settings, not on pass/fail screen
             // Reset action performed and frequency to defaults
-            $('#inspectActionPerformed').val('Annual Performance Inspection');
+            $('#inspectActionPerformed').val($('#inspectActionPerformed option:first').val() || 'Annual Performance Inspection');
             $('#inspectPMFrequency').val('12 Month');
         }, 'json')
         .fail(function() {
@@ -3172,6 +3439,19 @@
         handleAssetGo();
     }
 
+    // Add Enter key handler for assetInput barcode field
+    $(document).ready(function() {
+        const assetInput = document.getElementById('assetInput');
+        if (assetInput) {
+            assetInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' || event.keyCode === 13) {
+                    event.preventDefault();
+                    handleAssetGo();
+                }
+            });
+        }
+    });
+
     /**
      * Record an inspection result via AJAX.
      *
@@ -3181,7 +3461,7 @@
      *
      * @param {string} result Pass | Fail | Repair
      */
-    function recordInspection(result) {
+    function recordInspection(result, onSuccessCallback) {
         var payload = {
             site_id: siteId,
             asset_tag: $('#inspectAsset').val(),
@@ -3191,10 +3471,16 @@
             room: $('#inspectRoom').val(),
             serial_number: $('#inspectSerial').val(),
             action_performed: $('#inspectActionPerformed').val(),
-            pm_frequency: $('#inspectPMFrequency').val(),
-            est: $('#inspectEST').is(':checked') ? 'Yes' : 'No',
-            cal: $('#inspectCAL').is(':checked') ? 'Yes' : 'No'
+            pm_frequency: $('#inspectPMFrequency').val()
         };
+
+        // ── KEY FIX: if we are already viewing an active inspection session,
+        // reuse its group_id so new devices are appended to the SAME report
+        // instead of creating a brand-new inspection group. ──────────────────
+        if (typeof window.CURRENT_REPORT_GROUP_ID !== 'undefined' && window.CURRENT_REPORT_GROUP_ID) {
+            payload.group_id = window.CURRENT_REPORT_GROUP_ID;
+        }
+
         if (!payload.asset_tag) {
             alert('Asset tag is missing. Please enter a valid Asset #.');
             return;
@@ -3213,6 +3499,28 @@
 
         $.post('<?= site_url('admin/site-inspection/record') ?>', payload, function(resp) {
             if (resp && resp.success) {
+                // ── CRITICAL: capture the group_id returned by the server ──────
+                // For a new inspection CURRENT_INSPECTION_GROUP_ID was null before
+                // this call. The server created a fresh group_id and returned it.
+                // We must store it NOW before the background refresh so that
+                // filterInspectedByGroup() can find the right rows.
+                var newGroupId = resp.group_id || null;
+                if (newGroupId) {
+                    window.CURRENT_INSPECTION_GROUP_ID = newGroupId;
+                    window.CURRENT_REPORT_GROUP_ID     = newGroupId;
+
+                    // Update the inspection header with the real ID
+                    var idLabel = document.getElementById('insp-id-label');
+                    if (idLabel && (idLabel.textContent === '—' || !idLabel.textContent.trim())) {
+                        idLabel.textContent = newGroupId;
+                    }
+                    // Update title if still showing "New Inspection"
+                    var titleEl = document.getElementById('insp-title');
+                    if (titleEl && titleEl.textContent === 'New Inspection') {
+                        titleEl.textContent = resp.inspection_type || 'Inspection';
+                    }
+                }
+
                 // ── Background refresh: reload page HTML silently, then restore state ──
                 $.get(window.location.href, function(html) {
                     var parser  = new DOMParser();
@@ -3240,21 +3548,31 @@
                         if (newEl && curEl) curEl.innerHTML = newEl.innerHTML;
                     });
 
-                    // ── Switch to "Inspected Items" sub-tab ──
+                    // ── Re-apply group filter so Device Type Counter rows, badges,
+                    // and Work Orders table are all visible immediately ───────
+                    var currentGroupId = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || null;
+                    if (currentGroupId && typeof filterInspectedByGroup === 'function') {
+                        filterInspectedByGroup(currentGroupId);
+                    }
+
+                    // ── Refresh the inspection report (covers new inspection first-record case) ──
+                    if (currentGroupId && typeof openInspectionReport === 'function') {
+                        openInspectionReport(currentGroupId);
+                    }
+
+                    // ── Switch to "Inspected Items" sub-tab (unless a callback overrides) ──
+                    if (typeof onSuccessCallback === 'function') {
+                        // Let the caller decide which tab to show
+                        onSuccessCallback();
+                    } else {
                     var inspectedTabBtn = document.getElementById('inspected-tab');
                     if (inspectedTabBtn) bootstrap.Tab.getOrCreateInstance(inspectedTabBtn).show();
-
-                    // ── Clear the Pass/Fail form for next scan ──
-                    $('#inspectAsset').val('');
-                    $('#inspectNotes').val('');
-                    $('#inspectEST').prop('checked', false);
-                    $('#inspectCAL').prop('checked', false);
-                    // Return to not-inspected tab flow (re-enable scan input)
-                    var notInspTab = document.getElementById('not-inspected-tab');
-                    if (notInspTab) bootstrap.Tab.getOrCreateInstance(notInspTab).show();
+                    }
 
                     // Brief success toast
-                    if (typeof toast === 'function') {
+                    if (typeof showToast === 'function') {
+                        showToast('Inspection recorded as <strong>' + result + '</strong>!', 'success');
+                    } else if (typeof toast === 'function') {
                         toast('Inspection recorded as <strong>' + result + '</strong>!', 'success');
                     }
                 }).fail(function() {
@@ -3285,22 +3603,34 @@
         $('#btnRepairInspection').off('click').on('click', function() {
             recordInspection('Repair');
         });
-        $('#btnFailWOInspection').off('click').on('click', function() {
-            // First record a fail inspection, then switch to Work Orders tab and open modal
+        $('#btnFailWOInspection').off('click').on('click', function () {
+            // Capture asset before recordInspection refreshes UI
             var assetId = $('#inspectAsset').val();
-            recordInspection('Fail');
-            // After a short delay (to let the inspection record + background refresh run),
-            // navigate to the Work Orders tab and open the Work Order modal
-            setTimeout(function() {
-                // Switch to the Work Orders tab inside the inspection workflow
-                var woTabBtn = document.getElementById('work-orders-tab');
-                if (woTabBtn) {
-                    bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
+            if (!assetId) {
+                alert('Please scan or enter an Asset # first.');
+                return;
+            }
+
+            recordInspection('Fail', function () {
+                // 1) Switch to INSPECTION -> Work Orders tab (your updated inner tab id)
+                if (typeof window.showWorkOrdersTab === 'function') {
+                    window.showWorkOrdersTab();
                 }
-                // Open the work order modal pre-filled with the asset
-                openWorkOrderModalFromInventory(assetId);
-            }, 700);
+
+                // 2) Open the inspection work order modal with auto-fill
+                if (typeof window.openWorkOrderModalFromInventory === 'function') {
+                    window.openWorkOrderModalFromInventory(assetId);
+                } else {
+                    // fallback: at least set asset and trigger change
+                    var woAssetEl = document.getElementById('woAsset');
+                    if (woAssetEl) {
+                        woAssetEl.value = assetId;
+                        if (typeof window.onWOAssetChange === 'function') window.onWOAssetChange();
+                    }
+                }
+            });
         });
+
     });
 
     // Generic functions for exporting tables.  These are placeholders
@@ -3320,27 +3650,34 @@
     }
 
     // Show the Work Orders view inside the inspection workflow
+    // IMPORTANT: Work Orders is a tab INSIDE view-inspection — do NOT hide view-inspection.
+    // Simply activate the correct Bootstrap tab.
     window.showWorkOrdersTab = function showWorkOrdersTab() {
-        const inspView = document.getElementById('view-inspection');
-        const woView = document.getElementById('view-workorders');
-        const reportsView = document.getElementById('view-reports');
+        // Make sure the inspection view is visible (not the dashboard)
         const dashView = document.getElementById('view-dashboard');
-        if (inspView) inspView.classList.add('d-none-view');
+        const inspView = document.getElementById('view-inspection');
         if (dashView) dashView.classList.add('d-none-view');
-        if (reportsView) reportsView.classList.add('d-none-view');
-        if (woView) woView.classList.remove('d-none-view');
+        if (inspView) inspView.classList.remove('d-none-view');
+        // Activate the Work Orders tab inside the inspection view
+            var woTabBtn = document.getElementById('insp-work-orders-tab');
+        if (woTabBtn) {
+            woTabBtn.classList.remove('disabled');
+            bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
+        }
     }
 
-    // Show the Reports view inside the inspection workflow
+    // Show the Inspection Reports tab inside the inspection workflow
     window.showReportsView = function showReportsView() {
-        const inspView = document.getElementById('view-inspection');
-        const woView = document.getElementById('view-workorders');
-        const reportsView = document.getElementById('view-reports');
+        // Make sure the inspection view is visible
         const dashView = document.getElementById('view-dashboard');
-        if (inspView) inspView.classList.add('d-none-view');
-        if (woView) woView.classList.add('d-none-view');
+        const inspView = document.getElementById('view-inspection');
         if (dashView) dashView.classList.add('d-none-view');
-        if (reportsView) reportsView.classList.remove('d-none-view');
+        if (inspView) inspView.classList.remove('d-none-view');
+        // Activate the Inspection Reports tab
+        var reportsTabBtn = document.getElementById('reports-tab');
+        if (reportsTabBtn) {
+            bootstrap.Tab.getOrCreateInstance(reportsTabBtn).show();
+        }
     }
 
     

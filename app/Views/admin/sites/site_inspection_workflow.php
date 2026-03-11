@@ -12,7 +12,7 @@
 
 <!-- Site Inspection Workflow -->
 <div id="site-inspection-workflow">
-    <div class="container-fluid px-4 py-4">
+    <div class="container-fluid px-4 py-4 g-card">
         <!-- Dashboard view (list of inspections) -->
         <div class="fade-in" id="view-dashboard">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -22,20 +22,20 @@
                         Manage and track equipment safety checks.
                     </p>
                 </div>
-                <button class="btn btn-custom-primary" onclick="startInspection()">
+                <button class="btn btn-primary" onclick="startInspection()">
                     <i class="fa-solid fa-plus me-2"></i>Add Inspection
                 </button>
             </div>
             <div class="card-custom p-4">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
                     <div class="export-bar mb-0">
-                        <button class="export-btn">Copy</button>
-                        <button class="export-btn">CSV</button>
-                        <button class="export-btn">Excel</button>
-                        <button class="export-btn">PDF</button>
+                        <button class="export-btn btn">Copy</button>
+                        <button class="export-btn btn">CSV</button>
+                        <button class="export-btn btn">Excel</button>
+                        <button class="export-btn btn">PDF</button>
                     </div>
                     <div class="input-group" style="max-width: 300px">
-                        <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                        <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                         <input class="form-control border-start-0 ps-0" placeholder="Search inspections..." type="text">
                     </div>
                 </div>
@@ -59,7 +59,7 @@
                                             // Generate a human-friendly inspection ID using the scheduled date and group ID.
                                             $inspId = 'INSP-' . date('Ymd', strtotime($insp['scheduled_at'])) . '-' . substr(strtoupper(md5($insp['group_id'])), 0, 8);
                                             ?>
-                                            <span class="fw-medium text-dark"><?= esc($inspId) ?></span>
+                                            <span class="fw-medium"><?= esc($inspId) ?></span>
                                 </td>
                                         <td><?= esc(date('M d, Y', strtotime($insp['scheduled_at']))) ?></td>
                                 <td>
@@ -96,7 +96,19 @@
                                         )">
                                         <i class="fa-solid fa-eye me-1"></i> View
                                     </button>
-                                            <button class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this inspection?')">
+                                    <!--
+                                        Use a dedicated delete-inspection-btn with a data-id attribute to
+                                        trigger the SweetAlert confirmation and AJAX route defined in
+                                        admin/sites/details.php. The previous implementation merely
+                                        displayed a confirmation dialog without performing any action, so
+                                        the inspection was never deleted. By adding the class and data-id,
+                                        the global jQuery handler can capture the click event and
+                                        redirect to the appropriate deletion route (e.g. /admin/inspections/delete/{groupId}).
+                                    -->
+                                    <button
+                                        class="btn btn-sm btn-danger delete-inspection-btn"
+                                        data-id="<?= esc($insp['group_id']) ?>"
+                                        title="Delete Inspection">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </td>
@@ -160,6 +172,27 @@
         </div>
         <!-- Inspection detail view -->
         <div class="fade-in d-none-view" id="view-inspection">
+            <!-- Hidden JSON data: Equipment EST/CAL settings for counting logic -->
+            <script type="application/json" id="equipmentSettingsData">
+            <?php
+            // Build equipment settings map: model => {est, cal}
+            $equipmentSettingsMap = [];
+            if (!empty($site) && !empty($site['id'])) {
+                $equipmentModel = new \App\Models\EquipmentModel();
+                $allEquipment = $equipmentModel->where('site_id', $site['id'])->findAll();
+                foreach ($allEquipment as $eq) {
+                    $model = $eq['model'] ?? '';
+                    if (!empty($model)) {
+                        $equipmentSettingsMap[$model] = [
+                            'est' => $eq['est'] ?? '0',
+                            'cal' => $eq['cal'] ?? '0'
+                        ];
+                    }
+                }
+            }
+            echo json_encode($equipmentSettingsMap);
+            ?>
+            </script>
             <div class="mb-4">
                 <a class="text-decoration-none text-muted small mb-2 d-inline-block" href="#" onclick="showDashboard()">
                     <i class="fa-solid fa-arrow-left me-1"></i> Back to Inspections
@@ -168,7 +201,7 @@
                 <div class="d-flex justify-content-between align-items-start mt-2">
                     <div>
                         <!-- Dynamic header: populated by viewInspection() JS function -->
-                        <div class="badge bg-light text-dark border mb-2" id="insp-site-label">Site: <?= esc($site['name'] ?? '—') ?></div>
+                        <div class="badge  text-light border mb-2" id="insp-site-label">Site: <?= esc($site['name'] ?? '—') ?></div>
                         <h2 class="fw-bold" id="insp-title">—</h2>
                         <p class="text-muted">
                             <span id="insp-id-label">—</span> •
@@ -197,7 +230,7 @@
                 </div>
             </div>
             <!-- Asset entry section -->
-            <div class="asset-input-wrapper">
+            <div class="asset-input-wrapper glass-card p-3 mb-3">
                 <h5 class="fw-bold mb-3">
                     Start With Asset Number <span class="text-danger">Not</span> Serial
                     Number
@@ -216,12 +249,12 @@
             </div>
             <!-- Tabs and data grid -->
             <div class="card-custom">
-                <div class="card-header bg-white border-0 pt-3 pb-0">
+                <div class="card-header  border-0 pt-3 pb-0">
                     <ul class="nav nav-tabs" id="inspectionTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" data-bs-target="#not-inspected" data-bs-toggle="tab" id="not-inspected-tab" role="tab" type="button" aria-selected="true">
                                 Not Inspected
-                                <span class="badge bg-secondary rounded-pill ms-1" id="not-inspected-count">
+                                <span class="badge rounded-pill ms-1" id="not-inspected-count">
                                     <?= esc(count($notInspected ?? [])) ?>
                                 </span>
                             </button>
@@ -234,9 +267,7 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" data-bs-target="#inspected" data-bs-toggle="tab" id="inspected-tab" role="tab" type="button" aria-selected="false" tabindex="-1">
                                 Inspected Items
-                                <span class="badge bg-success rounded-pill ms-1" id="inspected-count">
-                                    <?= esc(count($inspectedItems ?? [])) ?>
-                                </span>
+                                <span class="badge bg-success rounded-pill ms-1" id="inspected-count">0</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -251,7 +282,7 @@
                         </li>
                         <!-- Added tab for Work Orders inside the inspection workflow -->
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" data-bs-target="#work-orders" data-bs-toggle="tab" id="work-orders-tab" role="tab" type="button" aria-selected="false" tabindex="-1">
+                            <button class="nav-link" data-bs-target="#insp-work-orders" data-bs-toggle="tab" id="insp-work-orders-tab" role="tab" type="button" aria-selected="false" tabindex="-1">
                                 Work Orders
                             </button>
                         </li>
@@ -275,13 +306,13 @@
                                     </div>
                                 </div>
                                 <div class="export-bar mb-0">
-                                    <button class="export-btn" onclick="copyTable('notInspectedTable')">Copy</button>
-                                    <button class="export-btn" onclick="exportTableCSV('notInspectedTable')">CSV</button>
-                                    <button class="export-btn" onclick="exportTableExcel('notInspectedTable')">Excel</button>
-                                    <button class="export-btn" onclick="exportTablePDF('notInspectedTable')">PDF</button>
+                                    <button class="export-btn btn" onclick="copyTable('notInspectedTable')">Copy</button>
+                                    <button class="export-btn btn" onclick="exportTableCSV('notInspectedTable')">CSV</button>
+                                    <button class="export-btn btn" onclick="exportTableExcel('notInspectedTable')">Excel</button>
+                                    <button class="export-btn btn" onclick="exportTablePDF('notInspectedTable')">PDF</button>
                                 </div>
                                 <div class="input-group" style="max-width: 320px">
-                                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                    <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                                     <input class="form-control border-start-0 ps-0" id="notInspectedSearch" placeholder="Search pending items..." type="text">
                                 </div>
                             </div>
@@ -322,26 +353,26 @@
                         </div>
                         <!-- Pass/Fail inspection form content -->
                         <div class="tab-pane fade p-4" id="inspect-device" role="tabpanel" aria-labelledby="inspect-device-tab">
-                            <div class="text-muted" id="inspectDeviceEmpty">
+                            <div class="text-white" id="inspectDeviceEmpty">
                                 Select a device to inspect (scan an Asset # above or click <strong>Inspect</strong> from the Not Inspected tab).
                             </div>
-                            <div class="d-none" id="inspectDeviceFormWrapper">
-                                <div class="card border-0 shadow-sm mb-4" style="background: #f8fafc;">
+                            <div class="d-none p-3" id="inspectDeviceFormWrapper">
+                                <div class="card border-0 shadow-sm mb-4 glass-card">
                                     <div class="card-body">
                                         <div class="row g-3 align-items-center">
-                                            <div class="col-md-3 text-muted fw-semibold">Customer:</div>
-                                            <div class="col-md-9 fw-semibold" id="inspectCustomerName">—</div>
-                                            <div class="col-md-3 text-muted fw-semibold">Model:</div>
-                                            <div class="col-md-9" id="inspectModelDisplay">—</div>
-                                            <div class="col-md-3 text-muted fw-semibold">Department:</div>
-                                            <div class="col-md-9"><input class="form-control" id="inspectDept" placeholder="Department" type="text"></div>
-                                            <div class="col-md-3 text-muted fw-semibold">Room:</div>
-                                            <div class="col-md-9"><input class="form-control" id="inspectRoom" placeholder="Room" type="text"></div>
-                                            <div class="col-md-3 text-muted fw-semibold">Serial #:</div>
-                                            <div class="col-md-9"><input class="form-control" id="inspectSerial" placeholder="Serial #" type="text"></div>
-                                            <div class="col-md-3 text-muted fw-semibold">Asset ID:</div>
-                                            <div class="col-md-9"><input class="form-control" id="inspectAsset" placeholder="Asset ID" readonly="" type="text"></div>
-                                            <div class="col-md-3 text-muted fw-semibold">Manufacturer PM Frequency (Days):</div>
+                                            <div class="col-md-3  text-white fw-semibold">Customer:</div>
+                                            <div class="col-md-9 text-white fw-semibold" id="inspectCustomerName">—</div>
+                                            <div class="col-md-3 text-white  fw-semibold">Model:</div>
+                                            <div class="col-md-9 text-white" id="inspectModelDisplay">—</div>
+                                            <div class="col-md-3 text-white  fw-semibold">Department:</div>
+                                            <div class="col-md-9 text-white"><input class="form-control" id="inspectDept" placeholder="Department" type="text"></div>
+                                            <div class="col-md-3 text-white  fw-semibold">Room:</div>
+                                            <div class="col-md-9 text-white"><input class="form-control" id="inspectRoom" placeholder="Room" type="text"></div>
+                                            <div class="col-md-3 text-white  fw-semibold">Serial #:</div>
+                                            <div class="col-md-9 text-white"><input class="form-control" id="inspectSerial" placeholder="Serial #" type="text"></div>
+                                            <div class="col-md-3 text-white  fw-semibold">Asset ID:</div>
+                                            <div class="col-md-9 text-white"><input class="form-control" id="inspectAsset" placeholder="Asset ID" readonly="" type="text"></div>
+                                            <div class="col-md-3 text-white fw-semibold">Manufacturer PM Frequency (Days):</div>
                                             <div class="col-md-9">
                                                 <select class="form-select" id="inspectPMFrequency" style="max-width: 240px;">
                                                     <option selected="" value="12 Month">12 Month</option>
@@ -350,35 +381,28 @@
                                                     <option value="24 Month">24 Month</option>
                                                 </select>
                                             </div>
+
+                                            <div class="col-md-3 text-white fw-semibold">Action Performed::</div>
+
+                                            <div class="col-md-9">
+                                                <select class="form-select" id="inspectActionPerformed" style="max-width: 240px;">
+                                                    <option value="Annual Performance Inspection">Annual Performance Inspection</option>
+                                                </select>
+                                            </div>
+
+
+
                                         </div>
                                     </div>
                                 </div>
-                                <div class="card border-0 shadow-sm" style="background: #f8fafc;">
+                                <div class="card border-0 glass-card shadow-sm" >
                                     <div class="card-body">
-                                        <div class="row g-3">
-                                            <div class="col-md-4 d-flex align-items-center gap-2">
-                                                <div class="text-muted fw-semibold" style="min-width: 130px;">Action Performed:</div>
-                                                <select class="form-select" id="inspectActionPerformed">
-                                                    <option selected="" value="Annual Performance Inspection">Annual Performance Inspection</option>
-                                                    <option value="Electrical Safety Test">Electrical Safety Test</option>
-                                                    <option value="Calibration">Calibration</option>
-                                                    <option value="Preventative Maintenance">Preventative Maintenance</option>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-8 d-flex align-items-center gap-4">
-                                                <label class="form-check d-flex align-items-center gap-2 m-0">
-                                                    <input class="form-check-input" id="inspectEST" type="checkbox">
-                                                    <span class="fw-semibold text-muted">EST</span>
-                                                </label>
-                                                <label class="form-check d-flex align-items-center gap-2 m-0">
-                                                    <input class="form-check-input" id="inspectCAL" type="checkbox">
-                                                    <span class="fw-semibold text-muted">CAL</span>
-                                                </label>
-                                            </div>
+                                        <div class="row g-3">                                           
+                                         
                                             <div class="col-12">
                                                 <div class="d-flex align-items-start gap-2">
-                                                    <div class="text-muted fw-semibold" style="min-width: 70px; padding-top: 6px;">Notes:</div>
-                                                    <textarea class="form-control" id="inspectNotes" placeholder="Enter service notes..." rows="5"></textarea>
+                                                    <div class="text-white fw-semibold" style="min-width: 70px; padding-top: 6px;">Notes:</div>
+                                                    <textarea class="form-control text-white" id="inspectNotes" placeholder="Enter service notes..." rows="5"></textarea>
                                                 </div>
                                             </div>
                                             <div class="col-12 d-flex flex-wrap gap-2 pt-2">
@@ -386,7 +410,7 @@
                                                 <button class="btn btn-danger px-4" id="btnFailInspection" type="button">Fail Inspection</button>
                                                 <button class="btn btn-warning px-4 text-white" id="btnFailWOInspection" type="button">Fail Inspection &amp; Open Work Order</button>
                                                 <button class="btn btn-primary px-4" id="btnRepairInspection" type="button">Repair Inspection</button>
-                                                <button class="btn btn-outline-secondary ms-auto" id="btnCancelInspection" type="button">Cancel</button>
+                                                <button class="btn btn-primary ms-auto" id="btnCancelInspection" type="button">Cancel</button>
                                             </div>
                                         </div>
                                     </div>
@@ -402,17 +426,17 @@
                                     <div class="text-muted small">These items have been inspected.</div>
                                 </div>
                                 <div class="export-bar mb-0">
-                                    <button class="export-btn" onclick="copyTable('inspectedTable')">Copy</button>
-                                    <button class="export-btn" onclick="exportTableCSV('inspectedTable')">CSV</button>
-                                    <button class="export-btn" onclick="exportTableExcel('inspectedTable')">Excel</button>
-                                    <button class="export-btn" onclick="exportTablePDF('inspectedTable')">PDF</button>
+                                    <button class="export-btn btn" onclick="copyTable('inspectedTable')">Copy</button>
+                                    <button class="export-btn btn" onclick="exportTableCSV('inspectedTable')">CSV</button>
+                                    <button class="export-btn btn" onclick="exportTableExcel('inspectedTable')">Excel</button>
+                                    <button class="export-btn btn" onclick="exportTablePDF('inspectedTable')">PDF</button>
                                 </div>
                                 <div class="input-group" style="max-width: 320px">
-                                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                    <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                                     <input class="form-control border-start-0 ps-0" id="inspectedSearch" placeholder="Search inspected..." type="text">
                                 </div>
                             </div>
-                            <!-- Device type counter for Admin and Tech: shows total, EST and CAL counts per device type -->
+                            <!-- Device type counter: Total, EST, CAL per device type with totals row -->
                             <div class="mb-3" id="deviceTypeCounter">
                                 <h6 class="fw-semibold">Device Type Counter</h6>
                                 <div class="table-responsive">
@@ -422,35 +446,44 @@
                                         </thead>
                                         <tbody id="deviceTypeCountsBody">
                                             <?php
-                                            // Build device type counts from inspected items
-                                            $deviceCounts = [];
+                                            // Build device type counts grouped by group_id.
+                                            $deviceCountsByGroup = [];
                                             if (!empty($inspectedItems ?? [])) {
                                                 foreach ($inspectedItems as $item) {
+                                                    $gid  = $item['group_id'] ?? '';
                                                     $type = $item['device_type'] ?? 'Unknown';
-                                                    if (!isset($deviceCounts[$type])) {
-                                                        $deviceCounts[$type] = ['total' => 0, 'est' => 0, 'cal' => 0];
+                                                    if (!isset($deviceCountsByGroup[$gid][$type])) {
+                                                        $deviceCountsByGroup[$gid][$type] = ['total' => 0, 'est' => 0, 'cal' => 0];
                                                     }
-                                                    $deviceCounts[$type]['total']++;
-                                                    if (!empty($item['est'])) {
-                                                        $deviceCounts[$type]['est']++;
+                                                    $deviceCountsByGroup[$gid][$type]['total']++;
+                                                    if (strtolower($item['est'] ?? '') === 'yes') $deviceCountsByGroup[$gid][$type]['est']++;
+                                                    if (strtolower($item['cal'] ?? '') === 'yes') $deviceCountsByGroup[$gid][$type]['cal']++;
                                                     }
-                                                    if (!empty($item['cal'])) {
-                                                        $deviceCounts[$type]['cal']++;
-                                                    }
+                                                }
+                                            $allDeviceCounts = [];
+                                            foreach ($deviceCountsByGroup as $gid => $types) {
+                                                foreach ($types as $type => $counts) {
+                                                    $allDeviceCounts[] = ['group_id' => $gid, 'type' => $type, 'counts' => $counts];
                                                 }
                                             }
                                             ?>
-                                            <?php if (!empty($deviceCounts)): ?>
-                                                <?php foreach ($deviceCounts as $type => $counts): ?>
-                                                    <tr>
-                                                        <td><?= esc($type) ?></td>
-                                                        <td><?= esc($counts['total']) ?></td>
-                                                        <td><?= esc($counts['est']) ?></td>
-                                                        <td><?= esc($counts['cal']) ?></td>
+                                            <?php if (!empty($allDeviceCounts)): ?>
+                                                <?php foreach ($allDeviceCounts as $row): ?>
+                                                    <tr data-group-id="<?= esc($row['group_id']) ?>" style="display:none">
+                                                        <td><?= esc($row['type']) ?></td>
+                                                        <td><?= esc($row['counts']['total']) ?></td>
+                                                        <td><?= esc($row['counts']['est']) ?></td>
+                                                        <td><?= esc($row['counts']['cal']) ?></td>
                                                     </tr>
                                                 <?php endforeach; ?>
+                                                <tr id="deviceCountTotalRow" data-total-row="1" style="display:none" class="fw-bold table-secondary">
+                                                    <td class="fw-bold">Total</td>
+                                                    <td class="fw-bold" id="deviceCountTotal">0</td>
+                                                    <td class="fw-bold" id="deviceCountTotalEST">0</td>
+                                                    <td class="fw-bold" id="deviceCountTotalCAL">0</td>
+                                                </tr>
                                             <?php else: ?>
-                                                <tr><td colspan="4" class="text-center text-muted">No inspected items yet.</td></tr>
+                                                <tr id="deviceCountEmptyRow"><td colspan="4" class="text-center text-muted">No inspected items yet.</td></tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -467,8 +500,6 @@
                                             <th>Asset #</th>
                                             <th>Dept / Room</th>
                                             <th>Tech</th>
-                                            <th>EST</th>
-                                            <th>CAL</th>
                                             <th>Result</th>
                                             <th style="width: 28%">Notes</th>
                                             <th>Insp Date</th>
@@ -476,10 +507,12 @@
                                     </thead>
                                     <tbody id="inspectionTableBody">
                                         <?php if (!empty($inspectedItems ?? [])): ?>
+                                            <tr id="inspectedEmptyRow" style="display:none"><td colspan="10" class="text-center text-muted">No inspected items for this inspection yet.</td></tr>
                                             <?php foreach ($inspectedItems as $item): ?>
-                                                <tr class="fade-in" data-row-id="<?= esc($item['id']) ?>" data-asset="<?= esc($item['asset_tag']) ?>">
+                                                <tr class="fade-in" data-row-id="<?= esc($item['id']) ?>" data-asset="<?= esc($item['asset_tag']) ?>" data-group-id="<?= esc($item['group_id'] ?? '') ?>" data-device-type="<?= esc($item['device_type'] ?? '') ?>" data-est="<?= esc($item['est'] ?? 'No') ?>" data-cal="<?= esc($item['cal'] ?? 'No') ?>">
                                             <td>
-                                                        <button class="btn-icon btn-edit-inspected" title="Edit"
+                                                   <div class="action-btns">
+                                            <button class="btn-icon btn-edit-inspected btn-primary" title="Edit"
                                                             data-id="<?= esc($item['id']) ?>"
                                                             data-model="<?= esc($item['model'] ?? $item['make'] ?? '') ?>"
                                                             data-type="<?= esc($item['device_type'] ?? '') ?>"
@@ -488,26 +521,34 @@
                                                             data-dept="<?= esc($item['department'] ?? '') ?>"
                                                             data-room="<?= esc($item['location'] ?? '') ?>"
                                                             data-tech="<?= esc($item['technician'] ?? '') ?>"
-                                                            data-est="<?= esc($item['est'] ?? '') ?>"
-                                                            data-cal="<?= esc($item['cal'] ?? '') ?>"
                                                             data-notes="<?= esc($item['notes'] ?? '') ?>">
-                                                            <i class="fa-solid fa-pen"></i>
+                                                            <i class="fa-solid fa-pen text-white"></i>
                                                         </button>
-                                                        <button class="btn-icon text-danger btn-delete-inspected" title="Delete"
+                                                        <button class="btn-icon text-danger btn-delete-inspected btn-danger" title="Delete"
                                                             data-id="<?= esc($item['id']) ?>"
                                                             data-asset="<?= esc($item['asset_tag'] ?? '') ?>">
                                                             <i class="fa-solid fa-trash"></i>
                                                         </button>
+                                                        </div>
                                             </td>
                                                     <td><strong><?= esc($item['model'] ?? $item['make']) ?></strong></td>
                                                     <td><?= esc($item['device_type'] ?? '') ?></td>
                                                     <td><?= esc($item['serial_number'] ?? 'N/A') ?></td>
-                                                    <td><span class="badge bg-light text-dark border"><?= esc($item['asset_tag']) ?></span></td>
+                                                    <td><span class="badge  text-dark border"><?= esc($item['asset_tag']) ?></span></td>
                                                     <td><?= esc($item['department'] ?? '') ?><br><span class="text-muted small"><?= esc($item['location'] ?? '') ?></span></td>
                                                     <td><?= esc($item['technician'] ?? 'N/A') ?></td>
-                                                    <td><?php if ($item['est']=='Yes'): ?><span class="text-success"><i class="fa-solid fa-check"></i> Yes</span><?php else: ?>No<?php endif; ?></td>
-                                                    <td><?php if ($item['cal'] =='Yes'): ?><span class="text-success"><i class="fa-solid fa-check"></i> Yes</span><?php else: ?>No<?php endif; ?></td>
-                                                    <td><?php if (!empty($item['result'])): ?><span class="text-muted"><?= esc($item['result']) ?></span><?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
+                                                    <td><?php
+                                                        $res = $item['result'] ?? '';
+                                                        if ($res === 'Pass'): ?>
+                                                            <span class="text-success fw-semibold"><i class="fa-solid fa-check me-1"></i>Pass</span>
+                                                        <?php elseif ($res === 'Fail'): ?>
+                                                            <span class="text-danger fw-semibold"><i class="fa-solid fa-xmark me-1"></i>Fail</span>
+                                                        <?php elseif (!empty($res)): ?>
+                                                            <span class="text-warning fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i><?= esc($res) ?></span>
+                                                        <?php else: ?>
+                                                            <span class="text-muted">-</span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td class="small text-muted"><?= esc($item['notes'] ?? '') ?></td>
                                                     <td>
                                                         <?php if (!empty($item['inspection_date'])):
@@ -520,7 +561,7 @@
                                         </tr>
                                             <?php endforeach; ?>
                                         <?php else: ?>
-                                            <tr><td colspan="12" class="text-center text-muted">No inspected items found.</td></tr>
+                                            <tr><td colspan="10" class="text-center text-muted">No inspected items found.</td></tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -540,7 +581,7 @@
                                     <button class="export-btn" onclick="exportTablePDF('archivedTable')">PDF</button>
                                 </div>
                                 <div class="input-group" style="max-width: 320px">
-                                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                    <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                                     <input class="form-control border-start-0 ps-0" id="archivedSearch" placeholder="Search archived..." type="text">
                                 </div>
                             </div>
@@ -567,7 +608,7 @@
                                         </tr>
                                             <?php endforeach; ?>
                                         <?php else: ?>
-                                            <tr><td colspan="5" class="text-center text-muted">No archived items found.</td></tr>
+                                            <tr><td colspan="5" class="text-center ">No archived items found.</td></tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -582,13 +623,13 @@
                                     <div class="text-muted small">Full list of equipment in the site inventory.</div>
                                 </div>
                                 <div class="export-bar mb-0">
-                                    <button class="export-btn" onclick="copyTable('inventoryTable')">Copy</button>
-                                    <button class="export-btn" onclick="exportTableCSV('inventoryTable')">CSV</button>
-                                    <button class="export-btn" onclick="exportTableExcel('inventoryTable')">Excel</button>
-                                    <button class="export-btn" onclick="exportTablePDF('inventoryTable')">PDF</button>
+                                    <button class="export-btn btn" onclick="copyTable('inventoryTable')">Copy</button>
+                                    <button class="export-btn btn" onclick="exportTableCSV('inventoryTable')">CSV</button>
+                                    <button class="export-btn btn" onclick="exportTableExcel('inventoryTable')">Excel</button>
+                                    <button class="export-btn btn" onclick="exportTablePDF('inventoryTable')">PDF</button>
                                 </div>
                                 <div class="input-group" style="max-width: 320px">
-                                    <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                    <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                                     <input class="form-control border-start-0 ps-0" id="allInventorySearch" placeholder="Search all inventory..." type="text">
                                 </div>
                             </div>
@@ -644,25 +685,26 @@
 
                         
                         <!-- Work Orders tab pane -->
-                        <div class="tab-pane fade p-3" id="work-orders" role="tabpanel" aria-labelledby="work-orders-tab">
+                        <div class="tab-pane fade p-3" id="insp-work-orders" role="tabpanel" aria-labelledby="insp-work-orders-tab">
+
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
                                     <h5 class="fw-bold mb-1">Work Orders</h5>
                                     <p class="text-muted small mb-0">Manage and track work orders for this site.</p>
                 </div>
-                <button class="btn btn-custom-primary" onclick="openWorkOrderModal()">
+                <button class="btn btn-primary" onclick="openWorkOrderModal()">
                     <i class="fa-solid fa-plus me-2"></i>Add Work Order
                 </button>
             </div>
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
                     <div class="export-bar mb-0">
-                        <button class="export-btn" onclick="copyTable('workOrdersTable')">Copy</button>
-                        <button class="export-btn" onclick="exportTableCSV('workOrdersTable')">CSV</button>
-                        <button class="export-btn" onclick="exportTableExcel('workOrdersTable')">Excel</button>
-                        <button class="export-btn" onclick="exportTablePDF('workOrdersTable')">PDF</button>
+                        <button class="export-btn btn" onclick="copyTable('workOrdersTable')">Copy</button>
+                        <button class="export-btn btn" onclick="exportTableCSV('workOrdersTable')">CSV</button>
+                        <button class="export-btn btn" onclick="exportTableExcel('workOrdersTable')">Excel</button>
+                        <button class="export-btn btn" onclick="exportTablePDF('workOrdersTable')">PDF</button>
                     </div>
                     <div class="input-group" style="max-width: 300px">
-                        <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                        <span class="input-group-text  border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
                         <input class="form-control border-start-0 ps-0" id="workOrdersSearch" oninput="renderWorkOrdersTable()" placeholder="Search work orders..." type="text">
                     </div>
                 </div>
@@ -685,16 +727,18 @@
                         <tbody id="workOrdersTableBody">
                             <?php if (!empty($workOrders ?? [])): ?>
                                 <?php foreach ($workOrders as $wo): ?>
-                                    <tr data-row-id="<?= esc($wo['id']) ?>">
+                                    <tr data-row-id="<?= esc($wo['id']) ?>" data-group-id="<?= esc($wo['group_id'] ?? '') ?>">
                                         <td>
-                                            <button class="btn-icon btn-edit" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                                            <div class="action-btns">
+                                            <button class="btn-icon btn-edit btn-primary" title="Edit"><i class="fa-solid fa-pen text-white"></i></button>
                                             <button class="btn-icon text-danger btn-delete" title="Delete"><i class="fa-solid fa-trash"></i></button>
+                                       </div>
                                         </td>
                                         <td><?= esc($wo['id']) ?></td>
                                         <td><?= esc($wo['title'] ?? '') ?></td>
                                         <td>
                                             <?php if (!empty($wo['asset_tag'])): ?>
-                                                <span class="badge bg-light text-dark border"><?= esc($wo['asset_tag']) ?></span>
+                                                <span class="badge  text-dark border"><?= esc($wo['asset_tag']) ?></span>
                                             <?php endif; ?>
                                             <?php if (!empty($wo['serial_number'])): ?>
                                                 <br><span class="small text-muted">S/N: <?= esc($wo['serial_number']) ?></span>
@@ -747,7 +791,7 @@
         <div aria-hidden="true" class="modal fade" id="workOrderModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
-                    <form id="workOrderForm">
+                    <form id="inspectionWorkOrderForm">
                         <input id="woIndex" type="hidden" value="-1">
                         <!-- Hidden fields to track work order id and equipment id for AJAX operations -->
                         <input id="woId" type="hidden" value="">
@@ -801,7 +845,14 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Technician</label>
-                                    <input class="form-control" id="woTech" type="text">
+                                    <select class="form-select" id="woTech">
+                                        <option value="">-- Select Technician --</option>
+                                        <?php if (!empty($technicians ?? [])): ?>
+                                            <?php foreach ($technicians as $tech): ?>
+                                                <option value="<?= esc($tech['full_name'] ?? $tech['id']) ?>"><?= esc($tech['full_name'] ?? 'Technician #' . $tech['id']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Start Date</label>
@@ -898,28 +949,29 @@
                                     <label class="form-label">Room</label>
                                     <input class="form-control" id="addRoom" placeholder="e.g. Room 2" type="text">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label">Tech</label>
                                     <input class="form-control" id="addTech" type="text" value="Admin">
                                 </div>
+                                <!-- EST and CAL: auto-filled from equipment settings based on selected model -->
                                 <div class="col-md-4">
                                     <label class="form-label">EST</label>
                                     <select class="form-select" id="addEST">
-                                        <option selected="" value="Yes">Yes</option>
-                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                        <option value="No" selected="">No</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">CAL</label>
                                     <select class="form-select" id="addCAL">
-                                        <option selected="" value="No">No</option>
                                         <option value="Yes">Yes</option>
+                                        <option value="No" selected="">No</option>
                                     </select>
                                 </div>
-                                <div class="col-12">
+                                <!-- <div class="col-12">
                                     <label class="form-label">Notes</label>
-                                    <textarea class="form-control" id="addNotes" placeholder="Optional" rows="3"></textarea>
-                                </div>
+                                    <textarea class="form-control d-none" id="addNotes" placeholder="Optional" rows="3"></textarea>
+                                </div> -->
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -968,24 +1020,11 @@
                                     <label class="form-label" for="editRoom">Room</label>
                                     <input class="form-control" id="editRoom" type="text">
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <label class="form-label" for="editTech">Tech</label>
                                     <input class="form-control" id="editTech" type="text">
                                 </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" for="editEST">Electrical Safety Test</label>
-                                    <select class="form-select" id="editEST">
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label" for="editCAL">Calibration</label>
-                                    <select class="form-select" id="editCAL">
-                                        <option value="Yes">Yes</option>
-                                        <option value="No">No</option>
-                                    </select>
-                                </div>
+                                <!-- EST and CAL removed - managed via Equipment Settings -->
                                 <div class="col-12">
                                     <label class="form-label" for="editNotes">Notes</label>
                                     <textarea class="form-control" id="editNotes" rows="3"></textarea>
@@ -1037,8 +1076,8 @@ function viewInspection(groupId, siteName, inspType, inspDisplayId, techName) {
     // Store current group for status update AJAX calls
     window.CURRENT_INSPECTION_GROUP_ID = groupId;
 
-    // Load status from server if needed (optional enhancement)
-    // updateInspectionStatusBadge(groupId);
+    // ── Filter Inspected Items & Device Counter to this group only ──────
+    filterInspectedByGroup(groupId);
 
     // Switch views
     showDashboard(); // hide all first
@@ -1051,10 +1090,271 @@ function viewInspection(groupId, siteName, inspType, inspDisplayId, techName) {
     var workflow = document.getElementById('site-inspection-workflow');
     if (workflow) workflow.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+/**
+ * Show only Inspected Items rows and Device Type Counter rows that belong
+ * to the given inspection group_id. All other rows are hidden so the tab
+ * shows exactly what was done in this inspection session.
+ *
+ * @param {string} groupId  e.g. "INSP-20260223-8086AD66"
+ */
+function filterInspectedByGroup(groupId) {
+    // ── Inspected Items table rows ───────────────────────────────────────
+    var inspRows = document.querySelectorAll('#inspectionTableBody tr[data-group-id]');
+    var hasExactMatch = false;
+
+    // First pass: check if ANY row has an exact match for this groupId
+    inspRows.forEach(function(row) {
+        if (row.getAttribute('data-group-id') === groupId) { hasExactMatch = true; }
+    });
+
+    var visibleCount = 0;
+    inspRows.forEach(function(row) {
+        var rowGroup = row.getAttribute('data-group-id');
+        // Show row if: exact group match OR (no exact matches exist AND row has empty group_id)
+        var show = (rowGroup === groupId) || (!hasExactMatch && rowGroup === '');
+        row.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    });
+
+    // Show empty placeholder if nothing is visible
+    var emptyRow = document.querySelector('#inspectionTableBody tr:not([data-group-id])');
+    if (emptyRow) emptyRow.style.display = (visibleCount === 0) ? '' : 'none';
+    var emptyRowById = document.getElementById('inspectedEmptyRow');
+    if (emptyRowById) emptyRowById.style.display = (visibleCount === 0) ? '' : 'none';
+
+    // ── Device Type Counter rows ─────────────────────────────────────────
+    var counterRows = document.querySelectorAll('#deviceTypeCountsBody tr[data-group-id]');
+    var hasExactCounterMatch = false;
+    counterRows.forEach(function(row) {
+        if (row.getAttribute('data-group-id') === groupId) { hasExactCounterMatch = true; }
+    });
+
+    // Build a map of equipment EST/CAL values from the equipment settings
+    // This data should be embedded in the page or fetched from server
+    var equipmentMap = {};
+    
+    // Try to get equipment data from page (if available)
+    var equipmentDataElement = document.getElementById('equipmentSettingsData');
+    if (equipmentDataElement) {
+        try {
+            equipmentMap = JSON.parse(equipmentDataElement.textContent);
+        } catch(e) {
+            console.warn('Could not parse equipment settings data:', e);
+        }
+    }
+
+    // Calculate EST/CAL counts from inspected items
+    // by looking up each item's model in the equipment table
+    var deviceTypeCounts = {};
+    var visibleInspRows = document.querySelectorAll('#inspectionTableBody tr[data-group-id]');
+    visibleInspRows.forEach(function(row) {
+        var deviceType = row.getAttribute('data-device-type') || 'Unknown';
+        var modelName = row.getAttribute('data-model') || '';
+        
+        if (!deviceTypeCounts[deviceType]) {
+            deviceTypeCounts[deviceType] = { total: 0, est: 0, cal: 0 };
+        }
+        
+        deviceTypeCounts[deviceType].total++;
+        
+        // Look up EST/CAL values from equipment map using model name
+        if (modelName && equipmentMap[modelName]) {
+            var equipmentData = equipmentMap[modelName];
+            var estVal = equipmentData.est || '0';
+            var calVal = equipmentData.cal || '0';
+            
+            // Convert 1/0 to numeric count
+            var estCount = (estVal === 1 || estVal === '1') ? 1 : 0;
+            var calCount = (calVal === 1 || calVal === '1') ? 1 : 0;
+            
+            deviceTypeCounts[deviceType].est += estCount;
+            deviceTypeCounts[deviceType].cal += calCount;
+        }
+    });
+
+    // Update counter table rows with calculated values
+    var counterVisible = 0;
+    var counterTotal = 0;
+    var counterTotalEST = 0;
+    var counterTotalCAL = 0;
+    counterRows.forEach(function(row) {
+        var rowGroup = row.getAttribute('data-group-id');
+        var show = (rowGroup === groupId) || (!hasExactCounterMatch && rowGroup === '');
+        row.style.display = show ? '' : 'none';
+        if (show) {
+            counterVisible++;
+            var cells = row.querySelectorAll('td');
+            var deviceTypeCell = cells[0];
+            var deviceType = deviceTypeCell ? deviceTypeCell.textContent.trim() : '';
+            
+            // Get calculated counts from deviceTypeCounts
+            var counts = deviceTypeCounts[deviceType] || { total: 0, est: 0, cal: 0 };
+            counterTotal += counts.total;
+            counterTotalEST += counts.est;
+            counterTotalCAL += counts.cal;
+            
+            // Update cell display with calculated values
+            if (cells[1]) cells[1].textContent = counts.total;
+            if (cells[2]) cells[2].textContent = counts.est;
+            if (cells[3]) cells[3].textContent = counts.cal;
+        }
+    });
+    var counterEmpty = document.getElementById('deviceCountEmptyRow');
+    if (counterEmpty) counterEmpty.style.display = (counterVisible === 0) ? '' : 'none';
+
+    // Show/update the Total row
+    var totalRow = document.getElementById('deviceCountTotalRow');
+    var totalCell = document.getElementById('deviceCountTotal');
+    var totalCellEST = document.getElementById('deviceCountTotalEST');
+    var totalCellCAL = document.getElementById('deviceCountTotalCAL');
+    if (totalRow) totalRow.style.display = (counterVisible > 0) ? '' : 'none';
+    if (totalCell) totalCell.textContent = counterTotal;
+    if (totalCellEST) totalCellEST.textContent = counterTotalEST;
+    if (totalCellCAL) totalCellCAL.textContent = counterTotalCAL;
+
+    // ── Update the "Inspected Items" tab badge count ─────────────────────
+    var badge = document.getElementById('inspected-count');
+    if (badge) badge.textContent = visibleCount > 0 ? visibleCount : '0';
+
+    // ── Work Orders: filter strictly by group_id ──────────────────────────
+    // Only show work orders that belong to THIS inspection group.
+    // Never fall back to showing unrelated or unlinked work orders.
+    var woRows = document.querySelectorAll('#workOrdersTableBody tr[data-group-id]');
+    var woVisible = 0;
+    woRows.forEach(function(row) {
+        var rg = row.getAttribute('data-group-id');
+        var show = (rg === groupId);
+        row.style.display = show ? '' : 'none';
+        if (show) woVisible++;
+    });
+    // Show placeholder row if no WO for this group
+    var woEmpty = document.querySelector('#workOrdersTableBody tr:not([data-group-id])');
+    if (woEmpty) woEmpty.style.display = (woVisible === 0) ? '' : 'none';
+}
 
 // Configuration constants for report endpoints
 const REPORT_DATA_URL = "<?= site_url('admin/inspections/reportData') ?>";
 const REPORT_PDF_URL  = "<?= site_url('admin/inspections/reportPdf') ?>";
+const LOGO_BASE_URL   = "<?= base_url('uploads/logos') ?>";
+const SEARCH_MODEL_URL = "<?= site_url('admin/inspections/searchByModel') ?>";
+
+// ── Add Device Modal: Model Number Autocomplete ──────────────────────────────
+(function() {
+    var _modelTimer = null;
+
+    function showModelSuggestions(results) {
+        var box = document.getElementById('modelSuggestions');
+        if (!box) return;
+        if (!results || results.length === 0) {
+            box.classList.add('d-none');
+            box.innerHTML = '';
+            return;
+        }
+        box.innerHTML = results.map(function(r) {
+            var label = [r.make, r.model].filter(Boolean).join(' — ');
+            var sub   = r.device_type || '';
+            return '<button type="button" class="list-group-item list-group-item-action py-2 px-3 model-suggestion-item"'
+                + ' data-make="'        + escapeHtml(r.make        || '') + '"'
+                + ' data-model="'       + escapeHtml(r.model       || '') + '"'
+                + ' data-device_type="' + escapeHtml(r.device_type || '') + '"'
+                + ' data-asset_tag="'   + escapeHtml(r.asset_tag   || '') + '"'
+                + ' data-serial="'      + escapeHtml(r.serial_number || '') + '"'
+                + ' data-department="'  + escapeHtml(r.department  || '') + '"'
+                + ' data-location="'    + escapeHtml(r.location    || '') + '"'
+                + ' data-est="'         + escapeHtml(r.est         || 'No') + '"'
+                + ' data-cal="'         + escapeHtml(r.cal         || 'No') + '"'
+                + '>'
+                + '<span class="fw-semibold">' + escapeHtml(label) + '</span>'
+                + (sub ? '<br><small class="text-muted">' + escapeHtml(sub) + '</small>' : '')
+                + '</button>';
+        }).join('');
+        box.classList.remove('d-none');
+    }
+
+    function hideModelSuggestions() {
+        var box = document.getElementById('modelSuggestions');
+        if (box) { box.classList.add('d-none'); box.innerHTML = ''; }
+    }
+
+    function fillFromModel(btn) {
+        document.getElementById('addModel').value        = btn.getAttribute('data-model')       || '';
+        document.getElementById('addManufacturer').value = btn.getAttribute('data-make')        || '';
+        document.getElementById('addType').value         = btn.getAttribute('data-device_type') || '';
+        document.getElementById('addDescription').value  = btn.getAttribute('data-device_type') || '';
+        document.getElementById('addSerial').value  = btn.getAttribute('data-serial') || '';
+        // Only fill department/room if empty (don't overwrite user entries)
+        var deptEl = document.getElementById('addDept');
+        var roomEl = document.getElementById('addRoom');
+        if (deptEl && !deptEl.value) deptEl.value = btn.getAttribute('data-department') || '';
+        if (roomEl && !roomEl.value) roomEl.value = btn.getAttribute('data-location')   || '';
+        
+        // Set EST and CAL dropdowns with proper value conversion
+        var estVal = btn.getAttribute('data-est') || 'No';
+        var calVal = btn.getAttribute('data-cal') || 'No';
+        estVal = convertToYesNo(estVal);
+        calVal = convertToYesNo(calVal);
+        var estSel = document.getElementById('addEST');
+        var calSel = document.getElementById('addCAL');
+        if (estSel) estSel.value = estVal;
+        if (calSel) calSel.value = calVal;
+        
+        hideModelSuggestions();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var inp = document.getElementById('addModel');
+        var box = document.getElementById('modelSuggestions');
+        if (!inp || !box) return;
+
+        // Typing → debounce search
+        inp.addEventListener('input', function() {
+            var q = inp.value.trim();
+            clearTimeout(_modelTimer);
+            if (q.length < 2) { hideModelSuggestions(); return; }
+            _modelTimer = setTimeout(function() {
+                fetch(SEARCH_MODEL_URL + '?keyword=' + encodeURIComponent(q), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) { showModelSuggestions(data || []); })
+                .catch(function() { hideModelSuggestions(); });
+            }, 220);
+        });
+
+        // Click a suggestion
+        box.addEventListener('mousedown', function(e) {
+            var btn = e.target.closest('.model-suggestion-item');
+            if (btn) { e.preventDefault(); fillFromModel(btn); }
+        });
+
+        // Hide on blur
+        inp.addEventListener('blur', function() {
+            setTimeout(hideModelSuggestions, 160);
+        });
+
+        // Keyboard navigation
+        inp.addEventListener('keydown', function(e) {
+            var items = box.querySelectorAll('.model-suggestion-item');
+            var active = box.querySelector('.model-suggestion-item.active');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!active) { if (items[0]) items[0].classList.add('active'); }
+                else { items.forEach(function(el) { el.classList.remove('active'); }); var next = active.nextElementSibling; if (next) next.classList.add('active'); }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (active) { var prev = active.previousElementSibling; items.forEach(function(el) { el.classList.remove('active'); }); if (prev) prev.classList.add('active'); }
+            } else if (e.key === 'Enter') {
+                if (active) { e.preventDefault(); fillFromModel(active); }
+            } else if (e.key === 'Escape') {
+                hideModelSuggestions();
+            }
+        });
+    });
+
+    function escapeHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+})();
 // Tracks the currently loaded report group; used when downloading PDFs
 let CURRENT_REPORT_GROUP_ID = null;
 
@@ -1098,7 +1398,7 @@ function openInspectionReport(groupId) {
                     + '</div>';
                 return;
             }
-            reportContent.innerHTML = generateInspectionReportHTML(res.latest, res.rows);
+            reportContent.innerHTML = generateInspectionReportHTML(res.latest, res.rows, res.group_id || groupId);
             // Also mirror into the tab pane so Preview/Download work from there too
             var tabContainer = document.getElementById('reportsTabContent');
             if (tabContainer) {
@@ -1139,80 +1439,31 @@ function generateReportHeaderHTML() {
         + '</div></div></div>';
 }
 
-/**
- * Preview report in a new window (no auto-print).
- * Reads from the modal reportContent first, falls back to reportsTabContent.
- */
-function previewReportPDF() {
-    var sourceEl = document.getElementById('reportContent');
-    if (!sourceEl || !sourceEl.innerHTML.trim()) {
-        sourceEl = document.getElementById('reportsTabContent');
-    }
-    if (!sourceEl || !sourceEl.innerHTML.trim()) {
-        alert('Please click the report icon on an inspection row first.');
-        return;
-    }
-    var win = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes');
-    if (!win) { alert('Please allow pop-ups to preview the report.'); return; }
-    win.document.write(
-        '<html><head><title>Inspection Report Preview</title>'
-        + '<style>'
-        + 'body{font-family:Arial,sans-serif;margin:20px;}'
-        + 'table{width:100%;border-collapse:collapse;}'
-        + 'th,td{border:1px solid #ccc;padding:6px;font-size:12px;}'
-        + 'th{background:#f8f9fa;font-weight:bold;}'
-        + '.text-success{color:#198754;font-weight:bold;}'
-        + '.text-danger{color:#dc3545;font-weight:bold;}'
-        + '.text-muted{color:#6c757d;}'
-        + '</style>'
-        + '</head><body>'
-        + generateReportHeaderHTML()
-        + sourceEl.innerHTML
-        + '</body></html>'
-    );
-    win.document.close();
-}
-
-/**
- * Download/print report as PDF.
- * Uses the same source logic as preview but triggers window.print().
- */
-function exportReportPDF() {
-    var sourceEl = document.getElementById('reportContent');
-    if (!sourceEl || !sourceEl.innerHTML.trim()) {
-        sourceEl = document.getElementById('reportsTabContent');
-    }
-    if (!sourceEl || !sourceEl.innerHTML.trim()) {
-        alert('Please click the report icon on an inspection row first.');
-        return;
-    }
-    var win = window.open('', '_blank', 'width=1000,height=700');
-    if (!win) { alert('Please allow pop-ups to download the report.'); return; }
-    win.document.write(
-        '<html><head><title>Inspection Report</title>'
-        + '<style>'
-        + 'body{font-family:Arial,sans-serif;margin:20px;}'
-        + 'table{width:100%;border-collapse:collapse;}'
-        + 'th,td{border:1px solid #ccc;padding:6px;font-size:12px;}'
-        + 'th{background:#f8f9fa;font-weight:bold;}'
-        + '.text-success{color:#198754;font-weight:bold;}'
-        + '.text-danger{color:#dc3545;font-weight:bold;}'
-        + '.text-muted{color:#6c757d;}'
-        + '@media print{button{display:none;}}'
-        + '</style>'
-        + '</head><body>'
-        + generateReportHeaderHTML()
-        + sourceEl.innerHTML
-        + '</body></html>'
-    );
-    win.document.close();
-    setTimeout(function() { win.focus(); win.print(); win.close(); }, 400);
-}
+// NOTE: previewReportPDF() and exportReportPDF() are defined in details.php
+// and support customer logos. Do NOT redefine them here as that would
+// override the implementations that include logo support.
 
 /**
  * Build the inner HTML for the inspection report (Latest Device + Overview table).
  */
-function generateInspectionReportHTML(latest, rows) {
+function generateInspectionReportHTML(latest, rows, groupId) {
+    // Header with logo
+    var logoHtml = '';
+    if (latest && latest.logo_path) {
+        var logoUrl = (typeof LOGO_BASE_URL !== 'undefined' ? LOGO_BASE_URL : '') + '/' + escapeHtml(latest.logo_path);
+        logoHtml = '<img src="' + logoUrl + '" style="height:60px;" alt="Logo">';
+    }
+    var siteName   = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name || latest.customer_name) : '';
+    var action     = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest.action_performed || latest.inspection_type) : '';
+    var technician = latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
+    var groupLabel = escapeHtml(groupId || '');
+    // var headerHtml = '<section class="mb-4">'
+    //     + '<div class="d-flex justify-content-between align-items-center">'
+    //     + '<div><strong>Site:</strong> ' + siteName + '<br><em>' + action + '</em></div>'
+    //     + '<div>' + logoHtml + '</div>'
+    //     + '<div class="text-end"><strong>Inspection #:</strong> ' + groupLabel + '<br><em>Technician: ' + technician + '</em></div>'
+    //     + '</div></section>';
+ var headerHtml = '';
     // Latest Added Device
     var latestHtml = '<p class="text-muted fst-italic">No device data available.</p>';
     if (latest) {
@@ -1222,7 +1473,7 @@ function generateInspectionReportHTML(latest, rows) {
             + '<thead><tr>'
             + '<th>Model</th><th>Type</th><th>S/N</th><th>Action Performed</th>'
             + '<th>Asset #</th><th>Department</th><th>Room</th><th>Tech</th>'
-            + '<th>EST</th><th>CAL</th><th>Notes</th>'
+            + '<th>Notes</th>'
             + '</tr></thead><tbody><tr>'
             + '<td>' + escapeHtml(latest.model             || '—') + '</td>'
             + '<td>' + escapeHtml(latest.device_type       || '—') + '</td>'
@@ -1232,18 +1483,55 @@ function generateInspectionReportHTML(latest, rows) {
             + '<td>' + escapeHtml(latest.dept              || '—') + '</td>'
             + '<td>' + escapeHtml(latest.room              || '—') + '</td>'
             + '<td>' + escapeHtml(latest.technician_name   || 'Admin') + '</td>'
-            + '<td>' + yesNo(latest.est) + '</td>'
-            + '<td>' + yesNo(latest.cal) + '</td>'
             + '<td>' + escapeHtml(latest.notes             || '') + '</td>'
             + '</tr></tbody></table></div>';
     }
 
     // Inspection Report Overview
     var rowsArr  = rows || [];
-    var rowsHtml = rowsArr.length === 0
-        ? '<tr><td colspan="14" class="text-center text-muted py-3">No inspections found.</td></tr>'
-        : rowsArr.map(function(r) {
-            return '<tr>'
+
+    // Sort: Fail=0, Repair=1, Pass=2, Other=3
+    var statusOrder = { 'Fail': 0, 'Repair': 1, 'Pass': 2 };
+    rowsArr = rowsArr.slice().sort(function(a, b) {
+        var ra = String(a.result || a.status || '');
+        var rb = String(b.result || b.status || '');
+        var oa = statusOrder.hasOwnProperty(ra) ? statusOrder[ra] : 3;
+        var ob = statusOrder.hasOwnProperty(rb) ? statusOrder[rb] : 3;
+        return oa - ob;
+    });
+
+    // Group rows by status
+    var groups = {};
+    var groupOrder = [];
+    rowsArr.forEach(function(r) {
+        var st = String(r.result || r.status || 'Unknown');
+        if (!groups[st]) { groups[st] = []; groupOrder.push(st); }
+        groups[st].push(r);
+    });
+
+    // Group label config
+    var groupMeta = {
+        'Fail':   { label: 'Failed',  badgeClass: 'bg-danger',  icon: 'fa-xmark' },
+        'Repair': { label: 'Repair',  badgeClass: 'bg-warning text-dark', icon: 'fa-wrench' },
+        'Pass':   { label: 'Passed',  badgeClass: 'bg-success', icon: 'fa-check' },
+    };
+
+    var rowsHtml = '';
+    if (rowsArr.length === 0) {
+        rowsHtml = '<tr><td colspan="12" class="text-center text-muted py-3">No inspections found.</td></tr>';
+    } else {
+        groupOrder.forEach(function(st) {
+            var meta = groupMeta[st] || { label: st, badgeClass: 'bg-secondary', icon: 'fa-circle' };
+            var count = groups[st].length;
+            // Group header row
+            rowsHtml += '<tr style="background:#f8fafc;">'
+                + '<td colspan="12" class="py-2 px-3">'
+                + '<span class="badge ' + meta.badgeClass + ' me-2"><i class="fa-solid ' + meta.icon + ' me-1"></i>' + meta.label + '</span>'
+                + '<span class="text-muted small">' + count + ' device' + (count !== 1 ? 's' : '') + '</span>'
+                + '</td></tr>';
+            // Data rows for this group
+            groups[st].forEach(function(r) {
+                rowsHtml += '<tr>'
                 + '<td>' + resultBadge(r.result || r.status) + '</td>'
                 + '<td>' + escapeHtml(r.customer_name || r.site_name || '—') + '</td>'
                 + '<td>' + escapeHtml(r.model         || '—') + '</td>'
@@ -1253,17 +1541,15 @@ function generateInspectionReportHTML(latest, rows) {
                 + '<td>' + escapeHtml(r.asset_tag     || '—') + '</td>'
                 + '<td>' + escapeHtml(r.dept          || '—') + '</td>'
                 + '<td>' + escapeHtml(r.room          || '—') + '</td>'
-                + '<td>' + yesNo(r.est) + '</td>'
-                + '<td>' + yesNo(r.cal) + '</td>'
                 + '<td>' + escapeHtml(r.technician_name || 'Admin') + '</td>'
                 + '<td>' + (r.inspection_date ? formatInspectionDateHTML(r.inspection_date) : '<span class="text-muted">—</span>') + '</td>'
                 + '<td>' + escapeHtml(r.notes || '') + '</td>'
                 + '</tr>';
-        }).join('');
+            });
+        });
+    }
 
-    return '<section class="mb-4">'
-        + '<h4 class="fw-bold mb-0">Reports &amp; History</h4>'
-        + '</section>'
+    return headerHtml
         + '<section class="mb-4">'
         + '<h5 class="fw-semibold">Latest Added Device</h5>'
         + latestHtml
@@ -1275,7 +1561,7 @@ function generateInspectionReportHTML(latest, rows) {
         + '<thead><tr>'
         + '<th>Result</th><th>Customer</th><th>Model</th><th>Type</th><th>S/N</th>'
         + '<th>Action Performed</th><th>Asset #</th><th>Dept</th><th>Room</th>'
-        + '<th>EST</th><th>CAL</th><th>Tech</th><th>Inspection Date</th><th>Notes</th>'
+        + '<th>Tech</th><th>Inspection Date</th><th>Notes</th>'
         + '</tr></thead>'
         + '<tbody>' + rowsHtml + '</tbody>'
         + '</table></div>'
@@ -1284,7 +1570,64 @@ function generateInspectionReportHTML(latest, rows) {
 
 
 
-// ── Table style helpers ─────────────────────────────────────────
+// ── Load IQ Notes dynamically into Action Performed dropdown ────────────────
+(function loadIqNotes() {
+    var IQ_NOTES_URL = "<?= site_url('admin/settings/iq-notes') ?>";
+    var sel = document.getElementById('inspectActionPerformed');
+    if (!sel) return;
+    fetch(IQ_NOTES_URL, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var notes = data.data || [];
+        if (!notes.length) return; // keep defaults if no IQ notes configured
+        // Clear existing options and repopulate from IQ notes
+        sel.innerHTML = '';
+        notes.forEach(function(n) {
+            var opt = document.createElement('option');
+            opt.value = n.note;
+            opt.textContent = n.note;
+            sel.appendChild(opt);
+        });
+    })
+    .catch(function() { /* keep static defaults on error */ });
+})();
+
+// ── Auto-fill EST/CAL in Add Device modal when model is selected ─────────────
+// When a model is picked from autocomplete suggestions, look up its equipment
+// settings and set the EST/CAL dropdowns accordingly.
+document.addEventListener('DOMContentLoaded', function() {
+    var box = document.getElementById('modelSuggestions');
+    if (box) {
+        box.addEventListener('mousedown', function(e) {
+            var btn = e.target.closest('.model-suggestion-item');
+            if (!btn) return;
+            // After fillFromModel runs (via existing handler), also set EST/CAL
+            setTimeout(function() {
+                var estVal = btn.getAttribute('data-est') || 'No';
+                var calVal = btn.getAttribute('data-cal') || 'No';
+                
+                // Convert 1/0 to Yes/No
+                estVal = convertToYesNo(estVal);
+                calVal = convertToYesNo(calVal);
+                
+                var estSel = document.getElementById('addEST');
+                var calSel = document.getElementById('addCAL');
+                if (estSel) estSel.value = estVal;
+                if (calSel) calSel.value = calVal;
+            }, 50);
+        });
+    }
+});
+
+// Helper function to convert 1/0 or Yes/No to proper Yes/No value
+function convertToYesNo(value) {
+    if (!value) return 'No';
+    var str = String(value).toLowerCase().trim();
+    // Handle numeric values
+    if (str === '1' || str === 'yes' || str === 'true') return 'Yes';
+    if (str === '0' || str === 'no' || str === 'false') return 'No';
+    return 'No'; // default to No
+}
 function thStyle() {
     return 'padding:10px 12px;text-align:left;font-size:11px;font-weight:600;'
          + 'color:#64748b;text-transform:uppercase;letter-spacing:0.05em;'
@@ -1301,8 +1644,9 @@ function esc(str) {
 /** Return a result badge based on the inspection outcome */
 function resultBadge(res) {
     const r = String(res || '').trim();
-    if (r === 'Pass') return '<span class="text-success fw-semibold"><i class="fa-solid fa-check"></i> Pass</span>';
-    if (r === 'Fail') return '<span class="text-danger fw-semibold"><i class="fa-solid fa-xmark"></i> Fail</span>';
+    if (r === 'Pass')   return '<span class="text-success fw-semibold"><i class="fa-solid fa-check"></i> Pass</span>';
+    if (r === 'Fail')   return '<span class="text-danger fw-semibold"><i class="fa-solid fa-xmark"></i> Fail</span>';
+    if (r === 'Repair') return '<span class="text-warning fw-semibold"><i class="fa-solid fa-wrench"></i> Repair</span>';
     return '<span class="text-muted">-</span>';
 }
 
@@ -1356,6 +1700,7 @@ function escapeHtml(str) {
                     'notInspectedTableBody', // Not Inspected rows
                     'archivedTableBody',     // Archived rows
                     'deviceTypeCountsBody',  // Device type counter
+                    'workOrdersTableBody',   // Work Orders rows
                     'not-inspected-count',   // Tab badge
                     'inspected-count',       // Tab badge
                 ];
@@ -1364,6 +1709,11 @@ function escapeHtml(str) {
                     var live  = document.getElementById(id);
                     if (fresh && live) live.innerHTML = fresh.innerHTML;
                 });
+
+                // Re-apply group filter so only current inspection rows stay visible
+                if (window.CURRENT_INSPECTION_GROUP_ID) {
+                    filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
+                }
 
                 if (typeof callback === 'function') callback();
             }); // silent fail — DOM stays as-is if fetch fails
@@ -1410,8 +1760,7 @@ function escapeHtml(str) {
                 document.getElementById('editDept').value   = d.dept  || '';
                 document.getElementById('editRoom').value   = d.room  || '';
                 document.getElementById('editTech').value   = d.tech  || '';
-                document.getElementById('editEST').value    = d.est   || 'No';
-                document.getElementById('editCAL').value    = d.cal   || 'No';
+                // EST/CAL removed from edit form - managed via Equipment Settings
                 document.getElementById('editNotes').value  = d.notes || '';
                 getModal().show();
             }
@@ -1475,8 +1824,7 @@ function escapeHtml(str) {
                         'department'     + '=' + encodeURIComponent(document.getElementById('editDept').value.trim()),
                         'location'       + '=' + encodeURIComponent(document.getElementById('editRoom').value.trim()),
                         'serial_number'  + '=' + encodeURIComponent(document.getElementById('editSerial').value.trim()),
-                        'est'            + '=' + encodeURIComponent(document.getElementById('editEST').value),
-                        'cal'            + '=' + encodeURIComponent(document.getElementById('editCAL').value),
+                        // est/cal removed from edit form - managed via Equipment Settings
                     ].join('&');
 
                     var saveBtn = form.querySelector('[type=submit]');
@@ -1511,8 +1859,7 @@ function escapeHtml(str) {
                                 editBtn.dataset.serial = document.getElementById('editSerial').value.trim();
                                 editBtn.dataset.dept   = document.getElementById('editDept').value.trim();
                                 editBtn.dataset.room   = document.getElementById('editRoom').value.trim();
-                                editBtn.dataset.est    = document.getElementById('editEST').value;
-                                editBtn.dataset.cal    = document.getElementById('editCAL').value;
+                                // est/cal dataset updates removed
                                 editBtn.dataset.notes  = document.getElementById('editNotes').value.trim();
 
                                 // Live-update visible cells
@@ -1526,8 +1873,7 @@ function escapeHtml(str) {
                                     esc(document.getElementById('editDept').value.trim()) +
                                     '<br><span class="text-muted small">' +
                                     esc(document.getElementById('editRoom').value.trim()) + '</span>';
-                                if (cells[7]) cells[7].innerHTML = yesNo(document.getElementById('editEST').value);
-                                if (cells[8]) cells[8].innerHTML = yesNo(document.getElementById('editCAL').value);
+                                // EST/CAL cell values come from DB on next refresh (not from edit form)
                                 if (cells[10]) cells[10].textContent = document.getElementById('editNotes').value.trim();
                             }
 
@@ -1565,6 +1911,18 @@ function escapeHtml(str) {
         // Auto-load the report when "Inspection Reports" tab is clicked inside view-inspection.
         // This makes the tab completely independent — no need to go back to the list first.
         document.addEventListener('DOMContentLoaded', function () {
+            const woForm = document.getElementById('workOrderForm');
+            if (!woForm) return;
+
+            woForm.addEventListener('submit', function () {
+                // keep MAIN Work Orders tab selected after refresh
+                sessionStorage.setItem('siteDetailsActiveTab', 'work-orders-tab');
+
+                // if this submit is coming from INSPECTIONS workflow, use these instead:
+                // sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');
+                // sessionStorage.setItem('siteDetailsActiveSubTab', 'insp-work-orders-tab');
+            });
+
             var reportsTabBtn = document.getElementById('reports-tab');
             if (!reportsTabBtn) return;
 
