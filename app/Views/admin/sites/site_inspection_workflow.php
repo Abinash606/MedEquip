@@ -440,7 +440,7 @@
                             <div class="mb-3" id="deviceTypeCounter">
                                 <h6 class="fw-semibold">Device Type Counter</h6>
                                 <div class="table-responsive">
-                                    <table class="table table-sm table-striped mb-0">
+                                    <table class="table table-sm  mb-0">
                                         <thead>
                                             <tr><th>Device Type</th><th>Total</th><th>EST</th><th>CAL</th></tr>
                                         </thead>
@@ -450,14 +450,29 @@
                                             $deviceCountsByGroup = [];
                                             if (!empty($inspectedItems ?? [])) {
                                                 foreach ($inspectedItems as $item) {
+                                                    // echo '<pre>'; print_r($item); echo '</pre>';
                                                     $gid  = $item['group_id'] ?? '';
                                                     $type = $item['device_type'] ?? 'Unknown';
                                                     if (!isset($deviceCountsByGroup[$gid][$type])) {
                                                         $deviceCountsByGroup[$gid][$type] = ['total' => 0, 'est' => 0, 'cal' => 0];
                                                     }
                                                     $deviceCountsByGroup[$gid][$type]['total']++;
-                                                    if (strtolower($item['est'] ?? '') === 'yes') $deviceCountsByGroup[$gid][$type]['est']++;
-                                                    if (strtolower($item['cal'] ?? '') === 'yes') $deviceCountsByGroup[$gid][$type]['cal']++;
+                                                    
+                                                    // Check EST: Convert to int first, then check if truthy
+                                                    // Values can be: 1 (int), '1' (string), 'Yes', or 0/'No'
+                                                    $estVal = $item['est'] ?? 0;
+                                                    $estInt = (int) $estVal;  // Convert to integer
+                                                    if ($estInt === 1 || strtolower((string)$estVal) === 'yes') {
+                                                        $deviceCountsByGroup[$gid][$type]['est']++;
+                                                    }
+                                                    
+                                                    // Check CAL: Convert to int first, then check if truthy
+                                                    // Values can be: 1 (int), '1' (string), 'Yes', or 0/'No'
+                                                    $calVal = $item['cal'] ?? 0;
+                                                    $calInt = (int) $calVal;  // Convert to integer
+                                                    if ($calInt === 1 || strtolower((string)$calVal) === 'yes') {
+                                                        $deviceCountsByGroup[$gid][$type]['cal']++;
+                                                    }
                                                     }
                                                 }
                                             $allDeviceCounts = [];
@@ -1144,12 +1159,13 @@ function filterInspectedByGroup(groupId) {
     }
 
     // Calculate EST/CAL counts from inspected items
-    // by looking up each item's model in the equipment table
+    // Read EST/CAL directly from row data attributes (data-est and data-cal)
     var deviceTypeCounts = {};
     var visibleInspRows = document.querySelectorAll('#inspectionTableBody tr[data-group-id]');
     visibleInspRows.forEach(function(row) {
         var deviceType = row.getAttribute('data-device-type') || 'Unknown';
-        var modelName = row.getAttribute('data-model') || '';
+        var estAttr = row.getAttribute('data-est') || '0';  // Read from row attribute
+        var calAttr = row.getAttribute('data-cal') || '0';  // Read from row attribute
         
         if (!deviceTypeCounts[deviceType]) {
             deviceTypeCounts[deviceType] = { total: 0, est: 0, cal: 0 };
@@ -1157,18 +1173,18 @@ function filterInspectedByGroup(groupId) {
         
         deviceTypeCounts[deviceType].total++;
         
-        // Look up EST/CAL values from equipment map using model name
-        if (modelName && equipmentMap[modelName]) {
-            var equipmentData = equipmentMap[modelName];
-            var estVal = equipmentData.est || '0';
-            var calVal = equipmentData.cal || '0';
-            
-            // Convert 1/0 to numeric count
-            var estCount = (estVal === 1 || estVal === '1') ? 1 : 0;
-            var calCount = (calVal === 1 || calVal === '1') ? 1 : 0;
-            
-            deviceTypeCounts[deviceType].est += estCount;
-            deviceTypeCounts[deviceType].cal += calCount;
+        // Check EST value from row attribute
+        // Can be: 1, '1', 'Yes', 'yes', or 0, '0', 'No'
+        var estVal = estAttr.toString().toLowerCase();
+        if (estVal === '1' || estVal === 'yes' || estVal === 'true') {
+            deviceTypeCounts[deviceType].est++;
+        }
+        
+        // Check CAL value from row attribute
+        // Can be: 1, '1', 'Yes', 'yes', or 0, '0', 'No'
+        var calVal = calAttr.toString().toLowerCase();
+        if (calVal === '1' || calVal === 'yes' || calVal === 'true') {
+            deviceTypeCounts[deviceType].cal++;
         }
     });
 

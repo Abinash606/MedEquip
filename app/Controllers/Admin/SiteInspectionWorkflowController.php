@@ -195,7 +195,21 @@ class SiteInspectionWorkflowController extends BaseController
             'device_complete' => 'Yes',
             'created_by'      => $userId > 0 ? $userId : null,
         ];
-        $inspectionModel->insert($insData);
+        
+        // Check if an inspection for this equipment already exists in this group
+        $existingInspection = $inspectionModel
+            ->where('equipment_id', $equipmentId)
+            ->where('group_id', $groupId)
+            ->where('site_id', $siteId)
+            ->first();
+        
+        if ($existingInspection) {
+            // Update existing inspection instead of creating a duplicate
+            $inspectionModel->update($existingInspection['id'], $insData);
+        } else {
+            // Insert new inspection record
+            $inspectionModel->insert($insData);
+        }
 
         // Update equipment status based on result
         if ($result === 'Pass') {

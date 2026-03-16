@@ -176,8 +176,9 @@ class SitesController extends BaseController
         // Get inspections for this site.  We join with equipment and users to
         // retrieve additional columns needed for the dynamic inspection
         // workflow (make, model, device type, serial number, etc.).
+        // IMPORTANT: Include equipment.est and equipment.cal from Equipment Settings table
         $allInspections = $inspectionModel
-            ->select('inspections.*, users.full_name as technician_name, equipment.make as equipment_make, equipment.model as equipment_model, equipment.device_type, equipment.serial_number, equipment.asset_tag, equipment.department, equipment.location')
+            ->select('inspections.*, users.full_name as technician_name, equipment.make as equipment_make, equipment.model as equipment_model, equipment.device_type, equipment.serial_number, equipment.asset_tag, equipment.department, equipment.location, equipment.est, equipment.cal')
             ->join('users', 'users.id = inspections.technician_id', 'left')
             ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
             ->where('inspections.site_id', $id)
@@ -235,6 +236,7 @@ class SitesController extends BaseController
                     : ($equipmentGroupMap[$record['equipment_id']] ?? '');
                 // Build inspected item row.  Each inspection record
                 // corresponds to one row in the Inspected Items list.
+                // EST/CAL now come from equipment table via JOIN (current values)
                 $inspectedItems[] = [
                     'id'             => $record['id'],
                     'group_id'       => $resolvedGroupId,
@@ -247,8 +249,8 @@ class SitesController extends BaseController
                     'department'     => $record['department'],
                     'location'       => $record['location'],
                     'technician'     => $record['technician_name'],
-                    'est'            => $record['est'], // placeholder for electrical safety test flag
-                    'cal'            => $record['cal'], // placeholder for calibration flag
+                    'est'            => $record['est'] ?? '0', // From equipment table via JOIN
+                    'cal'            => $record['cal'] ?? '0', // From equipment table via JOIN
                     'result'         => $record['status'],
                     'notes'          => $record['notes'],
                     'inspection_date'=> $record['completed_at'] ?? $record['scheduled_at'],

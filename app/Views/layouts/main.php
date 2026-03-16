@@ -775,6 +775,15 @@ border-radius:99px;
                 display: none;
             }
         }
+       .dataTables_wrapper .dataTables_paginate .paginate_button, .dataTables_wrapper .dataTables_paginate .paginate_button.disabled{
+            color:#fff!important;
+        }
+         .dataTables_wrapper .dataTables_paginate .ellipsis{
+            color:#fff!important;
+         }
+         #deviceCountTotalRow td{
+            background-color:transparent!important;
+         }
     </style>
 </head>
 

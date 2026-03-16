@@ -2672,6 +2672,8 @@
             params.append('device_type',  document.getElementById('addType')?.value || '');
             params.append('department',   document.getElementById('addDept')?.value || '');
             params.append('location',     document.getElementById('addRoom')?.value || '');
+            params.append('est',          document.getElementById('addEST')?.value || 'No');
+            params.append('cal',          document.getElementById('addCAL')?.value || 'No');
             params.append('status',       'active');
 
             const saveBtn = addDeviceFormEl.querySelector('[type="submit"]');
@@ -3560,6 +3562,18 @@
                         openInspectionReport(currentGroupId);
                     }
 
+                    // ── Clear asset input fields for next inspection ──────────────────
+                    // Clear the barcode input (main asset scanner field)
+                    var assetInput = document.getElementById('assetInput');
+                    if (assetInput) { assetInput.value = ''; }
+                    
+                    // Clear the Pass/Fail form fields
+                    $('#inspectAsset').val('');
+                    $('#inspectNotes').val('');
+                    $('#inspectDept').val('');
+                    $('#inspectRoom').val('');
+                    $('#inspectSerial').val('');
+                    
                     // ── Switch to "Inspected Items" sub-tab (unless a callback overrides) ──
                     if (typeof onSuccessCallback === 'function') {
                         // Let the caller decide which tab to show
@@ -3575,6 +3589,11 @@
                     } else if (typeof toast === 'function') {
                         toast('Inspection recorded as <strong>' + result + '</strong>!', 'success');
                     }
+                    
+                    // ── Focus asset input for next scan ────────────────────────────────
+                    setTimeout(function() {
+                        if (assetInput) { assetInput.focus(); assetInput.select(); }
+                    }, 200);
                 }).fail(function() {
                     // Fallback: full reload staying on inspected tab
                     sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');

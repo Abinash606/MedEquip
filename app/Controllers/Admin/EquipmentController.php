@@ -73,7 +73,9 @@ class EquipmentController extends BaseController
                 'location' => $this->request->getPost('location'),
                 'department' => $this->request->getPost('department'),
                 'status' => $this->request->getPost('status') ?: 'active',
-                'site_id' => $this->request->getPost('site_id')
+                'site_id' => $this->request->getPost('site_id'),
+                'est' => $this->request->getPost('est') ? ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1' ? '1' : '0') : '0',
+                'cal' => $this->request->getPost('cal') ? ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1' ? '1' : '0') : '0',
             ];
             $inserted = $equipmentModel->insert($data);
 
