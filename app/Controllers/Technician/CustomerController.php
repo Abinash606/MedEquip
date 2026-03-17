@@ -3,7 +3,7 @@
 namespace App\Controllers\Technician;
 
 use App\Controllers\BaseController;
-use Config\Database; 
+use Config\Database;
 
 class CustomerController extends BaseController
 {
