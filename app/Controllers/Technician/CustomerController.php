@@ -7,19 +7,13 @@ use Config\Database;
 
 class CustomerController extends BaseController
 {
-    // public function index()
-    // {
 
-    //     return view('technician/customer/index');
-    // }
     public function index()
     {
         $db = Database::connect();
 
-        // Logged-in user id (session madhun)
         $userId = session()->get('user_id');
 
-        // 1️⃣ Technician states fetch kara
         $technician = $db->table('technicians')
             ->select('state')
             ->where('user_id', $userId)
@@ -33,12 +27,11 @@ class CustomerController extends BaseController
             ]);
         }
 
-        // 2️⃣ States explode kara
         $states = array_map('trim', explode(',', $technician->state));
 
-        // 3️⃣ Customers fetch kara matching billing_state
         $customers = $db->table('customers')
             ->whereIn('billing_state', $states)
+            ->where('deleted_at', null)
             ->get()
             ->getResult();
 

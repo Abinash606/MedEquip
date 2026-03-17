@@ -5,50 +5,210 @@
     .glass-card {
         background: #ffffff;
         border-radius: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid #e9eef5;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
         padding: 1.5rem;
+        position: relative;
+    }
+
+    .back-btn-custom {
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-weight: 600;
+    }
+
+    .site-header-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        color: #475569;
+        margin: 0;
+    }
+
+    .site-info-toggle-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.25s ease;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.25);
+    }
+
+    .site-info-toggle-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+        background: linear-gradient(135deg, #0284c7, #1d4ed8);
+    }
+
+    .site-info-toggle-btn:focus {
+        outline: none;
+        box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+    }
+
+    .site-info-toggle-btn i {
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1;
+        color: #ffffff;
+    }
+
+    #siteInfoBody {
+        margin-top: 12px;
+    }
+
+    .site-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #f1f5f9;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .site-info-item {
+        margin-bottom: 12px;
+        font-size: 15px;
+        color: #334155;
+    }
+
+    .site-info-item strong {
+        display: inline-block;
+        min-width: 120px;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 0;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        border-radius: 12px 12px 0 0;
+        color: #475569;
+        font-weight: 600;
+        padding: 12px 24px;
+        margin-right: 8px;
+    }
+
+    .nav-tabs .nav-link.active {
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e9eef5;
+        border-bottom: 1px solid #ffffff;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    .tab-pane .glass-card {
+        border-top-left-radius: 0;
+    }
+
+    .dataTables_wrapper .dt-buttons .btn {
+        margin-right: 8px;
+        margin-bottom: 8px;
+        border-radius: 8px !important;
+        font-size: 14px;
+        padding: 7px 14px;
+    }
+
+    table.dataTable thead th {
+        background: #f8fafc;
+        color: #0f172a;
+        font-weight: 700;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    table.dataTable tbody td {
+        vertical-align: middle;
+    }
+
+    .btn-info.btn-sm {
+        border-radius: 8px;
+        padding: 6px 14px;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    @media (max-width: 767px) {
+        .site-info-item strong {
+            min-width: 100px;
+        }
+
+        .site-avatar {
+            width: 75px;
+            height: 75px;
+            margin-bottom: 15px;
+        }
+
+        .site-header-title {
+            font-size: 1rem;
+        }
     }
 </style>
 
 <!-- Back Button -->
-<button class="btn btn-secondary mb-3" onclick="window.location.href='<?= site_url('technician/sites') ?>'">
+<button class="btn btn-secondary back-btn-custom mb-3"
+    onclick="window.location.href='<?= site_url('technician/sites') ?>'">
     Back to Sites
 </button>
 
 <!-- Site Header Card -->
 <div class="glass-card mb-4">
-    <div class="row align-items-center">
-        <div class="col-md-auto me-4">
-            <?php
-            $logoPath = $customer['logo_path'] ?? '';
-            $logoFullPath = FCPATH . 'uploads/logos/' . $logoPath;
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="site-header-title">
+            <i class="bi bi-info-circle me-1"></i> Site Information
+            <?php if (!empty($customer['name'])): ?>
+                — <?= esc($customer['name']) ?>
+            <?php endif; ?>
+        </h6>
 
-            if (!empty($logoPath) && file_exists($logoFullPath)) {
-                echo '<img src="' . base_url('uploads/logos/' . $logoPath) . '" class="rounded-circle" width="80" alt="Logo">';
-            } else {
-                $customerName = $customer['name'] ?? 'Unknown';
-                $nameParts = explode(' ', $customerName);
-                if (count($nameParts) >= 2) {
-                    $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
+        <button class="site-info-toggle-btn" id="toggleSiteInfo" type="button" title="Toggle Site Info">
+            <i class="bi bi-chevron-up" id="toggleIcon"></i>
+        </button>
+    </div>
+
+    <div id="siteInfoBody">
+        <div class="row align-items-center">
+            <div class="col-md-auto me-4 text-center">
+                <?php
+                $logoPath = $customer['logo_path'] ?? '';
+                $logoFullPath = FCPATH . 'uploads/logos/' . $logoPath;
+
+                if (!empty($logoPath) && file_exists($logoFullPath)) {
+                    echo '<img src="' . base_url('uploads/logos/' . $logoPath) . '" class="site-avatar" alt="Logo">';
                 } else {
-                    $initials = strtoupper(substr($customerName, 0, 2));
+                    $customerName = $customer['name'] ?? 'Unknown';
+                    $nameParts = explode(' ', $customerName);
+                    if (count($nameParts) >= 2) {
+                        $initials = strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1));
+                    } else {
+                        $initials = strtoupper(substr($customerName, 0, 2));
+                    }
+                    echo '<img src="https://ui-avatars.com/api/?name=' . urlencode($initials) . '&background=e2e8f0&color=0f172a&size=128' . '" class="site-avatar" alt="Logo">';
                 }
-                echo '<img src="https://ui-avatars.com/api/?name=' . urlencode($initials) . '" class="rounded-circle" width="80" alt="Logo">';
-            }
-            ?>
-        </div>
-        <div class="col-md">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Site Name:</strong> <span><?= esc($site['name'] ?? 'N/A') ?></span></p>
-                    <p><strong>Site ID:</strong> <span><?= esc($site['id'] ?? 'N/A') ?></span></p>
-                    <p><strong>Email:</strong> <span><?= esc($site['email'] ?? 'N/A') ?></span></p>
-                    <p><strong>Phone:</strong> <span><?= esc($site['phone'] ?? 'N/A') ?></span></p>
-                </div>
-                <div class="col-md-6">
-                    <p><strong>Customer Name:</strong> <span><?= esc($customer['name'] ?? 'N/A') ?></span></p>
-                    <p><strong>Site Address:</strong> <span><?= esc($site['address'] ?? 'N/A') ?></span></p>
+                ?>
+            </div>
+
+            <div class="col-md">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="site-info-item"><strong>Site Name:</strong> <?= esc($site['name'] ?? 'N/A') ?></div>
+                        <div class="site-info-item"><strong>Site ID:</strong> <?= esc($site['id'] ?? 'N/A') ?></div>
+                        <div class="site-info-item"><strong>Email:</strong> <?= esc($site['email'] ?? 'N/A') ?></div>
+                        <div class="site-info-item"><strong>Phone:</strong> <?= esc($site['phone'] ?? 'N/A') ?></div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="site-info-item"><strong>Customer Name:</strong>
+                            <?= esc($customer['name'] ?? 'N/A') ?></div>
+                        <div class="site-info-item"><strong>Site Address:</strong> <?= esc($site['address'] ?? 'N/A') ?>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -99,8 +259,6 @@
                                 <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-info">View</button>
-                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
-                            <button class="btn btn-sm btn-danger">Delete</button> -->
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -134,8 +292,6 @@
                                 <td><?= esc($insp['status'] ?? 'Pending') ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-info">View</button>
-                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
-                            <button class="btn btn-sm btn-danger">Delete</button> -->
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -168,8 +324,6 @@
                                 <td><?= esc($wo['status'] ?? 'Open') ?></td>
                                 <td>
                                     <button class="btn btn-sm btn-info">View</button>
-                                    <!-- <button class="btn btn-sm btn-secondary">Edit</button>
-                            <button class="btn btn-sm btn-danger">Delete</button> -->
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -183,7 +337,6 @@
 
 <script>
     $(document).ready(function() {
-        // Get current date in DDMMYYYY format
         function getCurrentDate() {
             const today = new Date();
             const day = String(today.getDate()).padStart(2, '0');
@@ -192,24 +345,32 @@
             return day + month + year;
         }
 
+        $('#toggleSiteInfo').on('click', function() {
+            const body = $('#siteInfoBody');
+            const icon = $('#toggleIcon');
+
+            body.slideToggle(250, function() {
+                if (body.is(':visible')) {
+                    icon.removeClass('bi-chevron-down').addClass('bi-chevron-up');
+                } else {
+                    icon.removeClass('bi-chevron-up').addClass('bi-chevron-down');
+                }
+            });
+        });
+
         const currentDate = getCurrentDate();
 
-        /* COMMON PDF STYLE FUNCTION */
         function pdfCustomize(doc) {
-
             doc.styles.title.fontSize = 13;
             doc.defaultStyle.fontSize = 8;
-
             doc.pageMargins = [15, 30, 15, 20];
 
             const table = doc.content[1].table;
             const body = table.body;
             const colCount = body[0].length;
 
-            /* AUTO WIDTH */
             table.widths = Array(colCount).fill('*');
 
-            /* HEADER STYLE */
             doc.styles.tableHeader = {
                 bold: true,
                 fontSize: 9,
@@ -218,15 +379,14 @@
                 alignment: 'left'
             };
 
-            /* ROW COLORS */
             doc.styles.tableBodyEven = {
                 fillColor: '#f3f3f3'
             };
+
             doc.styles.tableBodyOdd = {
                 fillColor: '#ffffff'
             };
 
-            /* BORDERS */
             table.layout = {
                 hLineWidth: function() {
                     return 0.8;
@@ -254,7 +414,6 @@
                 }
             };
 
-            /* WORD WRAP */
             body.forEach(function(row, rowIndex) {
                 row.forEach(function(cell) {
                     if (rowIndex === 0) return;
@@ -269,7 +428,6 @@
             });
         }
 
-        /* ================= EQUIPMENT ================= */
         $('#equipment-datatable').DataTable({
             dom: 'Bfrtip',
             buttons: [{
@@ -294,7 +452,6 @@
             ]
         });
 
-        /* ================= INSPECTIONS ================= */
         $('#inspections-datatable').DataTable({
             dom: 'Bfrtip',
             buttons: [{
@@ -319,7 +476,6 @@
             ]
         });
 
-        /* ================= WORK ORDERS ================= */
         $('#work-orders-datatable').DataTable({
             dom: 'Bfrtip',
             buttons: [{
