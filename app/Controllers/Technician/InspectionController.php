@@ -413,7 +413,7 @@ class InspectionController extends BaseController
             'scheduled_at'    => $now,
             'completed_at'    => $now,
             'status'          => $result,
-            'technician_id'   => $technicianId,  
+            'technician_id'   => $technicianId,
             'findings'        => $assetNotFound === '1'
                 ? 'Asset not found in inventory. Manufacturer: ' . $this->request->getPost('manufacturer')
                 . '; Model: ' . $this->request->getPost('model_name')
