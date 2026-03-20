@@ -13,13 +13,11 @@ class AssetsController extends BaseController
         $siteModel = new SiteModel();
         $equipModel = new EquipmentModel();
         $companyId = $this->session->get('company_id');
-        // Get all sites for the company
         $sites = $siteModel
             ->where('company_id', $companyId)
             ->where('deleted_at', null)
             ->findAll();
 
-        // Get all equipment for these sites
         $siteIds = array_column($sites, 'id');
         $equipment = [];
 
@@ -29,8 +27,6 @@ class AssetsController extends BaseController
                 ->where('deleted_at', null)
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
-
-            log_message('debug', 'Equipment found: ' . count($equipment));
         }
 
         $data['sites'] = $sites;
