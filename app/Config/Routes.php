@@ -43,7 +43,6 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('data-operations/generate-backup', 'Admin\DataOperationController::generateBackup');
     $routes->get('data-operations/download-backup/(:any)', 'Admin\DataOperationController::downloadBackup/$1');
-    // Customer CRUD routes
 
     // Customers
     $routes->get('customers', 'Admin\CustomersController::index');
@@ -171,29 +170,53 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
 
 // Routes for Technician role
 $routes->group('technician', ['filter' => 'role:technician'], static function ($routes) {
-    $routes->get('dashboard',                                 'Technician\\DashboardController::index');
-    $routes->get('customers',                                 'Technician\\CustomerController::index');
-    $routes->get('inspections',                               'Technician\\InspectionController::index');
-    $routes->get('inspections/getEquipment',                  'Technician\\InspectionController::getEquipment');
-    $routes->get('inspections/searchByModel',                 'Technician\\InspectionController::searchByModel');
-    $routes->get('inspections/groupItems',                    'Technician\\InspectionController::groupItems');
-    $routes->get('inspections/siteInventory',                 'Technician\\InspectionController::siteInventory');
-    $routes->get('inspections/groupWorkOrders',               'Technician\\InspectionController::groupWorkOrders');
-    $routes->post('inspections/record',                       'Technician\\InspectionController::record');
-    $routes->post('inspections/deleteRecord/(:num)',          'Technician\\InspectionController::deleteRecord/$1');
+    $routes->get('dashboard',                                   'Technician\\DashboardController::index');
+    $routes->get('customers',                                   'Technician\\CustomerController::index');
 
-    $routes->get('inspections/reportData',                    'Technician\\InspectionController::reportData');
-    $routes->get('inspections/reportData/(:any)',              'Technician\\InspectionController::reportData/$1');
-    $routes->get('inspections/reportPreview/(:any)',           'Technician\\InspectionController::reportPreview/$1');
-    $routes->get('inspections/reportPdf/(:any)',               'Technician\\InspectionController::reportPdf/$1');
-    $routes->get('work-orders', 'Technician\\WorkOrdersController::index');
-    $routes->post('work-orders/create', 'Technician\\InspectionController::createWorkOrder');
-    $routes->get('work-orders/delete/(:num)',                  'Admin\\WorkOrdersController::delete/$1');
-    $routes->get('sites',                                     'Technician\\SitesController::index');
-    $routes->get('sites/view/(:num)',                         'Technician\\SitesController::view/$1');
-    $routes->get('reports',                                   'Technician\\ReportsController::index');
-    $routes->get('service-history',                           'Technician\\ServiceHistoryController::index');
-    $routes->post('service-history/create',                   'Technician\\ServiceHistoryController::create');
+    // ── Inspections ─────────────────────────────────────────────
+    $routes->get('inspections',                                 'Technician\\InspectionController::index');
+    $routes->get('inspections/getEquipment',                    'Technician\\InspectionController::getEquipment');
+    $routes->get('inspections/groupItems',                      'Technician\\InspectionController::groupItems');
+    $routes->get('inspections/siteInventory',                   'Technician\\InspectionController::siteInventory');
+    $routes->get('inspections/groupWorkOrders',                 'Technician\\InspectionController::groupWorkOrders');
+    $routes->post('inspections/record',                         'Technician\\InspectionController::record');
+    $routes->post('inspections/deleteRecord/(:num)',            'Technician\\InspectionController::deleteRecord/$1');
+    $routes->get('inspections/reportPreview/(:any)',            'Technician\\InspectionController::reportPreview/$1');
+    $routes->get('inspections/reportPdf/(:any)',                'Technician\\InspectionController::reportPdf/$1');
+
+    // ── Inspection Workflow (new — routed to SiteInspectionWorkflowController) ──
+    $routes->get('site-inspection/get-equipment',               'Technician\\SiteInspectionWorkflowController::getEquipment');
+    $routes->post('site-inspection/record',                     'Technician\\SiteInspectionWorkflowController::recordInspection');
+    $routes->post('inspections/create',                         'Technician\\SiteInspectionWorkflowController::create');
+    $routes->get('inspections/searchBySerial',                  'Technician\\SiteInspectionWorkflowController::searchBySerial');
+    $routes->get('inspections/searchByModel',                   'Technician\\SiteInspectionWorkflowController::searchByModel');
+    $routes->get('inspections/getByGroupId',                    'Technician\\SiteInspectionWorkflowController::getByGroupId');
+    $routes->get('inspections/getInspectionById/(:num)',        'Technician\\SiteInspectionWorkflowController::getInspectionById/$1');
+    $routes->post('inspections/updateInspection',               'Technician\\SiteInspectionWorkflowController::updateInspection');
+    $routes->post('inspections/deleteById/(:any)',              'Technician\\SiteInspectionWorkflowController::deleteById/$1');
+    $routes->get('inspections/reportData',                      'Technician\\SiteInspectionWorkflowController::reportData');
+    $routes->get('inspections/reportData/(:any)',               'Technician\\SiteInspectionWorkflowController::reportData/$1');
+    $routes->post('inspections/deleteGroup', 'Technician\\SiteInspectionWorkflowController::deleteGroup');
+    // ── Work Orders ────────────────────────────────────────────
+    $routes->get('work-orders',                                 'Technician\\WorkOrdersController::index');
+    $routes->post('work-orders/create',                         'Technician\\SitesController::workOrderCreate');
+    $routes->post('work-orders/update/(:num)',                  'Technician\\SitesController::workOrderUpdate/$1');
+    $routes->get('work-orders/delete/(:num)',                   'Technician\\SitesController::workOrderDelete/$1');
+
+    // ── Sites ──────────────────────────────────────────────────
+    $routes->get('sites',                                       'Technician\\SitesController::index');
+    $routes->get('sites/view/(:num)',                           'Technician\\SitesController::view/$1');
+
+    // ── Equipment ──────────────────────────────────────────────
+    $routes->get('equipment/show/(:num)',                       'Technician\\SitesController::equipmentShow/$1');
+    $routes->post('equipment/create',                           'Technician\\SitesController::equipmentCreate');
+    $routes->post('equipment/update/(:num)',                    'Technician\\SitesController::equipmentUpdate/$1');
+    $routes->get('equipment/delete/(:num)',                     'Technician\\SitesController::equipmentDelete/$1');
+
+    // ── Reports / Service History ──────────────────────────────
+    $routes->get('reports',                                     'Technician\\ReportsController::index');
+    $routes->get('service-history',                             'Technician\\ServiceHistoryController::index');
+    $routes->post('service-history/create',                     'Technician\\ServiceHistoryController::create');
 });
 
 // Auto routing is disabled for security. Explicitly define your routes above.
