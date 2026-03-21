@@ -1,189 +1,205 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 <div class=" mb-4 topbar">
-<h3 class="fw-bold mb-4">System Settings</h3>
+  <h3 class="fw-bold mb-4">System Settings</h3>
 </div>
- <div class="content">
-<div class="glass-card p-3">
-  <div class="row">
-    <div class="col-md-3 border-end">
-      <div class="list-group list-group-flush" id="settings-nav">
-        <a href="#" class="list-group-item list-group-item-action active" data-target="generalSettings">General</a>
-        <a href="#" class="list-group-item list-group-item-action" data-target="adminSettings">Admins</a>
-        <a href="#" class="list-group-item list-group-item-action" data-target="notificationSettings">Notifications</a>
-        <a href="#" class="list-group-item list-group-item-action"
-          data-target="iqNotesSettings">IQ Notes</a>
-        <a href="#" class="list-group-item list-group-item-action"
-          data-target="equipmentSettings">Equipment Setting</a>
-      </div>
-    </div>
-
-    <div class="col-md-9 p-4">
-
-      <!-- General settings pane -->
-      <div id="generalSettings" class="settings-pane">
-        <h5 class="fw-bold mb-3">General Configuration</h5>
-
-        <form id="generalForm">
-          <?= csrf_field() ?>
-
-          <div class="mb-3">
-            <label class="form-label">Company Name</label>
-            <input type="text" name="company_name" class="form-control"
-              value="<?= esc($settings['company_name'] ?? '') ?>">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Time Zone</label>
-            <select name="time_zone" class="form-select">
-              <?php
-              $tz = $settings['time_zone'] ?? 'Asia/Kolkata';
-              $timezones = [
-                'Asia/Kolkata',
-                'America/Chicago',
-                'America/New_York',
-                'America/Los_Angeles',
-                'UTC'
-              ];
-              ?>
-              <?php foreach ($timezones as $z): ?>
-                <option value="<?= esc($z) ?>" <?= $tz === $z ? 'selected' : '' ?>>
-                  <?= esc($z) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" id="maintenanceMode"
-              name="maintenance_mode" value="1"
-              <?= !empty($settings['maintenance_mode']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="maintenanceMode">Enable Maintenance Mode</label>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="btnSaveGeneral">Save Changes</button>
-        </form>
-      </div>
-
-      <!-- Admin settings pane -->
-      <div id="adminSettings" class="settings-pane d-none">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-          <h5 class="fw-bold mb-0">Admins</h5>
-          <button class="btn btn-primary shadow-sm" type="button" id="btnAddAdmin"
-            data-bs-toggle="modal" data-bs-target="#adminModal">
-            <i class="fa-solid fa-user-plus me-2"></i> Add Admin
-          </button>
-        </div>
-
-        <div class="glass-card p-3">
-          <div class="table-responsive">
-          <table id="admins-datatable" class="display" style="width:100%">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-          </table>
-        </div>
+<div class="content">
+  <div class="glass-card p-3">
+    <div class="row">
+      <div class="col-md-3 border-end">
+        <div class="list-group list-group-flush" id="settings-nav">
+          <a href="#" class="list-group-item list-group-item-action active"
+            data-target="generalSettings">General</a>
+          <a href="#" class="list-group-item list-group-item-action" data-target="adminSettings">Admins</a>
+          <a href="#" class="list-group-item list-group-item-action"
+            data-target="notificationSettings">Notifications</a>
+          <a href="#" class="list-group-item list-group-item-action" data-target="iqNotesSettings">IQ
+            Notes</a>
+          <a href="#" class="list-group-item list-group-item-action" data-target="equipmentSettings">Equipment
+            Setting</a>
         </div>
       </div>
 
-      <!-- Notifications settings pane -->
-      <div id="notificationSettings" class="settings-pane d-none">
-        <h5 class="fw-bold mb-3">Notification Preferences</h5>
+      <div class="col-md-9 p-4">
 
-        <form id="notifyForm">
-          <?= csrf_field() ?>
+        <!-- General settings pane -->
+        <div id="generalSettings" class="settings-pane">
+          <h5 class="fw-bold mb-3">General Configuration</h5>
 
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="emailNotifications"
-              name="email_notifications" value="1"
-              <?= !empty($settings['email_notifications']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="emailNotifications">Email Notifications</label>
-          </div>
+          <form id="generalForm">
+            <?= csrf_field() ?>
 
-          <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="smsNotifications"
-              name="sms_notifications" value="1"
-              <?= !empty($settings['sms_notifications']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
-          </div>
-
-          <div class="form-check form-switch mb-4">
-            <input class="form-check-input" type="checkbox" id="pushNotifications"
-              name="push_notifications" value="1"
-              <?= !empty($settings['push_notifications']) ? 'checked' : '' ?>>
-            <label class="form-check-label" for="pushNotifications">Push Notifications</label>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="btnSaveNotify">Save Preferences</button>
-        </form>
-      </div>
-
-      <!-- IQ Notes pane -->
-      <div id="iqNotesSettings" class="settings-pane d-none">
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="fw-bold mb-0">IQ Notes</h5>
-          <button class="btn btn-primary btn-sm" id="btnAddIqNote">
-            <i class="fa fa-plus"></i> Add Note
-          </button>
-        </div>
-
-        <div class="glass-card mb-3 p-3">
-          <div class="table-responsive">
-          <table class="table table-sm w-100" id="iqNotesTable">
-            <thead>
-              <tr>
-                <th>Note</th>
-                <th width="120">Action</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Equipment Settings -->
-      <div id="equipmentSettings" class="settings-pane d-none">
-        <div class="table-container">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <div>
-            <h5 class="fw-bold mb-0">Equipment Inventory</h5>
-              <small class="text-muted">Dynamically populated from Equipment DB. Toggle EST &amp; CAL flags per device row.</small>
+            <div class="mb-3">
+              <label class="form-label">Company Name</label>
+              <input type="text" name="company_name" class="form-control"
+                value="<?= esc($settings['company_name'] ?? '') ?>">
             </div>
-            <!-- <button class="btn btn-primary btn-sm" id="btnAddEquipment">
+
+            <div class="mb-3">
+              <label class="form-label">Time Zone</label>
+              <select name="time_zone" class="form-select">
+                <?php
+                $tz = $settings['time_zone'] ?? 'Asia/Kolkata';
+                $timezones = [
+                  'Asia/Kolkata',
+                  'America/Chicago',
+                  'America/New_York',
+                  'America/Los_Angeles',
+                  'UTC'
+                ];
+                ?>
+                <?php foreach ($timezones as $z): ?>
+                  <option value="<?= esc($z) ?>" <?= $tz === $z ? 'selected' : '' ?>>
+                    <?= esc($z) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="maintenanceMode" name="maintenance_mode"
+                value="1" <?= !empty($settings['maintenance_mode']) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="maintenanceMode">Enable Maintenance Mode</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSaveGeneral">Save Changes</button>
+          </form>
+        </div>
+
+        <!-- Admin settings pane -->
+        <div id="adminSettings" class="settings-pane d-none">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5 class="fw-bold mb-0">Admins</h5>
+            <button class="btn btn-primary shadow-sm" type="button" id="btnAddAdmin" data-bs-toggle="modal"
+              data-bs-target="#adminModal">
+              <i class="fa-solid fa-user-plus me-2"></i> Add Admin
+            </button>
+          </div>
+
+          <div class="glass-card p-3">
+            <div class="table-responsive">
+              <table id="admins-datatable" class="display" style="width:100%">
+                <thead>
+                  <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notifications settings pane -->
+        <div id="notificationSettings" class="settings-pane d-none">
+          <h5 class="fw-bold mb-3">Notification Preferences</h5>
+
+          <form id="notifyForm">
+            <?= csrf_field() ?>
+
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="emailNotifications"
+                name="email_notifications" value="1"
+                <?= !empty($settings['email_notifications']) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+            </div>
+
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="smsNotifications"
+                name="sms_notifications" value="1"
+                <?= !empty($settings['sms_notifications']) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
+            </div>
+
+            <div class="form-check form-switch mb-4">
+              <input class="form-check-input" type="checkbox" id="pushNotifications"
+                name="push_notifications" value="1"
+                <?= !empty($settings['push_notifications']) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="pushNotifications">Push Notifications</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="btnSaveNotify">Save Preferences</button>
+          </form>
+        </div>
+
+        <!-- IQ Notes pane -->
+        <div id="iqNotesSettings" class="settings-pane d-none">
+
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">IQ Notes</h5>
+            <button class="btn btn-primary btn-sm" id="btnAddIqNote">
+              <i class="fa fa-plus"></i> Add Note
+            </button>
+          </div>
+
+          <div class="glass-card mb-3 p-3">
+            <div class="table-responsive">
+              <table class="table table-sm w-100" id="iqNotesTable">
+                <thead>
+                  <tr>
+                    <th>Note</th>
+                    <th width="120">Action</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Equipment Settings -->
+        <div id="equipmentSettings" class="settings-pane d-none">
+          <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <h5 class="fw-bold mb-0">Equipment Inventory</h5>
+                <small class="text-muted">Dynamically populated from Equipment DB. Toggle EST &amp; CAL
+                  flags per device row.</small>
+              </div>
+              <!-- <button class="btn btn-primary btn-sm" id="btnAddEquipment">
               <i class="fas fa-plus"></i> Add Equipment
             </button> -->
-          </div>
-        <div class="glass-card mb-3 p-3 mt-3">
-          <div class="table-responsive">
-          <table id="equipment-datatable" class="table  table-hover w-100">
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th class="text-center" style="width:80px;">EST</th>
-                <th class="text-center" style="width:80px;">CAL</th>
-                <th class="text-center" style="width:100px;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="equipmentTable"></tbody>
-          </table>
-          </div>
+            </div>
+            <div class="glass-card mb-3 p-3 mt-3">
+              <div class="table-responsive">
+                <table id="equipment-datatable" class="table  table-hover w-100">
+                  <thead>
+                    <tr>
+                      <th>Description</th>
+                      <th class="text-center" style="width:80px;">
+                        EST
+                        <div class="form-check d-flex justify-content-center m-0 mt-1">
+                          <input class="form-check-input" type="checkbox" id="selectAllEst"
+                            title="Select All EST"
+                            style="cursor:pointer;width:1.2em;height:1.2em;">
+                        </div>
+                      </th>
+                      <th class="text-center" style="width:80px;">
+                        CAL
+                        <div class="form-check d-flex justify-content-center m-0 mt-1">
+                          <input class="form-check-input" type="checkbox" id="selectAllCal"
+                            title="Select All CAL"
+                            style="cursor:pointer;width:1.2em;height:1.2em;">
+                        </div>
+                      </th>
+                      <th class="text-center" style="width:100px;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="equipmentTable"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
+
+
       </div>
-
-
     </div>
   </div>
-</div>
 </div>
 
 <!-- Admin Modal -->
@@ -302,7 +318,8 @@
 
           <div class="form-check form-switch mb-3">
             <input type="checkbox" class="form-check-input" name="est" id="equipment-est" role="switch">
-            <label class="form-check-label fw-semibold" for="equipment-est">EST (Electrical Safety Test)</label>
+            <label class="form-check-label fw-semibold" for="equipment-est">EST (Electrical Safety
+              Test)</label>
           </div>
 
           <div class="form-check form-switch">
@@ -413,7 +430,8 @@
           },
           error: function(xhr) {
             let msg = 'Failed to update settings';
-            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr
+              .responseJSON.message;
             swalError(msg);
           },
           complete: function() {
@@ -447,11 +465,13 @@
           },
           error: function(xhr) {
             let msg = 'Failed to update notifications';
-            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr
+              .responseJSON.message;
             swalError(msg);
           },
           complete: function() {
-            $('#btnSaveNotify').prop('disabled', false).text('Save Preferences');
+            $('#btnSaveNotify').prop('disabled', false).text(
+              'Save Preferences');
           }
         });
 
@@ -518,7 +538,8 @@
           $('#admin-status').val(res.data.status);
           $('#admin-password').val('');
           $("#adminForm").validate().resetForm();
-          $("#adminForm .is-invalid, #adminForm .is-valid").removeClass("is-invalid is-valid");
+          $("#adminForm .is-invalid, #adminForm .is-valid").removeClass(
+            "is-invalid is-valid");
           $('#adminModal').modal('show');
         } else {
           swalError('Admin not found');
@@ -592,7 +613,8 @@
           },
           error: function(xhr) {
             let msg = 'Failed to save admin';
-            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr
+              .responseJSON.message;
             swalError(msg);
           },
           complete: function() {
@@ -630,7 +652,8 @@
           },
           error: function(xhr) {
             let msg = 'Delete failed';
-            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr.responseJSON.message;
+            if (xhr.responseJSON && xhr.responseJSON.message) msg = xhr
+              .responseJSON.message;
             swalError(msg);
           }
         });
@@ -781,24 +804,28 @@
     // ── Equipment Setting DataTable ────────────────────────────────────────
     // Columns: Make | Model | Device Type | EST (toggle) | CAL (toggle) | Actions
     const EQUIP_TOGGLE_URL = "<?= site_url('admin/settings/equipment/toggle') ?>";
-    const EQUIP_SAVE_URL   = "<?= site_url('admin/settings/equipment/save') ?>";
-    const EQUIP_DEL_URL    = "<?= site_url('admin/settings/equipment/delete') ?>";
+    const EQUIP_SAVE_URL = "<?= site_url('admin/settings/equipment/save') ?>";
+    const EQUIP_DEL_URL = "<?= site_url('admin/settings/equipment/delete') ?>";
 
     const equipmentTable = $('#equipment-datatable').DataTable({
-      ajax: { url: "<?= site_url('admin/settings/equipment') ?>", dataSrc: 'data' },
-      columns: [
-        { 
+      ajax: {
+        url: "<?= site_url('admin/settings/equipment') ?>",
+        dataSrc: 'data'
+      },
+      columns: [{
           data: null,
           render: function(row) {
-            const make  = row.make        || '';
-            const model = row.model       || '';
+            const make = row.make || '';
+            const model = row.model || '';
             const dtype = row.device_type || '';
             const parts = [make, model, dtype].filter(p => p !== '');
             return parts.join(' — ') || '<span class="text-muted">—</span>';
           }
         },
         {
-          data: 'est', className: 'text-center', orderable: false,
+          data: 'est',
+          className: 'text-center',
+          orderable: false,
           render: function(data, type, row) {
             return `<div class="form-check d-flex justify-content-center m-0">
               <input class="form-check-input equip-cb" type="checkbox"
@@ -809,7 +836,9 @@
           }
         },
         {
-          data: 'cal', className: 'text-center', orderable: false,
+          data: 'cal',
+          className: 'text-center',
+          orderable: false,
           render: function(data, type, row) {
             return `<div class="form-check d-flex justify-content-center m-0">
               <input class="form-check-input equip-cb" type="checkbox"
@@ -820,9 +849,11 @@
           }
         },
         {
-          data: null, orderable: false, className: 'text-center',
+          data: null,
+          orderable: false,
+          className: 'text-center',
           render: function(row) {
-            const make  = (row.make  || '').replace(/"/g, '&quot;');
+            const make = (row.make || '').replace(/"/g, '&quot;');
             const model = (row.model || '').replace(/"/g, '&quot;');
             const dtype = (row.device_type || '').replace(/"/g, '&quot;');
             return `
@@ -846,12 +877,16 @@
     // Inline checkbox toggle
     $(document).on('change', '.equip-cb', function() {
       const $cb = $(this);
-      const id    = $cb.data('id');
+      const id = $cb.data('id');
       const field = $cb.data('field');
       const value = this.checked ? 1 : 0;
       const label = field.toUpperCase();
-      $.post(EQUIP_TOGGLE_URL,
-        { id, field, value, '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val() },
+      $.post(EQUIP_TOGGLE_URL, {
+          id,
+          field,
+          value,
+          '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val()
+        },
         function(res) {
           if (res.status === 'success') {
             swalSuccess(label + (value ? ' enabled' : ' disabled') + ' successfully');
@@ -861,14 +896,17 @@
           }
         },
         'json'
-      ).fail(function() { $cb.prop('checked', !$cb.prop('checked')); swalError('Connection error'); });
+      ).fail(function() {
+        $cb.prop('checked', !$cb.prop('checked'));
+        swalError('Connection error');
+      });
     });
 
     // Open edit modal
     $(document).on('click', '.edit-equipment', function() {
       const $btn = $(this);
       $('#equipment-id').val($btn.data('id'));
-      $('#equipment-label-make').text($btn.data('make')  || '—');
+      $('#equipment-label-make').text($btn.data('make') || '—');
       $('#equipment-label-model').text($btn.data('model') || '—');
       $('#equipment-label-type').text($btn.data('device_type') || '—');
       $('#equipment-est').prop('checked', $btn.data('est') == 1);
@@ -879,19 +917,104 @@
     // Save modal
     $('#equipmentForm').on('submit', function(e) {
       e.preventDefault();
-      const id  = $('#equipment-id').val();
+      const id = $('#equipment-id').val();
       const est = $('#equipment-est').is(':checked') ? 1 : 0;
       const cal = $('#equipment-cal').is(':checked') ? 1 : 0;
-      $.post(EQUIP_SAVE_URL,
-        { id, est, cal, '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val() },
+      $.post(EQUIP_SAVE_URL, {
+          id,
+          est,
+          cal,
+          '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val()
+        },
         function(res) {
           $('#equipmentModal').modal('hide');
           swalSuccess(res.message || 'Saved');
           equipmentTable.ajax.reload(null, false);
         }, 'json'
-      ).fail(function() { swalError('Save failed'); });
+      ).fail(function() {
+        swalError('Save failed');
+      });
+    });
+    // ---------------------------------------
+    // Select All EST / CAL with confirmation
+    // ---------------------------------------
+    function handleSelectAll(field, $masterCb) {
+      const checked = $masterCb.is(':checked');
+      const label = field.toUpperCase();
+      const action = checked ? 'enable' : 'disable';
+
+      Swal.fire({
+        icon: 'warning',
+        title: `${action.charAt(0).toUpperCase() + action.slice(1)} all ${label}?`,
+        text: `This will ${action} ${label} for ALL equipment records in the current dataset.`,
+        showCancelButton: true,
+        confirmButtonText: `Yes, ${action} all`,
+        cancelButtonText: 'Cancel'
+      }).then(function(r) {
+        if (!r.isConfirmed) {
+          $masterCb.prop('checked', !checked); // revert
+          return;
+        }
+
+        // Collect all visible row IDs from DataTable
+        const ids = equipmentTable.rows({
+          search: 'applied'
+        }).data().toArray().map(r => r.id);
+        const value = checked ? 1 : 0;
+        let done = 0,
+          failed = 0;
+
+        if (!ids.length) return;
+
+        ids.forEach(function(id) {
+          $.post(EQUIP_TOGGLE_URL, {
+              id,
+              field,
+              value,
+              '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]')
+                .first().val()
+            },
+            function(res) {
+              if (res.status !== 'success') failed++;
+              done++;
+              if (done === ids.length) {
+                equipmentTable.ajax.reload(null, false);
+                if (failed === 0) {
+                  swalSuccess(`${label} ${action}d for all ${done} records`);
+                } else {
+                  swalError(`${failed} record(s) failed to update`);
+                }
+              }
+            }, 'json'
+          ).fail(function() {
+            failed++;
+            done++;
+            if (done === ids.length) {
+              equipmentTable.ajax.reload(null, false);
+              swalError(`${failed} record(s) failed to update`);
+            }
+          });
+        });
+      });
+    }
+
+    $('#selectAllEst').on('change', function() {
+      handleSelectAll('est', $(this));
+    });
+    $('#selectAllCal').on('change', function() {
+      handleSelectAll('cal', $(this));
     });
 
+    // Keep master checkboxes in sync after table redraws
+    equipmentTable.on('draw', function() {
+      ['est', 'cal'].forEach(function(field) {
+        const $master = $('#selectAll' + field.charAt(0).toUpperCase() + field.slice(1));
+        const $rows = $('#equipment-datatable .equip-cb[data-field="' + field + '"]');
+        const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows
+          .length;
+        $master.prop('checked', allChecked);
+      });
+    });
     // Reset (soft-delete) — sets EST=0, CAL=0, does NOT delete the record
     $(document).on('click', '.del-equipment', function() {
       const id = $(this).data('id');
@@ -902,17 +1025,19 @@
         showCancelButton: true,
         confirmButtonText: 'Yes, Reset',
         confirmButtonColor: '#e67e22',
-        cancelButtonColor:  '#6c757d'
+        cancelButtonColor: '#6c757d'
       }).then(function(r) {
         if (!r.isConfirmed) return;
         $.ajax({
-          url:  EQUIP_DEL_URL + '/' + id,
+          url: EQUIP_DEL_URL + '/' + id,
           type: 'DELETE',
           success: function(res) {
             swalSuccess(res.message || 'Flags reset');
             equipmentTable.ajax.reload(null, false);
           },
-          error: function() { swalError('Reset failed'); }
+          error: function() {
+            swalError('Reset failed');
+          }
         });
       });
     });
