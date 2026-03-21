@@ -43,6 +43,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('data-operations/generate-backup', 'Admin\DataOperationController::generateBackup');
     $routes->get('data-operations/download-backup/(:any)', 'Admin\DataOperationController::downloadBackup/$1');
+    // Customer CRUD routes
 
     // Customers
     $routes->get('customers', 'Admin\CustomersController::index');
@@ -118,11 +119,11 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('inspections/getInspectionById/(:num)', 'Admin\InspectionsController::getInspectionById/$1');
     $routes->post('inspections/updateInspection', 'Admin\InspectionsController::updateInspection');
 
-   
+
     $routes->get('inspections/reportData', 'Admin\InspectionsController::reportData');
     $routes->get('inspections/reportData/(:any)', 'Admin\InspectionsController::reportData/$1');
 
-        // PDF endpoint for inspection reports
+    // PDF endpoint for inspection reports
     $routes->get('inspections/reportPdf/(:any)', 'Admin\InspectionsController::reportPdf/$1');
 
 
