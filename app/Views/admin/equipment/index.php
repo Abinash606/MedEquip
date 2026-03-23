@@ -12,27 +12,27 @@
     const BASE_URL = "<?= $BASE_URL ?>";
     const equipmentData = <?= json_encode($equipment) ?>;
 </script>
- <div class="content">
-<div class="glass-card p-3">
-    <div class="table-responsive">
-    <table class="table table-striped" id="equipmentTable">
-        <thead>
-            <tr>
-                <th>Brand</th>
-                <th>Model</th>
-                <th>Description</th>
-                <th>Part #</th>
-                <!-- <th>AKA</th> -->
-                <th>Service Manual</th>
-                <th>Owners Manual</th>
-                <th>Photo</th>
-                <th width="150">Action</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+<div class="content">
+    <div class="glass-card p-3">
+        <div class="table-responsive">
+            <table class="table table-striped" id="equipmentTable">
+                <thead>
+                    <tr>
+                        <th>Brand</th>
+                        <th>Model</th>
+                        <th>Description</th>
+                        <th>Part #</th>
+                        <!-- <th>AKA</th> -->
+                        <th>Service Manual</th>
+                        <th>Owners Manual</th>
+                        <th>Photo</th>
+                        <th width="150">Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
-</div>
 </div>
 <!-- MODAL -->
 <div class="modal fade" id="equipmentModal" tabindex="-1">
@@ -50,17 +50,19 @@
                     <div class="row">
                         <div class="col-md-6 mb-2">
                             <label>Brand</label>
-                            <input type="text" name="make" id="make" class="form-control" required>
+                            <select name="make" id="make" class="form-control select2-field" required
+                                style="width:100%"></select>
                         </div>
                         <div class="col-md-6 mb-2">
                             <label>Model</label>
-                            <input type="text" name="model" id="model" class="form-control" required>
+                            <select name="model" id="model" class="form-control select2-field" required
+                                style="width:100%"></select>
                         </div>
                     </div>
-
                     <div class="mb-2">
                         <label>Description</label>
-                        <input type="text" name="device_type" id="device_type" class="form-control" required>
+                        <select name="device_type" id="device_type" class="form-control select2-field" required
+                            style="width:100%"></select>
                     </div>
 
                     <div class="row">
@@ -78,10 +80,7 @@
 
                     <div class="mb-2">
                         <label>Service Manual (PDF, Max 5MB)</label>
-                        <input type="file"
-                            name="service_manual"
-                            class="form-control"
-                            accept="application/pdf">
+                        <input type="file" name="service_manual" class="form-control" accept="application/pdf">
                     </div>
 
                     <div class="mb-2">
@@ -123,7 +122,68 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<style>
+    /* Select2 dropdown - white background, dark text */
+    .select2-dropdown {
+        background: #ffffff !important;
+        border: 1px solid #ced4da !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, .15) !important;
+    }
 
+    .select2-results__option {
+        color: #212529 !important;
+        padding: 8px 12px !important;
+        font-size: 14px !important;
+    }
+
+    .select2-container--default .select2-results__option--highlighted {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+    }
+
+    .select2-container--default .select2-results__option[aria-selected=true] {
+        background-color: #e9ecef !important;
+        color: #212529 !important;
+    }
+
+    .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ced4da !important;
+        border-radius: 4px !important;
+        padding: 6px 8px !important;
+        color: #212529 !important;
+        background: #fff !important;
+    }
+
+    /* Selection box inside modal */
+    .select2-container--default .select2-selection--single {
+        height: 38px !important;
+        border: 1px solid #adb5bd !important;
+        border-radius: 10px !important;
+        background: #fff !important;
+    }
+
+    .select2-container--default.select2-container--open .select2-selection--single,
+    .select2-container--default.select2-container--focus .select2-selection--single {
+        border-color: #0d6efd !important;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, .15) !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #212529 !important;
+        line-height: 28px !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__placeholder {
+        color: #6c757d !important;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        top: 5px !important;
+    }
+</style>
 <script>
     let table;
 
@@ -315,11 +375,10 @@
                 if (res.status === 'success') {
                     const d = res.data;
                     equipment_id.value = d.id;
-                    make.value = d.make ?? '';
-                    model.value = d.model ?? '';
-                    device_type.value = d.device_type ?? '';
                     serial_number.value = d.serial_number ?? '';
-                    // asset_tag.value = d.asset_tag ?? '';
+                    loadBrands(d.make);
+                    loadModels(d.make, d.model);
+                    loadDescs(d.make, d.model, d.device_type);
                     new bootstrap.Modal('#equipmentModal').show();
                 }
             });
@@ -412,7 +471,101 @@
                 });
         });
     });
+    // ---------------------------------------
+    // Select2 Searchable Dropdowns
+    // ---------------------------------------
+    function makeOptions(values, selected) {
+        return values.map(v =>
+            new Option(v, v, v === selected, v === selected)
+        );
+    }
 
+    function initSelect2(selector, placeholder) {
+        $(selector).select2({
+            placeholder: placeholder,
+            allowClear: true,
+            tags: true, // allows adding new entries
+            dropdownParent: $('#equipmentModal'),
+            createTag: function(params) {
+                const term = $.trim(params.term);
+                if (!term) return null;
+                return {
+                    id: 'new_' + term,
+                    text: '+ Add "' + term + '"',
+                    newVal: term
+                };
+            }
+        }).on('select2:select', function(e) {
+            // If user picked a "new" tag, replace value with clean text
+            if (e.params.data.newVal) {
+                const clean = e.params.data.newVal;
+                // Replace the temp option with a real one
+                const $opt = new Option(clean, clean, true, true);
+                $(this).empty().append($opt).trigger('change');
+            }
+        });
+    }
+
+    function loadBrands(selected) {
+        const brands = [...new Set(equipmentData.map(r => r.make).filter(Boolean))].sort();
+        $('#make').empty().append('<option></option>');
+        makeOptions(brands, selected).forEach(o => $('#make').append(o));
+        $('#make').trigger('change');
+    }
+
+    function loadModels(brand, selected) {
+        const rows = brand ? equipmentData.filter(r => r.make === brand) : equipmentData;
+        const models = [...new Set(rows.map(r => r.model).filter(Boolean))].sort();
+        $('#model').empty().append('<option></option>');
+        makeOptions(models, selected).forEach(o => $('#model').append(o));
+        $('#model').trigger('change');
+    }
+
+    function loadDescs(brand, model, selected) {
+        let rows = equipmentData;
+        if (brand) rows = rows.filter(r => r.make === brand);
+        if (model) rows = rows.filter(r => r.model === model);
+        const descs = [...new Set(rows.map(r => r.device_type).filter(Boolean))].sort();
+        $('#device_type').empty().append('<option></option>');
+        makeOptions(descs, selected).forEach(o => $('#device_type').append(o));
+        $('#device_type').trigger('change');
+    }
+
+    // Init Select2 on all three
+    initSelect2('#make', 'Type or select brand...');
+    initSelect2('#model', 'Type or select model...');
+    initSelect2('#device_type', 'Type or select description...');
+
+    // Brand change → reload model & desc
+    $('#make').on('change', function() {
+        const brand = $(this).val();
+        loadModels(brand, null);
+        loadDescs(brand, null, null);
+    });
+
+    // Model change → auto-fill desc
+    $('#model').on('change', function() {
+        const brand = $('#make').val();
+        const model = $(this).val();
+        loadDescs(brand, model, null);
+        const match = equipmentData.find(r => r.make === brand && r.model === model);
+        if (match && match.device_type) {
+            const $opt = new Option(match.device_type, match.device_type, true, true);
+            $('#device_type').empty().append('<option></option>').append($opt).trigger('change');
+        }
+    });
+
+    // Load initial data
+    loadBrands(null);
+    loadModels(null, null);
+    loadDescs(null, null, null);
+
+    // Reset on Add
+    $('#addBtn').on('click', function() {
+        loadBrands(null);
+        loadModels(null, null);
+        loadDescs(null, null, null);
+    });
     const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
     function checkFileSize(input) {
