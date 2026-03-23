@@ -6,6 +6,9 @@
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold mb-0">Site Directory</h3>
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addSiteModal">
+            <i class="fa-solid fa-plus me-2"></i> Add Site
+        </button>
     </div>
 
     <!-- Search -->
@@ -14,8 +17,7 @@
             <span class="input-group-text bg-white">
                 <i class="fa-solid fa-search"></i>
             </span>
-            <input id="site-search" type="text"
-                class="form-control border-start-0 ps-0"
+            <input id="site-search" type="text" class="form-control border-start-0 ps-0"
                 placeholder="Search by site, address or customer name...">
         </div>
     </div>
@@ -50,7 +52,6 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-
             <tbody>
                 <?php if (!empty($sites)) : ?>
                     <?php foreach ($sites as $site) : ?>
@@ -71,9 +72,7 @@
                     <?php endforeach; ?>
                 <?php else : ?>
                     <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            No sites found
-                        </td>
+                        <td colspan="7" class="text-center text-muted">No sites found</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
@@ -82,188 +81,244 @@
 
 </section>
 
-<!-- 🔥 SEARCH + FILTER SCRIPT -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
 
-        const searchInput = document.getElementById('site-search');
-        const customerFilter = document.getElementById('customer-filter');
-        const rows = document.querySelectorAll('#sites-datatable tbody tr');
+<!-- ═══════════════════════════════════════════════════════
+     ADD SITE MODAL
+════════════════════════════════════════════════════════ -->
+<div class="modal fade" id="addSiteModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="addSiteForm" method="POST" action="<?= site_url('technician/sites/add') ?>">
+                <?= csrf_field() ?>
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fa-solid fa-building me-2"></i>Add Site
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
 
-        function filterSites() {
-            const searchValue = searchInput.value.toLowerCase();
-            const customerValue = customerFilter.value.toLowerCase();
+                <div class="modal-body">
 
-            rows.forEach(row => {
-                const siteName = row.cells[0].innerText.toLowerCase();
-                const customerName = row.cells[1].innerText.toLowerCase();
-                const siteAddress = row.cells[2].innerText.toLowerCase();
+                    <div class="row g-3 mb-3">
+                        <!-- Site Name -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Site Name <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="add-site-name" name="name"
+                                placeholder="Enter site name" required>
+                        </div>
 
-                const matchSearch =
-                    siteName.includes(searchValue) ||
-                    customerName.includes(searchValue) ||
-                    siteAddress.includes(searchValue);
+                        <!-- Customer Dropdown -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">
+                                Customer <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="add-site-customer" name="customer_id" required>
+                                <option value="">-- Select Customer --</option>
+                                <?php foreach ($customers as $customer): ?>
+                                    <option value="<?= esc($customer['id']) ?>">
+                                        <?= esc($customer['name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
 
-                const matchCustomer =
-                    customerValue === '' || customerName === customerValue;
+                    <!-- Address -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Address</label>
+                            <input type="text" class="form-control" id="add-site-address" name="address"
+                                placeholder="Street address">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">City</label>
+                            <input type="text" class="form-control" id="add-site-city" name="city" placeholder="City">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">State</label>
+                            <input type="text" class="form-control" id="add-site-state" name="state"
+                                placeholder="State">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Zip</label>
+                            <input type="text" class="form-control" id="add-site-zip" name="zip" placeholder="Zip code">
+                        </div>
+                    </div>
 
-                row.style.display = (matchSearch && matchCustomer) ?
-                    '' :
-                    'none';
-            });
-        }
+                    <!-- Contact -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Contact Name</label>
+                            <input type="text" class="form-control" id="add-site-contact" name="contact_name"
+                                placeholder="Contact person">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="email" class="form-control" id="add-site-email" name="email"
+                                placeholder="email@example.com">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Phone</label>
+                            <input type="text" class="form-control" id="add-site-phone" name="phone"
+                                placeholder="Phone number">
+                        </div>
+                    </div>
 
-        searchInput.addEventListener('keyup', filterSites);
-        customerFilter.addEventListener('change', filterSites);
-    });
-</script>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveSiteBtn">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <script>
     $(document).ready(function() {
 
-        const table = $('#sites-datatable').DataTable({
-            dom: 'Bfrtip',
-            pageLength: 10,
-            order: [
-                [0, 'asc']
-            ],
-
-            buttons: [{
-                    extend: 'copy',
-                    text: 'Copy',
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    }
-                },
-                {
-                    extend: 'excelHtml5',
-                    text: 'Excel',
-                    filename: function() {
-                        const today = new Date();
-                        let d = String(today.getDate()).padStart(2, '0');
-                        let m = String(today.getMonth() + 1).padStart(2, '0');
-                        let y = today.getFullYear();
-                        return 'Technician_Sites_' + d + m + y;
+        // ── DataTable safe init ──────────────────────────────────────
+        var table;
+        if ($.fn.dataTable.isDataTable('#sites-datatable')) {
+            table = $('#sites-datatable').DataTable();
+        } else {
+            table = $('#sites-datatable').DataTable({
+                dom: 'Bfrtip',
+                pageLength: 10,
+                order: [
+                    [0, 'asc']
+                ],
+                buttons: [{
+                        extend: 'copy',
+                        text: 'Copy',
+                        exportOptions: {
+                            columns: ':visible:not(:last-child)'
+                        }
                     },
-                    title: 'Technician Sites',
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    }
-                },
-                {
-                    extend: 'pdfHtml5',
-                    text: 'PDF',
-                    orientation: 'landscape',
-                    pageSize: 'A4',
-                    title: 'Technician Sites',
-
-                    filename: function() {
-                        const today = new Date();
-                        let d = String(today.getDate()).padStart(2, '0');
-                        let m = String(today.getMonth() + 1).padStart(2, '0');
-                        let y = today.getFullYear();
-                        return 'Technician_Sites_' + d + m + y;
+                    {
+                        extend: 'excelHtml5',
+                        text: 'Excel',
+                        filename: function() {
+                            const d = new Date();
+                            return 'Technician_Sites_' +
+                                String(d.getDate()).padStart(2, '0') +
+                                String(d.getMonth() + 1).padStart(2, '0') +
+                                d.getFullYear();
+                        },
+                        title: 'Technician Sites',
+                        exportOptions: {
+                            columns: ':visible:not(:last-child)'
+                        }
                     },
-
-                    exportOptions: {
-                        columns: ':visible:not(:last-child)'
-                    },
-
-                    customize: function(doc) {
-
-                        /* FONT */
-                        doc.styles.title.fontSize = 13;
-                        doc.styles.tableHeader.fontSize = 9;
-                        doc.defaultStyle.fontSize = 8;
-
-                        /* MARGIN */
-                        doc.pageMargins = [15, 30, 15, 20];
-
-                        const table = doc.content[1].table;
-                        const body = table.body;
-                        const colCount = body[0].length;
-
-                        /* AUTO WIDTH */
-                        table.widths = Array(colCount).fill('*');
-
-                        /* HEADER COLOR */
-                        doc.styles.tableHeader = {
-                            bold: true,
-                            fontSize: 9,
-                            color: 'black',
-                            fillColor: '#a4d169',
-                            alignment: 'left'
-                        };
-
-                        /* ROW COLORS */
-                        doc.styles.tableBodyEven = {
-                            fillColor: '#f3f3f3'
-                        };
-                        doc.styles.tableBodyOdd = {
-                            fillColor: '#ffffff'
-                        };
-
-                        /* BORDERS */
-                        table.layout = {
-                            hLineWidth: function() {
-                                return 0.8;
-                            },
-                            vLineWidth: function() {
-                                return 0.8;
-                            },
-                            hLineColor: function() {
-                                return '#cccccc';
-                            },
-                            vLineColor: function() {
-                                return '#cccccc';
-                            },
-                            paddingLeft: function() {
-                                return 4;
-                            },
-                            paddingRight: function() {
-                                return 4;
-                            },
-                            paddingTop: function() {
-                                return 3;
-                            },
-                            paddingBottom: function() {
-                                return 3;
-                            }
-                        };
-
-                        /* WORD WRAP */
-                        body.forEach(function(row, rowIndex) {
-                            row.forEach(function(cell) {
-
-                                if (rowIndex === 0) return;
-
-                                if (typeof cell.text === 'string') {
-                                    cell.text = cell.text.replace(/(.{35})/g,
-                                        '$1\n');
-                                }
-
-                                cell.noWrap = false;
-                                cell.alignment = 'left';
-                            });
-                        });
-
+                    {
+                        extend: 'pdfHtml5',
+                        text: 'PDF',
+                        orientation: 'landscape',
+                        pageSize: 'A4',
+                        title: 'Technician Sites',
+                        filename: function() {
+                            const d = new Date();
+                            return 'Technician_Sites_' +
+                                String(d.getDate()).padStart(2, '0') +
+                                String(d.getMonth() + 1).padStart(2, '0') +
+                                d.getFullYear();
+                        },
+                        exportOptions: {
+                            columns: ':visible:not(:last-child)'
+                        },
+                        customize: function(doc) {
+                            doc.styles.title.fontSize = 13;
+                            doc.styles.tableHeader.fontSize = 9;
+                            doc.defaultStyle.fontSize = 8;
+                            doc.pageMargins = [15, 30, 15, 20];
+                            const tbl = doc.content[1].table;
+                            const colCount = tbl.body[0].length;
+                            tbl.widths = Array(colCount).fill('*');
+                            doc.styles.tableHeader = {
+                                bold: true,
+                                fontSize: 9,
+                                color: 'black',
+                                fillColor: '#a4d169',
+                                alignment: 'left'
+                            };
+                            tbl.layout = {
+                                hLineWidth: () => 0.8,
+                                vLineWidth: () => 0.8,
+                                hLineColor: () => '#cccccc',
+                                vLineColor: () => '#cccccc',
+                                paddingLeft: () => 4,
+                                paddingRight: () => 4,
+                                paddingTop: () => 3,
+                                paddingBottom: () => 3
+                            };
+                        }
                     }
-                }
-            ]
-        });
+                ]
+            });
+        }
 
-        // 🔍 Custom search input
+        // ── DataTable search & filter ────────────────────────────────
         $('#site-search').on('keyup', function() {
             table.search(this.value).draw();
         });
 
-        // 🧑‍💼 Customer filter
         $('#customer-filter').on('change', function() {
             const val = this.value;
             if (val === '') {
-                table.column(1).search('').draw(); // Customer Name column
+                table.column(1).search('').draw();
             } else {
                 table.column(1).search('^' + val + '$', true, false).draw();
             }
+        });
+
+        // ── Reset Add Site modal on close ────────────────────────────
+        $('#addSiteModal').on('hidden.bs.modal', function() {
+            $('#addSiteForm')[0].reset();
+        });
+
+        // ── Save Site AJAX ───────────────────────────────────────────
+        $('#saveSiteBtn').on('click', function() {
+
+            // Basic validation
+            if (!$('#add-site-name').val().trim()) {
+                Swal.fire('Validation', 'Site name is required.', 'warning');
+                return;
+            }
+            if (!$('#add-site-customer').val()) {
+                Swal.fire('Validation', 'Please select a customer.', 'warning');
+                return;
+            }
+
+            var formData = new FormData($('#addSiteForm')[0]);
+
+            $.ajax({
+                type: 'POST',
+                url: '<?= site_url('technician/sites/add') ?>',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire('Success!', 'Site added successfully!', 'success').then(
+                            () => {
+                                $('#addSiteModal').modal('hide');
+                                location.reload();
+                            });
+                    } else {
+                        Swal.fire('Error!', response.message || 'Could not save site.',
+                            'error');
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
+                }
+            });
         });
 
     });

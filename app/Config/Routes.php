@@ -173,7 +173,7 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
 $routes->group('technician', ['filter' => 'role:technician'], static function ($routes) {
     $routes->get('dashboard',                                   'Technician\\DashboardController::index');
     $routes->get('customers',                                   'Technician\\CustomerController::index');
-
+    $routes->post('sites/add', 'Technician\\SitesController::siteCreate');
     // ── Inspections ─────────────────────────────────────────────
     $routes->get('inspections',                                 'Technician\\InspectionController::index');
     $routes->get('inspections/getEquipment',                    'Technician\\InspectionController::getEquipment');

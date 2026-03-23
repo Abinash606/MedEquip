@@ -7,7 +7,6 @@ use Config\Database;
 
 class CustomerController extends BaseController
 {
-
     public function index()
     {
         $db = Database::connect();
@@ -30,10 +29,13 @@ class CustomerController extends BaseController
         $states = array_map('trim', explode(',', $technician->state));
 
         $customers = $db->table('customers')
-            ->whereIn('billing_state', $states)
-            ->where('deleted_at', null)
+            ->select('customers.*, COUNT(sites.id) as site_count, MIN(sites.id) as first_site_id')
+            ->join('sites', 'sites.customer_id = customers.id AND sites.deleted_at IS NULL', 'left')
+            ->whereIn('customers.billing_state', $states)
+            ->where('customers.deleted_at', null)
+            ->groupBy('customers.id')
             ->get()
-            ->getResult();
+            ->getResultArray();
 
         return view('technician/customer/index', [
             'customers' => $customers

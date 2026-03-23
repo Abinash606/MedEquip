@@ -7,46 +7,56 @@ use Config\Database;
 
 class SitesController extends BaseController
 {
-    // ──────────────────────────────────────────────────────────────
-    // index() — list sites scoped to technician's assigned states
-    // ──────────────────────────────────────────────────────────────
     public function index()
     {
         $db        = Database::connect();
         $userId    = session()->get('user_id');
         $companyId = session()->get('company_id');
+        $customerId = $this->request->getGet('customer_id');
 
         $states = $this->getTechnicianStates($db, $userId);
 
         if (empty($states)) {
-            return view('technician/site/index', ['sites' => []]);
+            return view('technician/site/index', ['sites' => [], 'customers' => [], 'customer_id' => $customerId]);
         }
 
         $customerIds = $this->getAllowedCustomerIds($db, $companyId, $states);
 
         if (empty($customerIds)) {
-            return view('technician/site/index', ['sites' => []]);
+            return view('technician/site/index', ['sites' => [], 'customers' => [], 'customer_id' => $customerId]);
         }
 
-        $sites = $db->table('sites')
-            ->select('
-                sites.id,
-                sites.name          AS site_name,
-                sites.address       AS site_address,
-                sites.contact_name  AS site_contact_name,
-                sites.phone         AS site_phone,
-                sites.email         AS site_email,
-                customers.name      AS customer_name
-            ')
+        $query = $db->table('sites')
+            ->select('sites.id, sites.name AS site_name, sites.address AS site_address,
+                  sites.contact_name AS site_contact_name, sites.phone AS site_phone,
+                  sites.email AS site_email, customers.name AS customer_name')
             ->join('customers', 'customers.id = sites.customer_id AND customers.deleted_at IS NULL', 'left')
             ->where('sites.company_id', $companyId)
             ->whereIn('sites.customer_id', $customerIds)
             ->where('sites.deleted_at IS NULL', null, false)
-            ->orderBy('sites.name', 'ASC')
+            ->orderBy('sites.name', 'ASC');
+
+        if (!empty($customerId)) {
+            $query->where('sites.customer_id', $customerId);
+        }
+
+        $sites = $query->get()->getResultArray();
+
+        // ── Pass allowed customers for the Add Site dropdown ──
+        $customers = $db->table('customers')
+            ->select('id, name')
+            ->where('company_id', $companyId)
+            ->whereIn('id', $customerIds)
+            ->where('deleted_at IS NULL', null, false)
+            ->orderBy('name', 'ASC')
             ->get()
             ->getResultArray();
 
-        return view('technician/site/index', ['sites' => $sites]);
+        return view('technician/site/index', [
+            'sites'       => $sites,
+            'customers'   => $customers,
+            'customer_id' => $customerId,
+        ]);
     }
 
     public function view($id)
@@ -252,7 +262,34 @@ class SitesController extends BaseController
             'workOrderCount'  => count($workOrders),
         ]);
     }
+    public function siteCreate()
+    {
+        $db        = Database::connect();
+        $companyId = session()->get('company_id');
 
+        $data = [
+            'customer_id'  => $this->request->getPost('customer_id'),
+            'name'         => $this->request->getPost('name'),
+            'address'      => $this->request->getPost('address'),
+            'city'         => $this->request->getPost('city'),
+            'state'        => $this->request->getPost('state'),
+            'zip'          => $this->request->getPost('zip'),
+            'contact_name' => $this->request->getPost('contact_name'),
+            'email'        => $this->request->getPost('email'),
+            'phone'        => $this->request->getPost('phone'),
+            'company_id'   => $companyId,
+            'created_at'   => date('Y-m-d H:i:s'),
+            'updated_at'   => date('Y-m-d H:i:s'),
+        ];
+
+        $db->table('sites')->insert($data);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Site added successfully.');
+    }
     // ══════════════════════════════════════════════════════════════
     // EQUIPMENT — show (AJAX JSON for edit modal)
     // GET  technician/equipment/show/:id
