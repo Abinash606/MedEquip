@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
-<?php $BASE_URL = base_url(); ?>
+<?php $BASE_URL = rtrim(base_url(), '/'); ?>
 <div class="d-flex align-items-center mb-3 topbar">
     <h3 class="me-auto">Equipment DB</h3>
     <button class="btn btn-primary" id="addBtn"><i class="fa-solid fa-plus"></i> Add Equipment</button>
@@ -38,7 +38,8 @@
 <div class="modal fade" id="equipmentModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form id="equipmentForm" enctype="multipart/form-data">
+            <form id="equipmentForm" method="post" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Equipment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
