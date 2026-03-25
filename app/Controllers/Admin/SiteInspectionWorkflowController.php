@@ -68,6 +68,42 @@ class SiteInspectionWorkflowController extends BaseController
     }
 
     /**
+     * Return the department and room from the most recently saved equipment
+     * record for a given site.  This is used to auto-fill the Department and
+     * Room fields in the "Add New Device" modal so operators don't have to
+     * re-type the same location on every device in the same area.
+     *
+     * The value is fetched fresh from the database on every call so it
+     * persists across sessions and logins without any client-side storage.
+     *
+     * Accepts GET parameter:
+     *   - site_id: the current site id
+     *
+     * Returns JSON { department: string, location: string }
+     */
+    public function getLastDeviceForSite()
+    {
+        $siteId    = (int) $this->request->getGet('site_id');
+        $companyId = (int) session('company_id');
+
+        if ($siteId === 0) {
+            return $this->response->setJSON(['department' => '', 'location' => '']);
+        }
+
+        $equipmentModel = new EquipmentModel();
+        $eq = $equipmentModel
+            ->where('company_id', $companyId)
+            ->where('site_id', $siteId)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        return $this->response->setJSON([
+            'department' => $eq['department'] ?? '',
+            'location'   => $eq['location']   ?? '',
+        ]);
+    }
+
+    /**
      * Record an inspection result for a single device.
      *
      * This endpoint accepts a POST request with the details of the
@@ -213,11 +249,11 @@ class SiteInspectionWorkflowController extends BaseController
 
         // Update equipment status based on result
         if ($result === 'Pass') {
-            $equipmentModel->update($equipmentId, ['status' => 'Ready']);
+            $equipmentModel->update($equipmentId, ['status' => 'ready']);
         } elseif ($result === 'Fail') {
-            $equipmentModel->update($equipmentId, ['status' => 'Needs Attention']);
+            $equipmentModel->update($equipmentId, ['status' => 'need_attention']);
         } elseif ($result === 'Repair') {
-            $equipmentModel->update($equipmentId, ['status' => 'Repair']);
+            $equipmentModel->update($equipmentId, ['status' => 'need_attention']);
         }
 
         return $this->response->setJSON([

@@ -558,4 +558,11 @@ class CustomersController extends BaseController
             'customers' => $customers
         ]);
     }
+
+    public function filterSites($customerId)
+    {
+        session()->set('admin_site_customer_filter', (int)$customerId);
+        return redirect()->to('admin/sites');
+    }
+
 }

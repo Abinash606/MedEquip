@@ -718,9 +718,14 @@
         <div class="glass-card p-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0">Equipment List</h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                    <i class="fa fa-plus me-2"></i> Add Equipment
-                </button>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adminBulkImportModal">
+                        <i class="fa-solid fa-file-excel me-1"></i> Import Excel
+                    </button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                        <i class="fa fa-plus me-2"></i> Add Equipment
+                    </button>
+                </div>
             </div>
             <table id="equipment-datatable" class="table table-striped table-hover" style="width:100%">
                 <thead>
@@ -948,6 +953,7 @@
         </div>
     </div>
 </div> -->
+
 
 <div class="modal fade" id="addEquipmentModal" tabindex="-1" aria-labelledby="addEquipmentModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -2013,6 +2019,9 @@
 (function() {
     // Constants for API endpoints and settings
     const SITE_ID = <?= (int) ($site['id'] ?? 0) ?>;
+    // CSRF helper — reads fresh from cookie (CI4 regenerate=true rotates token)
+    function getFreshCsrf() { var m=document.cookie.match(/csrf_cookie_name=([^;]+)/); return m?decodeURIComponent(m[1]):''; }
+    $.ajaxSetup({ beforeSend: function(xhr,s) { if(s.type&&s.type.toUpperCase()==='POST'){ var c=getFreshCsrf(); if(c&&typeof s.data==='string') s.data+=(s.data?'&':'')+encodeURIComponent('csrf_test_name')+'='+encodeURIComponent(c); } } });
     const REPORT_DATA_URL   = "<?= site_url('admin/inspections/reportData') ?>";
     const REPORT_PDF_URL    = "<?= site_url('admin/inspections/reportPdf') ?>";
     const GET_EQUIPMENT_URL = "<?= site_url('admin/site-inspection/get-equipment') ?>";
@@ -2674,7 +2683,7 @@
             params.append('location',     document.getElementById('addRoom')?.value || '');
             params.append('est',          document.getElementById('addEST')?.value || 'No');
             params.append('cal',          document.getElementById('addCAL')?.value || 'No');
-            params.append('status',       'active');
+            params.append('status',       'ready');
 
             const saveBtn = addDeviceFormEl.querySelector('[type="submit"]');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
@@ -4330,6 +4339,217 @@
 
 
     });
+</script>
+
+
+
+<!-- ═══════════════════════════════════════════════════════
+     BULK IMPORT EQUIPMENT MODAL  (Admin → Sites → Details)
+     Accepts CSV only for maximum server compatibility.
+     ═══════════════════════════════════════════════════════ -->
+<div class="modal fade" id="adminBulkImportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:560px;">
+        <div class="modal-content" style="background:#0E1630;border:1px solid rgba(255,255,255,.1);border-radius:16px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-radius:16px 16px 0 0;border:none;">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="fa-solid fa-file-csv me-2"></i>Import Equipment from CSV
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <!-- Info box -->
+                <div class="mb-3 p-3" style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.25);border-radius:10px;">
+                    <p class="small fw-semibold mb-1" style="color:rgba(34,211,238,.9);">Required CSV columns (Row 1 = headers):</p>
+                    <code style="font-size:11px;color:#E9EDFF;background:rgba(0,0,0,.3);padding:6px 10px;border-radius:6px;display:block;line-height:1.8;">
+                        Make, Model, Device Type, Asset Tag, Serial Number, Department, Location Or Room
+                    </code>
+                    <p class="small mb-0 mt-2" style="color:rgba(233,237,255,.5);">
+                        Headers are case-insensitive &amp; trim spaces. Asset Tag auto-generated if blank. "N/A" serial treated as empty.
+                    </p>
+                </div>
+
+                <!-- Alert box -->
+                <div id="adminImportAlert" class="d-none alert mb-3" style="border-radius:10px;"></div>
+
+                <!-- File picker -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold" style="color:#E9EDFF;">
+                        CSV File <span class="text-danger">*</span>
+                    </label>
+                    <div id="adminDropZone" style="border:2px dashed rgba(124,58,237,.5);border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s;" onclick="document.getElementById('adminImportFile').click()">
+                        <i class="fa-solid fa-cloud-arrow-up fa-2x mb-2" style="color:rgba(124,58,237,.7);"></i>
+                        <p class="mb-1 fw-semibold" style="color:#E9EDFF;">Click to choose file or drag &amp; drop</p>
+                        <p class="small mb-0" id="adminImportFileName" style="color:rgba(233,237,255,.5);">CSV files only (.csv)</p>
+                    </div>
+                    <input type="file" id="adminImportFile" accept=".csv" style="display:none;">
+                </div>
+
+                <!-- Progress bar (hidden until import starts) -->
+                <div id="adminImportProgressWrap" class="d-none mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small" style="color:rgba(233,237,255,.7);" id="adminImportProgressLabel">Uploading...</span>
+                        <span class="small fw-bold" style="color:#E9EDFF;" id="adminImportProgressPct">0%</span>
+                    </div>
+                    <div class="progress" style="height:8px;background:rgba(255,255,255,.08);border-radius:8px;">
+                        <div id="adminImportProgressBar" class="progress-bar" role="progressbar"
+                             style="width:0%;background:linear-gradient(90deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-radius:8px;transition:width .3s;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="adminImportBtn" disabled
+                        style="background:linear-gradient(90deg,rgba(34,211,238,.9),rgba(124,58,237,.8));border:none;">
+                    <i class="fa-solid fa-upload me-1"></i> Import Equipment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Admin Equipment CSV Import ──────────────────────────────────────────────
+(function () {
+    var fileInput  = document.getElementById('adminImportFile');
+    var dropZone   = document.getElementById('adminDropZone');
+    var importBtn  = document.getElementById('adminImportBtn');
+    var alertEl    = document.getElementById('adminImportAlert');
+    var nameEl     = document.getElementById('adminImportFileName');
+    var progressWrap = document.getElementById('adminImportProgressWrap');
+    var progressBar  = document.getElementById('adminImportProgressBar');
+    var progressPct  = document.getElementById('adminImportProgressPct');
+    var progressLbl  = document.getElementById('adminImportProgressLabel');
+
+    var selectedFile = null;
+
+    function showAlert(type, html) {
+        alertEl.className = 'alert alert-' + type + ' mb-3';
+        alertEl.innerHTML = html;
+        alertEl.classList.remove('d-none');
+    }
+    function hideAlert() { alertEl.classList.add('d-none'); }
+
+    function setProgress(pct, label) {
+        progressWrap.classList.remove('d-none');
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        if (label) progressLbl.textContent = label;
+    }
+
+    function onFileSelected(file) {
+        if (!file) return;
+        var ext = file.name.split('.').pop().toLowerCase();
+        if (ext !== 'csv') {
+            showAlert('danger', '<i class="fa-solid fa-triangle-exclamation me-2"></i>Only <strong>.csv</strong> files are accepted. Please save your Excel file as CSV first.');
+            selectedFile = null;
+            importBtn.disabled = true;
+            return;
+        }
+        selectedFile = file;
+        hideAlert();
+        nameEl.textContent = file.name + '  (' + (file.size / 1024).toFixed(1) + ' KB)';
+        nameEl.style.color = 'rgba(34,211,238,.9)';
+        dropZone.style.borderColor = 'rgba(34,211,238,.7)';
+        importBtn.disabled = false;
+    }
+
+    // File input change
+    fileInput.addEventListener('change', function () { onFileSelected(this.files[0]); });
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        this.style.borderColor = 'rgba(124,58,237,.9)';
+        this.style.background  = 'rgba(124,58,237,.06)';
+    });
+    dropZone.addEventListener('dragleave', function () {
+        this.style.borderColor = 'rgba(124,58,237,.5)';
+        this.style.background  = '';
+    });
+    dropZone.addEventListener('drop', function (e) {
+        e.preventDefault();
+        this.style.borderColor = 'rgba(124,58,237,.5)';
+        this.style.background  = '';
+        onFileSelected(e.dataTransfer.files[0]);
+    });
+
+    // Reset modal when closed
+    document.getElementById('adminBulkImportModal').addEventListener('hidden.bs.modal', function () {
+        selectedFile = null;
+        fileInput.value = '';
+        importBtn.disabled = true;
+        hideAlert();
+        progressWrap.classList.add('d-none');
+        progressBar.style.width = '0%';
+        nameEl.textContent = 'CSV files only (.csv)';
+        nameEl.style.color = '';
+        dropZone.style.borderColor = 'rgba(124,58,237,.5)';
+    });
+
+    // Import button click — use XMLHttpRequest for real upload progress
+    importBtn.addEventListener('click', function () {
+        if (!selectedFile) return;
+
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Importing...';
+        hideAlert();
+        setProgress(5, 'Preparing upload...');
+
+        var fd = new FormData();
+        fd.append('excel_file', selectedFile);
+        fd.append('site_id', '<?= (int)($site['id'] ?? 0) ?>');
+
+        // Fresh CSRF from cookie (CI4 regenerate=true)
+        var csrfMatch = document.cookie.match(/csrf_cookie_name=([^;]+)/);
+        if (csrfMatch) fd.append('csrf_test_name', decodeURIComponent(csrfMatch[1]));
+
+        var xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', function (e) {
+            if (e.lengthComputable) {
+                var pct = Math.round((e.loaded / e.total) * 70); // 0-70% for upload
+                setProgress(pct, 'Uploading file... ' + pct + '%');
+            }
+        });
+
+        xhr.addEventListener('load', function () {
+            setProgress(95, 'Processing rows...');
+            importBtn.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Import Equipment';
+            importBtn.disabled = false;
+            try {
+                var res = JSON.parse(xhr.responseText);
+                setProgress(100, 'Done!');
+                if (res.success) {
+                    showAlert('success',
+                        '<i class="fa-solid fa-check-circle me-2"></i>'
+                        + '<strong>' + res.imported + ' equipment records imported</strong>'
+                        + (res.skipped > 0 ? ' &nbsp;·&nbsp; <span class="text-warning">' + res.skipped + ' skipped (duplicates)</span>' : '')
+                        + '<br><small class="text-muted">Page will reload in 2 seconds to show new equipment.</small>'
+                    );
+                    setTimeout(function () { location.reload(); }, 2200);
+                } else {
+                    showAlert('danger', '<i class="fa-solid fa-triangle-exclamation me-2"></i>' + (res.message || 'Import failed.'));
+                    progressWrap.classList.add('d-none');
+                }
+            } catch (e) {
+                showAlert('danger', '<i class="fa-solid fa-triangle-exclamation me-2"></i>Server error (status ' + xhr.status + '). ' + xhr.responseText.substring(0, 150));
+                progressWrap.classList.add('d-none');
+            }
+        });
+
+        xhr.addEventListener('error', function () {
+            importBtn.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Import Equipment';
+            importBtn.disabled = false;
+            showAlert('danger', '<i class="fa-solid fa-triangle-exclamation me-2"></i>Network error. Check your connection and try again.');
+            progressWrap.classList.add('d-none');
+        });
+
+        xhr.open('POST', '<?= site_url('admin/equipment/bulk-import') ?>');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.send(fd);
+    });
+})();
 </script>
 
 <?= $this->endSection() ?>

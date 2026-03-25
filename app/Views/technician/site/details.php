@@ -2,367 +2,664 @@
 <?= $this->section('content') ?>
 
 <style>
-/* ── base card & layout ── */
-.glass-card {
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid #e9eef5;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-    padding: 1.5rem;
-    position: relative;
-}
-
-/* Required for the workflow partial */
-.d-none-view {
-    display: none !important;
-}
-
-.site-avatar {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 4px solid #f1f5f9;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-}
-
-.site-avatar-initials {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #fff;
-}
-
-.site-info-item {
-    margin-bottom: 12px;
-    font-size: 15px;
-    color: #334155;
-}
-
-.site-info-item strong {
-    display: inline-block;
-    min-width: 130px;
-    color: #0f172a;
-    font-weight: 700;
-}
-
-/* ── tabs ── */
-.nav-tabs {
-    border-bottom: 1px solid #dee2e6;
-    margin-bottom: 0;
-}
-
-.nav-tabs .nav-link {
-    border: none;
-    border-radius: 12px 12px 0 0;
-    color: #475569;
-    font-weight: 600;
-    padding: 12px 24px;
-    margin-right: 8px;
-}
-
-.nav-tabs .nav-link.active {
-    background: #ffffff;
-    color: #0f172a;
-    border: 1px solid #e9eef5;
-    border-bottom: 1px solid #fff;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
-}
-
-/* ── status badges ── */
-.status-badge {
-    padding: .25rem .75rem;
-    border-radius: 12px;
-    font-size: .875rem;
-    font-weight: 500;
-    display: inline-block;
-}
-
-.status-ready,
-.status-completed,
-.status-pass {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-need-attention,
-.status-fail {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.status-pending,
-.status-open {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.status-scheduled,
-.status-in-progress,
-.status-repair {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-/* ── modals ── */
-.modal-header {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
-}
-
-.modal-header .btn-close {
-    filter: brightness(0) invert(1);
-}
-
-/* ── wizard ── */
-.wizard-step {
-    display: none;
-}
-
-.wizard-step.active {
-    display: block;
-}
-
-.wizard-step h5 {
-    font-weight: 700;
-    margin-bottom: .25rem;
-    color: #1e293b;
-}
-
-.wizard-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e2e8f0;
-}
-
-.step3-readonly-row .form-control {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #475569;
-}
-
-.asset-not-found-alert {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-    border-radius: 6px;
-    padding: .5rem .75rem;
-    font-size: .875rem;
-    font-weight: 500;
-    margin-bottom: 1rem;
-}
-
-/* ── inspection outcome buttons ── */
-.inspection-outcome-btns {
-    display: flex;
-    justify-content: center;
-    gap: .75rem;
-    margin-top: 1rem;
-}
-
-.btn-pass {
-    background: #16a34a;
-    color: #fff;
-    border: none;
-    padding: .5rem 1.25rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: .875rem;
-    cursor: pointer;
-}
-
-.btn-pass:hover {
-    background: #15803d;
-}
-
-.btn-fail {
-    background: #dc2626;
-    color: #fff;
-    border: none;
-    padding: .5rem 1.25rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: .875rem;
-    cursor: pointer;
-}
-
-.btn-fail:hover {
-    background: #b91c1c;
-}
-
-.btn-repair {
-    background: #0ea5e9;
-    color: #fff;
-    border: none;
-    padding: .5rem 1.25rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: .875rem;
-    cursor: pointer;
-}
-
-.btn-repair:hover {
-    background: #0284c7;
-}
-
-/* ── queue ── */
-.queue-item {
-    background: #fff;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: .75rem;
-    margin-bottom: .5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.queue-item-info {
-    flex: 1;
-}
-
-.queue-item-model {
-    font-weight: 600;
-    color: #1e293b;
-    font-size: .9rem;
-}
-
-.queue-item-details {
-    font-size: .82rem;
-    color: #64748b;
-    margin-top: .25rem;
-}
-
-.queue-item-remove {
-    background: #ef4444;
-    color: #fff;
-    border: none;
-    padding: .25rem .5rem;
-    border-radius: 4px;
-    font-size: .75rem;
-    cursor: pointer;
-}
-
-.queue-item-remove:hover {
-    background: #dc2626;
-}
-
-/* ── view inspection modal ── */
-#viewInspectionModal .modal-header {
-    background: #6c757d;
-    color: #fff;
-}
-
-#viewInspectionModal .modal-body {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-#viewInspectionModal table th,
-#viewInspectionModal table td {
-    text-align: center;
-}
-
-/* ── workflow inner UI ── */
-#site-inspection-workflow {
-    --primary-color: #2563eb;
-    --secondary-color: #64748b;
-    --success-color: #10b981;
-}
-
-#site-inspection-workflow .nav-link {
-    color: var(--secondary-color);
-    font-weight: 500;
-    border: none;
-    padding: 12px 14px;
-    font-size: 14px;
-    border-bottom: 2px solid transparent;
-    transition: all .2s;
-}
-
-#site-inspection-workflow .nav-link:hover {
-    color: var(--primary-color);
-}
-
-#site-inspection-workflow .nav-link.active {
-    color: #fff !important;
-    border-bottom: 2px solid var(--primary-color) !important;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(34, 211, 238, 1)) !important;
-}
-
-#site-inspection-workflow .table-custom th {
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    font-size: .75rem;
-    letter-spacing: .05em;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 12px 8px;
-}
-
-#site-inspection-workflow .table-custom td {
-    vertical-align: middle;
-    font-size: .9rem;
-    padding: 12px 8px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-#site-inspection-workflow .btn-icon {
-    width: 32px;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: all .2s;
-}
-
-#site-inspection-workflow .export-btn {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: .85rem;
-    color: var(--secondary-color);
-    font-weight: 500;
-}
-
-#site-inspection-workflow .export-bar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.action-btns {
-    display: flex;
-    gap: 4px;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
+    /* ======================== DARK THEME OVERRIDES ======================== */
+    /* Modal dark styling */
+    .modal-content {
+        background: #0E1630 !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+        color: #E9EDFF !important;
+        border-radius: 16px !important;
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    .modal-header {
+        background: linear-gradient(135deg, rgba(124, 58, 237, .9), rgba(34, 211, 238, .8)) !important;
+        border-bottom: none !important;
+        border-radius: 16px 16px 0 0 !important;
     }
-}
 
-.fade-in {
-    animation: fadeIn .4s ease-in-out;
-}
+    .modal-footer {
+        border-top: 1px solid rgba(255, 255, 255, .08) !important;
+        background: rgba(14, 22, 48, .5) !important;
+    }
+
+    .modal-body {
+        background: transparent !important;
+    }
+
+    .modal-title,
+    .modal-body label,
+    .modal-body h5,
+    .modal-body .form-label,
+    .modal-body p,
+    .modal-body span {
+        color: #E9EDFF !important;
+    }
+
+    .modal-body .form-control,
+    .modal-body .form-select,
+    .modal-body .input-group-text {
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .14) !important;
+        color: #E9EDFF !important;
+        border-radius: 10px !important;
+    }
+
+    .modal-body .form-control::placeholder {
+        color: rgba(233, 237, 255, .4) !important;
+    }
+
+    .modal-body .form-select option {
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    .modal-body .form-control[readonly] {
+        background: rgba(255, 255, 255, .03) !important;
+        color: rgba(233, 237, 255, .6) !important;
+    }
+
+    /* DataTables dark */
+    table.dataTable thead th,
+    table.dataTable thead td {
+        background: rgba(14, 22, 48, .8) !important;
+        color: rgba(233, 237, 255, .6) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+        font-size: 11px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+
+    table.dataTable tbody tr {
+        background: transparent !important;
+    }
+
+    table.dataTable tbody tr:hover {
+        background: rgba(255, 255, 255, .04) !important;
+    }
+
+    table.dataTable tbody td {
+        border-bottom: 1px solid rgba(255, 255, 255, .06) !important;
+        color: #E9EDFF !important;
+    }
+
+    table.dataTable.stripe tbody tr.odd,
+    table.dataTable.stripe tbody tr.even {
+        background: transparent !important;
+    }
+
+    .dataTables_wrapper .dataTables_length select,
+    .dataTables_wrapper .dataTables_filter input {
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+        color: #E9EDFF !important;
+        border-radius: 8px !important;
+        padding: 4px 8px;
+    }
+
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_length,
+    .dataTables_wrapper .dataTables_filter {
+        color: rgba(233, 237, 255, .7) !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        color: #E9EDFF !important;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: linear-gradient(135deg, rgba(124, 58, 237, .8), rgba(34, 211, 238, .6)) !important;
+        border-color: transparent !important;
+        color: #fff !important;
+    }
+
+    .dt-buttons .dt-button,
+    .export-btn {
+        background: linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(34, 211, 238, 1)) !important;
+        color: #fff !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 6px 14px !important;
+    }
+
+    /* Nav tabs dark */
+    .nav-tabs {
+        border-bottom: 1px solid rgba(255, 255, 255, .10) !important;
+    }
+
+    .nav-tabs .nav-link {
+        color: rgba(233, 237, 255, .6) !important;
+        border: none !important;
+    }
+
+    .nav-tabs .nav-link.active {
+        background: rgba(124, 58, 237, .2) !important;
+        color: #E9EDFF !important;
+        border-bottom: 2px solid rgba(124, 58, 237, .9) !important;
+        border-radius: 8px 8px 0 0 !important;
+    }
+
+    .nav-tabs .nav-link:hover {
+        color: #E9EDFF !important;
+        background: rgba(255, 255, 255, .05) !important;
+    }
+
+    /* Badges */
+    .badge {
+        border-radius: 999px !important;
+        font-weight: 600 !important;
+        font-size: 11px !important;
+    }
+
+    .badge.bg-success {
+        background: rgba(34, 197, 94, .18) !important;
+        color: #4ade80 !important;
+        border: 1px solid rgba(34, 197, 94, .3) !important;
+    }
+
+    .badge.bg-danger {
+        background: rgba(239, 68, 68, .18) !important;
+        color: #f87171 !important;
+        border: 1px solid rgba(239, 68, 68, .3) !important;
+    }
+
+    .badge.bg-warning {
+        background: rgba(245, 158, 11, .18) !important;
+        color: #fbbf24 !important;
+        border: 1px solid rgba(245, 158, 11, .3) !important;
+    }
+
+    .badge.bg-info {
+        background: rgba(96, 165, 250, .18) !important;
+        color: #93c5fd !important;
+        border: 1px solid rgba(96, 165, 250, .3) !important;
+    }
+
+    /* Buttons */
+    .btn-primary {
+        background: linear-gradient(90deg, rgba(34, 211, 238, .9), rgba(124, 58, 237, .8)) !important;
+        border: none !important;
+    }
+
+    .btn-danger {
+        background: rgba(239, 68, 68, .85) !important;
+        border: none !important;
+    }
+
+    .btn-outline-secondary {
+        color: rgba(233, 237, 255, .7) !important;
+        border-color: rgba(255, 255, 255, .2) !important;
+    }
+
+    .btn-outline-primary {
+        color: rgba(34, 211, 238, .9) !important;
+        border-color: rgba(34, 211, 238, .4) !important;
+    }
+
+    .btn-outline-success {
+        color: rgba(34, 197, 94, .9) !important;
+        border-color: rgba(34, 197, 94, .4) !important;
+    }
+
+    .btn-outline-danger {
+        color: rgba(239, 68, 68, .9) !important;
+        border-color: rgba(239, 68, 68, .4) !important;
+    }
+
+    .btn-light {
+        background: rgba(255, 255, 255, .08) !important;
+        border-color: rgba(255, 255, 255, .12) !important;
+        color: #E9EDFF !important;
+    }
+
+    /* Form controls outside modals */
+    .glass-card .form-control,
+    .glass-card .form-select,
+    .glass-card .input-group-text {
+        background: rgba(255, 255, 255, .06) !important;
+        border: 1px solid rgba(255, 255, 255, .12) !important;
+        color: #E9EDFF !important;
+    }
+
+    .glass-card .form-label {
+        color: rgba(233, 237, 255, .8) !important;
+    }
+
+    .glass-card .form-select option {
+        color: #000 !important;
+    }
+
+    /* Text */
+    .text-muted {
+        color: rgba(233, 237, 255, .5) !important;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .fw-bold {
+        color: #E9EDFF !important;
+    }
+
+    p,
+    span,
+    td,
+    th,
+    label {
+        color: #E9EDFF;
+    }
+
+    /* Back button */
+    .btn-secondary {
+        background: rgba(255, 255, 255, .08) !important;
+        border: 1px solid rgba(255, 255, 255, .15) !important;
+        color: #E9EDFF !important;
+    }
+
+    /* Site info card */
+    #siteInfoCard .text-muted,
+    #siteInfoCard p,
+    #siteInfoCard span {
+        color: rgba(233, 237, 255, .7) !important;
+    }
+
+    #siteInfoCard strong {
+        color: #E9EDFF !important;
+    }
+
+    /* Tab content area */
+    .tab-content {
+        background: transparent !important;
+    }
+
+    .card,
+    .card-body {
+        background: transparent !important;
+        border-color: rgba(255, 255, 255, .08) !important;
+    }
+
+    /* ======================== END DARK THEME ======================== */
+    /* ── base card & layout ── */
+    .glass-card {
+        border-radius: 18px;
+        border: 1px solid rgba(255, 255, 255, .10);
+        background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .03));
+        backdrop-filter: blur(14px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+        padding: 1.5rem;
+        position: relative;
+        color: #E9EDFF;
+    }
+
+    /* Required for the workflow partial */
+    .d-none-view {
+        display: none !important;
+    }
+
+    .site-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #f1f5f9;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .site-avatar-initials {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .site-info-item {
+        margin-bottom: 12px;
+        font-size: 15px;
+        color: #334155;
+    }
+
+    .site-info-item strong {
+        display: inline-block;
+        min-width: 130px;
+        color: #0f172a;
+        font-weight: 700;
+    }
+
+    /* ── tabs ── */
+    .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 0;
+    }
+
+    .nav-tabs .nav-link {
+        border: none;
+        border-radius: 12px 12px 0 0;
+        color: #475569;
+        font-weight: 600;
+        padding: 12px 24px;
+        margin-right: 8px;
+    }
+
+    .nav-tabs .nav-link.active {
+        background: #ffffff;
+        color: #0f172a;
+        border: 1px solid #e9eef5;
+        border-bottom: 1px solid #fff;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+    }
+
+    /* ── status badges ── */
+    .status-badge {
+        padding: .25rem .75rem;
+        border-radius: 12px;
+        font-size: .875rem;
+        font-weight: 500;
+        display: inline-block;
+    }
+
+    .status-ready,
+    .status-completed,
+    .status-pass {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-need-attention,
+    .status-fail {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-pending,
+    .status-open {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-scheduled,
+    .status-in-progress,
+    .status-repair {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    /* ── modals ── */
+    .modal-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+    }
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1);
+    }
+
+    /* ── wizard ── */
+    .wizard-step {
+        display: none;
+    }
+
+    .wizard-step.active {
+        display: block;
+    }
+
+    .wizard-step h5 {
+        font-weight: 700;
+        margin-bottom: .25rem;
+        color: #1e293b;
+    }
+
+    .wizard-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .step3-readonly-row .form-control {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #475569;
+    }
+
+    .asset-not-found-alert {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #dc2626;
+        border-radius: 6px;
+        padding: .5rem .75rem;
+        font-size: .875rem;
+        font-weight: 500;
+        margin-bottom: 1rem;
+    }
+
+    /* ── inspection outcome buttons ── */
+    .inspection-outcome-btns {
+        display: flex;
+        justify-content: center;
+        gap: .75rem;
+        margin-top: 1rem;
+    }
+
+    .btn-pass {
+        background: #16a34a;
+        color: #fff;
+        border: none;
+        padding: .5rem 1.25rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: .875rem;
+        cursor: pointer;
+    }
+
+    .btn-pass:hover {
+        background: #15803d;
+    }
+
+    .btn-fail {
+        background: #dc2626;
+        color: #fff;
+        border: none;
+        padding: .5rem 1.25rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: .875rem;
+        cursor: pointer;
+    }
+
+    .btn-fail:hover {
+        background: #b91c1c;
+    }
+
+    .btn-repair {
+        background: #0ea5e9;
+        color: #fff;
+        border: none;
+        padding: .5rem 1.25rem;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: .875rem;
+        cursor: pointer;
+    }
+
+    .btn-repair:hover {
+        background: #0284c7;
+    }
+
+    /* ── queue ── */
+    .queue-item {
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: .75rem;
+        margin-bottom: .5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .queue-item-info {
+        flex: 1;
+    }
+
+    .queue-item-model {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: .9rem;
+    }
+
+    .queue-item-details {
+        font-size: .82rem;
+        color: #64748b;
+        margin-top: .25rem;
+    }
+
+    .queue-item-remove {
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        padding: .25rem .5rem;
+        border-radius: 4px;
+        font-size: .75rem;
+        cursor: pointer;
+    }
+
+    .queue-item-remove:hover {
+        background: #dc2626;
+    }
+
+    /* ── view inspection modal ── */
+    #viewInspectionModal .modal-header {
+        background: #6c757d;
+        color: #fff;
+    }
+
+    #viewInspectionModal .modal-body {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    #viewInspectionModal table th,
+    #viewInspectionModal table td {
+        text-align: center;
+    }
+
+    /* ── workflow inner UI ── */
+    #site-inspection-workflow {
+        --primary-color: #2563eb;
+        --secondary-color: #64748b;
+        --success-color: #10b981;
+    }
+
+    #site-inspection-workflow .nav-link {
+        color: var(--secondary-color);
+        font-weight: 500;
+        border: none;
+        padding: 12px 14px;
+        font-size: 14px;
+        border-bottom: 2px solid transparent;
+        transition: all .2s;
+    }
+
+    #site-inspection-workflow .nav-link:hover {
+        color: var(--primary-color);
+    }
+
+    #site-inspection-workflow .nav-link.active {
+        color: #fff !important;
+        border-bottom: 2px solid var(--primary-color) !important;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 1), rgba(34, 211, 238, 1)) !important;
+    }
+
+    #site-inspection-workflow .table-custom th {
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        font-size: .75rem;
+        letter-spacing: .05em;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 12px 8px;
+    }
+
+    #site-inspection-workflow .table-custom td {
+        vertical-align: middle;
+        font-size: .9rem;
+        padding: 12px 8px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    #site-inspection-workflow .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all .2s;
+    }
+
+    #site-inspection-workflow .export-btn {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: .85rem;
+        color: var(--secondary-color);
+        font-weight: 500;
+    }
+
+    #site-inspection-workflow .export-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .action-btns {
+        display: flex;
+        gap: 4px;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn .4s ease-in-out;
+    }
+
+    /* ===== FIX: Make ONLY text white in Site Info ===== */
+    #siteInfoCard,
+    #siteInfoCard p,
+    #siteInfoCard span,
+    #siteInfoCard label,
+    #siteInfoCard div,
+    #siteInfoCard strong,
+    #siteInfoCard h6 {
+        color: #ffffff !important;
+    }
+
+    /* Optional: slightly softer for muted text */
+    #siteInfoCard .text-muted {
+        color: rgba(255, 255, 255, 0.7) !important;
+    }
 </style>
 
 <!-- ── Back button ── -->
@@ -389,14 +686,14 @@
                 $logoPath     = $customer['logo_path'] ?? '';
                 $logoFullPath = FCPATH . 'uploads/logos/' . $logoPath;
                 if (!empty($logoPath) && file_exists($logoFullPath)): ?>
-                <img src="<?= base_url('uploads/logos/' . $logoPath) ?>" class="site-avatar" alt="Logo">
+                    <img src="<?= base_url('uploads/logos/' . $logoPath) ?>" class="site-avatar" alt="Logo">
                 <?php else:
                     $nameParts = explode(' ', $customer['name'] ?? 'Unknown');
                     $initials  = count($nameParts) >= 2
                         ? strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1))
                         : strtoupper(substr($customer['name'] ?? 'UN', 0, 2));
                 ?>
-                <div class="site-avatar-initials"><?= esc($initials) ?></div>
+                    <div class="site-avatar-initials"><?= esc($initials) ?></div>
                 <?php endif; ?>
             </div>
             <div class="col-md">
@@ -472,39 +769,39 @@
                 </thead>
                 <tbody>
                     <?php foreach ($equipment as $eq): ?>
-                    <tr>
-                        <td><?= esc($eq['asset_tag']) ?></td>
-                        <td><?= esc($eq['make'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['model'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['location'] ?? 'N/A') ?></td>
-                        <td><?= esc($eq['department'] ?? 'N/A') ?></td>
-                        <td>
-                            <?php
+                        <tr>
+                            <td><?= esc($eq['asset_tag']) ?></td>
+                            <td><?= esc($eq['make'] ?? 'N/A') ?></td>
+                            <td><?= esc($eq['model'] ?? 'N/A') ?></td>
+                            <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
+                            <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
+                            <td><?= esc($eq['location'] ?? 'N/A') ?></td>
+                            <td><?= esc($eq['department'] ?? 'N/A') ?></td>
+                            <td>
+                                <?php
                                 $st  = strtolower($eq['status'] ?? 'pending');
                                 $cls = str_contains($st, 'ready') ? 'status-ready' : (str_contains($st, 'need') ? 'status-need-attention' : 'status-pending');
                                 ?>
-                            <span class="status-badge <?= $cls ?>"><?= esc($eq['status'] ?? 'Pending') ?></span>
-                        </td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-info edit-equipment-btn" data-id="<?= $eq['id'] ?>"
-                                data-asset_tag="<?= esc($eq['asset_tag'], 'attr') ?>"
-                                data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
-                                data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
-                                data-serial_number="<?= esc($eq['serial_number'] ?? '', 'attr') ?>"
-                                data-device_type="<?= esc($eq['device_type'] ?? '', 'attr') ?>"
-                                data-location="<?= esc($eq['location'] ?? '', 'attr') ?>"
-                                data-department="<?= esc($eq['department'] ?? '', 'attr') ?>"
-                                data-status="<?= esc($eq['status'] ?? '', 'attr') ?>">
-                                <i class="fa fa-edit"></i> Edit
-                            </button>
-                            <a href="<?= site_url('technician/equipment/delete/' . $eq['id']) ?>"
-                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this equipment?')">
-                                <i class="fa fa-trash"></i> Delete
-                            </a>
-                        </td>
-                    </tr>
+                                <span class="status-badge <?= $cls ?>"><?= esc($eq['status'] ?? 'Pending') ?></span>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-info edit-equipment-btn" data-id="<?= $eq['id'] ?>"
+                                    data-asset_tag="<?= esc($eq['asset_tag'], 'attr') ?>"
+                                    data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
+                                    data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
+                                    data-serial_number="<?= esc($eq['serial_number'] ?? '', 'attr') ?>"
+                                    data-device_type="<?= esc($eq['device_type'] ?? '', 'attr') ?>"
+                                    data-location="<?= esc($eq['location'] ?? '', 'attr') ?>"
+                                    data-department="<?= esc($eq['department'] ?? '', 'attr') ?>"
+                                    data-status="<?= esc($eq['status'] ?? '', 'attr') ?>">
+                                    <i class="fa fa-edit"></i> Edit
+                                </button>
+                                <a href="<?= site_url('technician/equipment/delete/' . $eq['id']) ?>"
+                                    class="btn btn-sm btn-danger" onclick="return confirm('Delete this equipment?')">
+                                    <i class="fa fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -541,40 +838,40 @@
                 </thead>
                 <tbody>
                     <?php foreach ($workOrders as $wo): ?>
-                    <tr>
-                        <td>WO-<?= esc($wo['id']) ?></td>
-                        <td><?= esc($wo['title']) ?></td>
-                        <td><?= esc($wo['asset_tag'] ?? 'N/A') ?></td>
-                        <td>
-                            <?php
+                        <tr>
+                            <td>WO-<?= esc($wo['id']) ?></td>
+                            <td><?= esc($wo['title']) ?></td>
+                            <td><?= esc($wo['asset_tag'] ?? 'N/A') ?></td>
+                            <td>
+                                <?php
                                 $ws = strtolower($wo['status'] ?? '');
                                 $wc = $ws === 'completed' ? 'status-completed' : ($ws === 'in progress' || $ws === 'in-progress' ? 'status-in-progress' : 'status-open');
                                 ?>
-                            <span class="status-badge <?= $wc ?>"><?= esc($wo['status']) ?></span>
-                        </td>
-                        <td><?= esc($wo['priority']) ?></td>
-                        <td><?= esc($wo['assigned_to_name'] ?? 'Unassigned') ?></td>
-                        <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '—' ?></td>
-                        <td><?= $wo['end_date']   ? date('M d, Y', strtotime($wo['end_date']))   : '—' ?></td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-info edit-workorder-btn" data-id="<?= $wo['id'] ?>"
-                                data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
-                                data-serial_number="<?= esc($wo['serial_number'] ?? '', 'attr') ?>"
-                                data-title="<?= esc($wo['title'], 'attr') ?>"
-                                data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
-                                data-status="<?= esc($wo['status'], 'attr') ?>"
-                                data-priority="<?= esc($wo['priority'], 'attr') ?>"
-                                data-assigned_to="<?= $wo['assigned_to'] ?? '' ?>"
-                                data-start_date="<?= $wo['start_date'] ?? '' ?>"
-                                data-end_date="<?= $wo['end_date'] ?? '' ?>">
-                                <i class="fa fa-edit"></i> Edit
-                            </button>
-                            <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
-                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
-                                <i class="fa fa-trash"></i> Delete
-                            </a>
-                        </td>
-                    </tr>
+                                <span class="status-badge <?= $wc ?>"><?= esc($wo['status']) ?></span>
+                            </td>
+                            <td><?= esc($wo['priority']) ?></td>
+                            <td><?= esc($wo['assigned_to_name'] ?? 'Unassigned') ?></td>
+                            <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '—' ?></td>
+                            <td><?= $wo['end_date']   ? date('M d, Y', strtotime($wo['end_date']))   : '—' ?></td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-info edit-workorder-btn" data-id="<?= $wo['id'] ?>"
+                                    data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
+                                    data-serial_number="<?= esc($wo['serial_number'] ?? '', 'attr') ?>"
+                                    data-title="<?= esc($wo['title'], 'attr') ?>"
+                                    data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
+                                    data-status="<?= esc($wo['status'], 'attr') ?>"
+                                    data-priority="<?= esc($wo['priority'], 'attr') ?>"
+                                    data-assigned_to="<?= $wo['assigned_to'] ?? '' ?>"
+                                    data-start_date="<?= $wo['start_date'] ?? '' ?>"
+                                    data-end_date="<?= $wo['end_date'] ?? '' ?>">
+                                    <i class="fa fa-edit"></i> Edit
+                                </button>
+                                <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
+                                    class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
+                                    <i class="fa fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
@@ -779,7 +1076,7 @@
                             <select class="form-select" id="wiz-s3-technician">
                                 <option value="">-- Select Technician --</option>
                                 <?php foreach ($technicians as $tech): ?>
-                                <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
+                                    <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -986,7 +1283,7 @@
                             <select class="form-select" id="edit-wiz-s3-technician">
                                 <option value="">-- Select Technician --</option>
                                 <?php foreach ($technicians as $tech): ?>
-                                <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
+                                    <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1055,8 +1352,8 @@
                             <select class="form-select" id="workorder-equipment" name="equipment_id">
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
-                                <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> — <?= esc($eq['make']) ?>
-                                    <?= esc($eq['model']) ?></option>
+                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> — <?= esc($eq['make']) ?>
+                                        <?= esc($eq['model']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1086,7 +1383,7 @@
                             <select class="form-select" id="workorder-assigned-to" name="assigned_to">
                                 <option value="">-- Select --</option>
                                 <?php foreach ($users as $user): ?>
-                                <option value="<?= $user['id'] ?>"><?= esc($user['full_name']) ?></option>
+                                    <option value="<?= $user['id'] ?>"><?= esc($user['full_name']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1112,676 +1409,676 @@
      JAVASCRIPT — all URLs use technician prefix
 ════════════════════════════════════════════════════ -->
 <script>
-$(document).ready(function() {
+    $(document).ready(function() {
 
-    const SITE_ID = <?= (int)$site['id'] ?>;
-    const BASE_TEC = '<?= site_url('technician') ?>';
-    // All inspection AJAX calls go to the new technician controller
-    const URL_SEARCH_SERIAL = BASE_TEC + '/inspections/searchBySerial';
-    const URL_SEARCH_MODEL = BASE_TEC + '/inspections/searchByModel';
-    const URL_GET_BY_GROUP = BASE_TEC + '/inspections/getByGroupId';
-    const URL_GET_INSP_BY_ID = BASE_TEC + '/inspections/getInspectionById';
-    const URL_UPDATE_INSP = BASE_TEC + '/inspections/updateInspection';
-    const URL_CREATE_INSP = BASE_TEC + '/inspections/create';
+        const SITE_ID = <?= (int)$site['id'] ?>;
+        const BASE_TEC = '<?= site_url('technician') ?>';
+        // All inspection AJAX calls go to the new technician controller
+        const URL_SEARCH_SERIAL = BASE_TEC + '/inspections/searchBySerial';
+        const URL_SEARCH_MODEL = BASE_TEC + '/inspections/searchByModel';
+        const URL_GET_BY_GROUP = BASE_TEC + '/inspections/getByGroupId';
+        const URL_GET_INSP_BY_ID = BASE_TEC + '/inspections/getInspectionById';
+        const URL_UPDATE_INSP = BASE_TEC + '/inspections/updateInspection';
+        const URL_CREATE_INSP = BASE_TEC + '/inspections/create';
 
-    // ── Toggle site info ─────────────────────────────────────────────
-    $('#toggleSiteInfo').on('click', function() {
-        $('#siteInfoBody').slideToggle(250, function() {
-            const visible = $('#siteInfoBody').is(':visible');
-            $('#toggleIcon')
-                .toggleClass('fa-chevron-up', visible)
-                .toggleClass('fa-chevron-down', !visible);
-        });
-    });
-
-    // ── Restore saved tab ────────────────────────────────────────────
-    const savedTab = sessionStorage.getItem('siteDetailsActiveTab');
-    if (savedTab) {
-        sessionStorage.removeItem('siteDetailsActiveTab');
-        const tabEl = document.getElementById(savedTab);
-        if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
-    }
-
-    // ── DataTables ───────────────────────────────────────────────────
-    function getTodayDate() {
-        const d = new Date();
-        return String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + d
-            .getFullYear();
-    }
-
-    function pdfCustomize(doc) {
-        doc.defaultStyle.fontSize = 7;
-        doc.styles.tableHeader = {
-            bold: true,
-            fontSize: 8,
-            color: 'black',
-            fillColor: '#a4d169',
-            alignment: 'center'
-        };
-        doc.pageMargins = [10, 10, 10, 10];
-        const table = doc.content[1].table;
-        table.widths = Array(table.body[0].length).fill('*');
-        doc.styles.tableBodyEven = {
-            fillColor: '#f2f2f2'
-        };
-        doc.styles.tableBodyOdd = {
-            fillColor: '#ffffff'
-        };
-        const layout = {};
-        layout.hLineWidth = () => 0.5;
-        layout.vLineWidth = () => 0.5;
-        layout.hLineColor = () => '#aaaaaa';
-        layout.vLineColor = () => '#aaaaaa';
-        doc.content[1].layout = layout;
-    }
-    const dtBtns = (fn) => [{
-            extend: 'copy',
-            filename: fn
-        }, {
-            extend: 'csv',
-            filename: fn
-        }, {
-            extend: 'excel',
-            filename: fn
-        },
-        {
-            extend: 'pdfHtml5',
-            filename: fn + '_' + getTodayDate(),
-            title: fn,
-            orientation: 'landscape',
-            pageSize: 'LEGAL',
-            exportOptions: {
-                columns: ':visible:not(:last-child)'
-            },
-            customize: pdfCustomize
-        }
-    ];
-
-    $('#equipment-datatable').DataTable({
-        dom: 'Bfrtip',
-        responsive: true,
-        pageLength: 10,
-        order: [
-            [0, 'asc']
-        ],
-        buttons: dtBtns('Equipment')
-    });
-    $('#work-orders-datatable').DataTable({
-        dom: 'Bfrtip',
-        responsive: true,
-        pageLength: 10,
-        order: [
-            [6, 'desc']
-        ],
-        buttons: dtBtns('WorkOrders')
-    });
-
-    // ── Equipment — Edit ─────────────────────────────────────────────
-    $(document).on('click', '.edit-equipment-btn', function() {
-        const id = $(this).data('id');
-        $('#equipmentModalLabel').text('Edit Equipment');
-        $('#equipmentForm').attr('action', BASE_TEC + '/equipment/update/' + id);
-        $.ajax({
-            url: BASE_TEC + '/equipment/show/' + id,
-            method: 'GET',
-            dataType: 'json',
-            success: function(res) {
-                if (res.status === 'success') {
-                    const d = res.data;
-                    $('#equipment-id').val(d.id);
-                    $('#equipment-asset-tag').val(d.asset_tag);
-                    $('#equipment-serial-number').val(d.serial_number);
-                    $('#equipment-make').val(d.make);
-                    $('#equipment-model').val(d.model);
-                    $('#equipment-device-type').val(d.device_type);
-                    $('#equipment-department').val(d.department);
-                    $('#equipment-location').val(d.location);
-                    $('#equipment-status').val(d.status);
-                    $('#equipment-pm-kit').val(d.pm_kit);
-                    $('#equipment-fast-notes').val(d.fast_notes);
-                    $('#equipment-installation-date').val(d.installation_date);
-                    $('#equipment-warranty-expires').val(d.warranty_expires);
-                    $('#addEquipmentModal').modal('show');
-                }
-            },
-            error: function() {
-                alert('Failed to load equipment data.');
-            }
-        });
-    });
-
-    $('#addEquipmentModal').on('hidden.bs.modal', function() {
-        $('#equipmentForm')[0].reset();
-        $('#equipment-id').val('');
-        $('#equipmentModalLabel').text('Add / Edit Equipment');
-        $('#equipmentForm').attr('action', BASE_TEC + '/equipment/create');
-        $('#equipmentSubmitBtn').prop('disabled', false).html('Save Equipment');
-    });
-
-    $('#equipmentForm').on('submit', function(e) {
-        e.preventDefault();
-        $('#equipmentSubmitBtn').prop('disabled', true).html(
-            '<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
-        $.ajax({
-            url: $(this).attr('action'),
-            method: 'POST',
-            data: $(this).serialize(),
-            success: function() {
-                $('#addEquipmentModal').modal('hide');
-                location.reload();
-            },
-            error: function() {
-                alert('Error saving equipment.');
-                $('#equipmentSubmitBtn').prop('disabled', false).html('Save Equipment');
-            }
-        });
-    });
-
-    // ════════════════════════════════════════════════════
-    // INSPECTION WIZARD — 3-step new inspection
-    // ════════════════════════════════════════════════════
-    let wizardAssetFound = false;
-    let wizardMatchedEquip = null;
-    let inspectionQueue = [];
-    let wizGroupId = '';
-
-    function generateGroupId() {
-        return 'INSP-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random()
-            .toString(36).substr(2, 9).toUpperCase();
-    }
-
-    function showStep(n) {
-        $('#wizardStep1,#wizardStep2,#wizardStep3').removeClass('active');
-        $('#wizardStep' + n).addClass('active');
-        $('#wizBtnComplete').toggle(n === 3 && inspectionQueue.length > 0);
-    }
-
-    function resetWizard() {
-        wizardAssetFound = false;
-        wizardMatchedEquip = null;
-        $('#wiz-serial-number,#wiz-search-model,#wiz-s2-manufacturer,#wiz-s2-model,#wiz-s2-description,#wiz-s2-serial')
-            .val('');
-        $('#wiz-s3-model,#wiz-s3-description,#wiz-s3-serial,#wiz-s3-assetid,#wiz-s3-department,#wiz-s3-location')
-            .val('');
-        $('#wiz-equipment-id,#wiz-s3-pmfreq,#wiz-s3-insptype,#wiz-s3-technician,#wiz-s3-notes').val('');
-        $('#wiz-s3-inspdate').val('<?= date('Y-m-d') ?>');
-        $('#wiz-s3-status').val('Pass');
-        $('#wiz-s3-devicecomplete').val('Yes');
-        showStep(1);
-    }
-
-    function updateQueueDisplay() {
-        const $q = $('#inspectionQueue').empty();
-        if (!inspectionQueue.length) {
-            $('#inspectionQueueContainer').hide();
-            $('#wizBtnComplete').hide();
-            return;
-        }
-        $('#inspectionQueueContainer').show();
-        $('#queueCount').text(inspectionQueue.length);
-        inspectionQueue.forEach(function(item, idx) {
-            $q.append(
-                '<div class="queue-item"><div class="queue-item-info"><div class="queue-item-model">' +
-                (item.make || '') + ' ' + (item.model || '') +
-                '</div><div class="queue-item-details">S/N: ' + (item.serial_number || 'N/A') +
-                ' | ' + item.status + '</div></div><button class="queue-item-remove" data-index="' +
-                idx + '">Remove</button></div>');
-        });
-        if (inspectionQueue.length > 0) $('#wizBtnComplete').show();
-    }
-
-    $(document).on('click', '.queue-item-remove', function() {
-        inspectionQueue.splice($(this).data('index'), 1);
-        updateQueueDisplay();
-    });
-
-    // Open wizard
-    // The workflow partial calls startInspection() which is defined inside the partial's script.
-    // The wizard modal is kept here and opened by the "New Inspection" button in details.php
-    // via a separate openInspectionWizardBtn if needed, but the partial's startInspection()
-    // switches to the detail view; the wizard modal is for batch entry.
-    // The partial calls startInspection() for the Pass/Fail workflow.
-    // For batch wizard (New Inspection button in dashboard list), wire it here:
-    $(document).on('click', '#openInspectionWizardBtn', function() {
-        inspectionQueue = [];
-        wizGroupId = generateGroupId();
-        $('#wiz-group-id').val(wizGroupId);
-        resetWizard();
-        updateQueueDisplay();
-        $('#inspectionWizardModal').modal('show');
-    });
-
-    $('#inspectionWizardModal').on('hidden.bs.modal', function() {
-        inspectionQueue = [];
-        resetWizard();
-        updateQueueDisplay();
-    });
-
-    // Step 1 → Next
-    $('#wizStep1Next').on('click', function() {
-        const serial = $.trim($('#wiz-serial-number').val());
-        if (!serial) {
-            alert('Please enter a serial number.');
-            return;
-        }
-        $(this).prop('disabled', true).text('Searching…');
-        $.ajax({
-            url: URL_SEARCH_SERIAL,
-            method: 'GET',
-            data: {
-                serial_number: serial,
-                site_id: SITE_ID
-            },
-            success: function(res) {
-                $('#wizStep1Next').prop('disabled', false).text('Next');
-                if (res.found) {
-                    wizardAssetFound = true;
-                    wizardMatchedEquip = res;
-                    $('#wiz-equipment-id').val(res.id);
-                    $('#wiz-s3-model').val(res.model);
-                    $('#wiz-s3-description').val(res.device_type);
-                    $('#wiz-s3-serial').val(res.serial_number);
-                    $('#wiz-s3-assetid').val(res.asset_tag);
-                    $('#wiz-s3-department').val(res.department);
-                    $('#wiz-s3-location').val(res.location);
-                    showStep(3);
-                } else {
-                    wizardAssetFound = false;
-                    wizardMatchedEquip = null;
-                    $('#wiz-s2-serial').val(serial);
-                    showStep(2);
-                }
-            },
-            error: function() {
-                $('#wizStep1Next').prop('disabled', false).text('Next');
-                alert('Search failed.');
-            }
-        });
-    });
-
-    $('#wizStep2Back').on('click', function() {
-        showStep(1);
-    });
-
-    // Model search autocomplete
-    let modelTimer = null;
-    $('#wiz-search-model').on('keyup', function() {
-        const val = $.trim($(this).val());
-        $('#wiz-model-dropdown').remove();
-        if (val.length < 2) return;
-        clearTimeout(modelTimer);
-        modelTimer = setTimeout(function() {
-            $.get(URL_SEARCH_MODEL, {
-                keyword: val
-            }, function(results) {
-                $('#wiz-model-dropdown').remove();
-                if (!results || !results.length) return;
-                const $wrap = $('#wiz-search-model').parent();
-                $wrap.css('position', 'relative');
-                let html =
-                    '<div id="wiz-model-dropdown" style="position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:2px;">';
-                results.forEach(function(item) {
-                    const label = $.trim((item.make || '') + ' ' + (item
-                        .model || '')) || item.device_type || 'Unknown';
-                    html += '<div class="wiz-model-option" data-make="' + (item
-                            .make || '') + '" data-model="' + (item.model ||
-                            '') + '" data-serial_number="' + (item
-                            .serial_number ||
-                            '') + '" data-device_type="' + (item.device_type ||
-                            '') +
-                        '" style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmouseover="$(this).css(\'background\',\'#eef2ff\')" onmouseout="$(this).css(\'background\',\'#fff\')">';
-                    html += '<strong>' + label + '</strong>';
-                    if (item.serial_number) html +=
-                        ' <span style="color:#64748b;font-size:.82rem;">S/N: ' +
-                        item.serial_number + '</span>';
-                    html += '</div>';
-                });
-                html += '</div>';
-                $('#wiz-search-model').after(html);
+        // ── Toggle site info ─────────────────────────────────────────────
+        $('#toggleSiteInfo').on('click', function() {
+            $('#siteInfoBody').slideToggle(250, function() {
+                const visible = $('#siteInfoBody').is(':visible');
+                $('#toggleIcon')
+                    .toggleClass('fa-chevron-up', visible)
+                    .toggleClass('fa-chevron-down', !visible);
             });
-        }, 350);
-    });
-    $(document).on('click', '.wiz-model-option', function() {
-        $('#wiz-s2-manufacturer').val($(this).data('make'));
-        $('#wiz-s2-model').val($(this).data('model'));
-        $('#wiz-s2-description').val($(this).data('device_type'));
-        $('#wiz-search-model').val($.trim(($(this).data('make') || '') + ' ' + ($(this).data('model') ||
-            '')));
-        $('#wiz-model-dropdown').remove();
-    });
-    $(document).on('click', function(e) {
-        if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown').length)
-            $('#wiz-model-dropdown').remove();
-    });
-
-    $('#wizStep2Next').on('click', function() {
-        $('#wiz-s3-model').val($('#wiz-s2-model').val());
-        $('#wiz-s3-description').val($('#wiz-s2-description').val());
-        $('#wiz-s3-serial').val($('#wiz-s2-serial').val());
-        $('#wiz-s3-assetid,#wiz-s3-department,#wiz-s3-location').val('');
-        $('#wiz-equipment-id').val('');
-        showStep(3);
-    });
-    $('#wizStep3Back').on('click', function() {
-        showStep(wizardAssetFound ? 1 : 2);
-    });
-
-    function addToQueue(status) {
-        inspectionQueue.push({
-            site_id: SITE_ID,
-            equipment_id: $('#wiz-equipment-id').val(),
-            scheduled_at: $('#wiz-s3-inspdate').val(),
-            status,
-            technician_id: $('#wiz-s3-technician').val(),
-            notes: $('#wiz-s3-notes').val(),
-            pm_frequency: $('#wiz-s3-pmfreq').val(),
-            inspection_type: $('#wiz-s3-insptype').val(),
-            device_complete: $('#wiz-s3-devicecomplete').val(),
-            make: wizardMatchedEquip ? (wizardMatchedEquip.make || '') : $('#wiz-s2-manufacturer')
-                .val(),
-            model: $('#wiz-s3-model').val(),
-            serial_number: $('#wiz-s3-serial').val(),
-            device_type: $('#wiz-s3-description').val(),
-            asset_tag: $('#wiz-s3-assetid').val(),
-            department: $('#wiz-s3-department').val(),
-            location: $('#wiz-s3-location').val(),
-            manufacturer: $('#wiz-s2-manufacturer').val(),
-            model_name: $('#wiz-s2-model').val(),
-            description: $('#wiz-s2-description').val(),
-            asset_not_found: wizardAssetFound ? '0' : '1'
         });
-        updateQueueDisplay();
-    }
 
-    $('#wizBtnPass').on('click', function() {
-        addToQueue('Pass');
-        alert('Added to queue as Pass.');
-    });
-    $('#wizBtnFail').on('click', function() {
-        addToQueue('Fail');
-        alert('Added to queue as Fail.');
-    });
-    $('#wizBtnRepair').on('click', function() {
-        addToQueue('Repair');
-        alert('Added to queue as Repair.');
-    });
-    $('#wizBtnNextDevice').on('click', function() {
-        resetWizard();
-        updateQueueDisplay();
-    });
-
-    $('#wizBtnComplete').on('click', function() {
-        if (!inspectionQueue.length) {
-            alert('No inspections in queue.');
-            return;
+        // ── Restore saved tab ────────────────────────────────────────────
+        const savedTab = sessionStorage.getItem('siteDetailsActiveTab');
+        if (savedTab) {
+            sessionStorage.removeItem('siteDetailsActiveTab');
+            const tabEl = document.getElementById(savedTab);
+            if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
         }
-        $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
-        const fd = new FormData();
-        const csrf = $('input[name="csrf_token"]').first();
-        if (csrf.length) fd.append(csrf.attr('name'), csrf.val());
-        fd.append('group_id', wizGroupId);
-        fd.append('inspection_items', JSON.stringify(inspectionQueue));
-        $.ajax({
-            url: URL_CREATE_INSP,
-            method: 'POST',
-            data: fd,
-            contentType: false,
-            processData: false,
-            success: function() {
-                $('#inspectionWizardModal').modal('hide');
-                sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');
-                location.reload();
-            },
-            error: function(xhr) {
-                console.error(xhr.responseText);
-                alert('Failed to save inspections.');
-                $('#wizBtnComplete').prop('disabled', false).html(
-                    '<i class="fa fa-check-double me-1"></i>Complete Inspections');
-            }
-        });
-    });
 
-    // ── View Inspection (from inspections list table) ─────────────────
-    $(document).on('click', '.view-inspection-btn', function() {
-        const groupId = $(this).data('group_id');
-        $.ajax({
-            url: URL_GET_BY_GROUP,
-            method: 'GET',
-            data: {
-                group_id: groupId
+        // ── DataTables ───────────────────────────────────────────────────
+        function getTodayDate() {
+            const d = new Date();
+            return String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0') + d
+                .getFullYear();
+        }
+
+        function pdfCustomize(doc) {
+            doc.defaultStyle.fontSize = 7;
+            doc.styles.tableHeader = {
+                bold: true,
+                fontSize: 8,
+                color: 'black',
+                fillColor: '#a4d169',
+                alignment: 'center'
+            };
+            doc.pageMargins = [10, 10, 10, 10];
+            const table = doc.content[1].table;
+            table.widths = Array(table.body[0].length).fill('*');
+            doc.styles.tableBodyEven = {
+                fillColor: '#f2f2f2'
+            };
+            doc.styles.tableBodyOdd = {
+                fillColor: '#ffffff'
+            };
+            const layout = {};
+            layout.hLineWidth = () => 0.5;
+            layout.vLineWidth = () => 0.5;
+            layout.hLineColor = () => '#aaaaaa';
+            layout.vLineColor = () => '#aaaaaa';
+            doc.content[1].layout = layout;
+        }
+        const dtBtns = (fn) => [{
+                extend: 'copy',
+                filename: fn
+            }, {
+                extend: 'csv',
+                filename: fn
+            }, {
+                extend: 'excel',
+                filename: fn
             },
-            dataType: 'json',
-            success: function(res) {
-                if (!res.success) {
-                    alert('Error: ' + res.message);
-                    return;
+            {
+                extend: 'pdfHtml5',
+                filename: fn + '_' + getTodayDate(),
+                title: fn,
+                orientation: 'landscape',
+                pageSize: 'LEGAL',
+                exportOptions: {
+                    columns: ':visible:not(:last-child)'
+                },
+                customize: pdfCustomize
+            }
+        ];
+
+        $('#equipment-datatable').DataTable({
+            dom: 'Bfrtip',
+            responsive: true,
+            pageLength: 10,
+            order: [
+                [0, 'asc']
+            ],
+            buttons: dtBtns('Equipment')
+        });
+        $('#work-orders-datatable').DataTable({
+            dom: 'Bfrtip',
+            responsive: true,
+            pageLength: 10,
+            order: [
+                [6, 'desc']
+            ],
+            buttons: dtBtns('WorkOrders')
+        });
+
+        // ── Equipment — Edit ─────────────────────────────────────────────
+        $(document).on('click', '.edit-equipment-btn', function() {
+            const id = $(this).data('id');
+            $('#equipmentModalLabel').text('Edit Equipment');
+            $('#equipmentForm').attr('action', BASE_TEC + '/equipment/update/' + id);
+            $.ajax({
+                url: BASE_TEC + '/equipment/show/' + id,
+                method: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (res.status === 'success') {
+                        const d = res.data;
+                        $('#equipment-id').val(d.id);
+                        $('#equipment-asset-tag').val(d.asset_tag);
+                        $('#equipment-serial-number').val(d.serial_number);
+                        $('#equipment-make').val(d.make);
+                        $('#equipment-model').val(d.model);
+                        $('#equipment-device-type').val(d.device_type);
+                        $('#equipment-department').val(d.department);
+                        $('#equipment-location').val(d.location);
+                        $('#equipment-status').val(d.status);
+                        $('#equipment-pm-kit').val(d.pm_kit);
+                        $('#equipment-fast-notes').val(d.fast_notes);
+                        $('#equipment-installation-date').val(d.installation_date);
+                        $('#equipment-warranty-expires').val(d.warranty_expires);
+                        $('#addEquipmentModal').modal('show');
+                    }
+                },
+                error: function() {
+                    alert('Failed to load equipment data.');
                 }
-                const tbody = $('#inspection-details-body').empty();
-                res.data.forEach(function(insp) {
-                    const badge = insp.inspection_status === 'Pass' ?
-                        '<span class="badge bg-success">Pass</span>' :
-                        (insp.inspection_status === 'Fail' ?
-                            '<span class="badge bg-danger">Fail</span>' :
-                            '<span class="badge bg-warning text-dark">' + insp
-                            .inspection_status + '</span>');
-                    tbody.append(
-                        '<tr><td><button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="' +
-                        insp.inspections_id + '" data-group-id="' + insp
-                        .group_id +
-                        '"><i class="fa fa-edit"></i> Edit</button></td>' +
-                        '<td>' + badge + '</td>' +
-                        '<td>' + (insp.customer_site || 'N/A') + '</td>' +
-                        '<td>' + (insp.model || 'N/A') + '</td>' +
-                        '<td>' + (insp.device_type || 'N/A') + '</td>' +
-                        '<td>' + (insp.serial_number || 'N/A') + '</td>' +
-                        '<td>' + (insp.inspection_type || 'N/A') + '</td>' +
-                        '<td>' + (insp.asset_tag || 'N/A') + '</td>' +
-                        '<td>' + (insp.department || 'N/A') + '</td>' +
-                        '<td>' + (insp.location || insp.room || 'N/A') +
-                        '</td>' +
-                        '<td>' + (insp.technician_name || 'N/A') + '</td>' +
-                        '<td>' + (insp.updated_at ? new Date(insp.updated_at)
-                            .toLocaleDateString() : 'N/A') + '</td>' +
-                        '<td>' + (insp.notes || '') + '</td></tr>'
-                    );
-                });
-                $('#viewInspectionModal').modal('show');
-            },
-            error: function() {
-                alert('Failed to fetch inspection details.');
-            }
+            });
         });
-    });
 
-    // ── Edit Inspection Wizard ────────────────────────────────────────
-    function editGoToStep(n) {
-        $('#edit-wiz-step1,#edit-wiz-step2,#edit-wiz-step3').removeClass('active');
-        $('#edit-wiz-step' + n).addClass('active');
-    }
-
-    $(document).on('click', '.btn-edit-inspection', function() {
-        const inspId = $(this).data('inspection-id');
-        $.ajax({
-            url: URL_GET_INSP_BY_ID + '/' + inspId,
-            method: 'GET',
-            dataType: 'json',
-            success: function(res) {
-                if (!res.success) {
-                    alert('Failed to load inspection.');
-                    return;
-                }
-                const d = res.data;
-                $('#edit-wiz-inspection-id').val(d.id);
-                $('#edit-wiz-group-id').val(d.group_id);
-                $('#edit-wiz-equipment-id').val(d.equipment_id);
-                $('#edit-wiz-s1-serial').val(d.serial_number || '');
-                $('#edit-wiz-s2-manufacturer').val(d.make || '');
-                $('#edit-wiz-s2-model').val(d.model || '');
-                $('#edit-wiz-s2-description').val(d.device_type || '');
-                $('#edit-wiz-s2-serial').val(d.serial_number || '');
-                $('#edit-wiz-s2-assetid').val(d.asset_tag || '');
-                $('#edit-wiz-s2-department').val(d.department || '');
-                $('#edit-wiz-s2-location').val(d.location || '');
-                $('#edit-wiz-s3-model-ro').val(d.model || '');
-                $('#edit-wiz-s3-desc-ro').val(d.device_type || '');
-                $('#edit-wiz-s3-serial-ro').val(d.serial_number || '');
-                $('#edit-wiz-s3-assetid-ro').val(d.asset_tag || '');
-                $('#edit-wiz-s3-dept-ro').val(d.department || '');
-                $('#edit-wiz-s3-location-ro').val(d.location || '');
-                $('#edit-wiz-s3-pmfreq').val(d.pm_frequency || '');
-                $('#edit-wiz-s3-insptype').val(d.inspection_type || '');
-                $('#edit-wiz-s3-technician').val(d.technician_id || '');
-                $('#edit-wiz-s3-inspdate').val(d.scheduled_at ? d.scheduled_at.split(' ')[
-                    0] : '');
-                $('#edit-wiz-s3-notes').val(d.notes || '');
-                $('#edit-wiz-s3-status').val(d.status || 'Pass');
-                $('#edit-wiz-s3-devicecomplete').val(d.device_complete || 'Yes');
-                $('#viewInspectionModal').modal('hide');
-                $('#editInspectionWizardModal').modal('show');
-                editGoToStep(1);
-            },
-            error: function() {
-                alert('Failed to load inspection data.');
-            }
+        $('#addEquipmentModal').on('hidden.bs.modal', function() {
+            $('#equipmentForm')[0].reset();
+            $('#equipment-id').val('');
+            $('#equipmentModalLabel').text('Add / Edit Equipment');
+            $('#equipmentForm').attr('action', BASE_TEC + '/equipment/create');
+            $('#equipmentSubmitBtn').prop('disabled', false).html('Save Equipment');
         });
-    });
 
-    function searchEditSerial() {
-        const serial = $.trim($('#edit-wiz-s1-serial').val());
-        if (!serial) return;
-        $.ajax({
-            url: URL_SEARCH_SERIAL,
-            method: 'GET',
-            data: {
-                serial_number: serial,
-                site_id: SITE_ID
-            },
-            dataType: 'json',
-            success: function(res) {
-                if (res.found) {
-                    $('#edit-wiz-equipment-id').val(res.id);
-                    $('#edit-wiz-asset-not-found-alert').hide();
-                    $('#edit-wiz-s2-manufacturer').val(res.make || '');
-                    $('#edit-wiz-s2-model').val(res.model || '');
-                    $('#edit-wiz-s2-description').val(res.device_type || '');
-                    $('#edit-wiz-s2-serial').val(res.serial_number || '');
-                    $('#edit-wiz-s2-assetid').val(res.asset_tag || '');
-                    $('#edit-wiz-s2-department').val(res.department || '');
-                    $('#edit-wiz-s2-location').val(res.location || '');
-                } else {
-                    $('#edit-wiz-equipment-id').val('');
-                    $('#edit-wiz-asset-not-found-alert').show();
-                    $('#edit-wiz-s2-serial').val(serial);
-                }
-            }
-        });
-    }
-    $('#edit-wiz-s1-search-btn').on('click', searchEditSerial);
-    $('#edit-wiz-s1-serial').on('keypress', function(e) {
-        if (e.which === 13) {
+        $('#equipmentForm').on('submit', function(e) {
             e.preventDefault();
-            searchEditSerial();
-        }
-    });
-    $('#edit-wiz-step1-next').on('click', function() {
-        editGoToStep(2);
-    });
-    $('#edit-wiz-step2-back').on('click', function() {
-        editGoToStep(1);
-    });
-    $('#edit-wiz-step2-next').on('click', function() {
-        $('#edit-wiz-s3-model-ro').val($('#edit-wiz-s2-model').val());
-        $('#edit-wiz-s3-desc-ro').val($('#edit-wiz-s2-description').val());
-        $('#edit-wiz-s3-serial-ro').val($('#edit-wiz-s2-serial').val());
-        $('#edit-wiz-s3-assetid-ro').val($('#edit-wiz-s2-assetid').val());
-        $('#edit-wiz-s3-dept-ro').val($('#edit-wiz-s2-department').val());
-        $('#edit-wiz-s3-location-ro').val($('#edit-wiz-s2-location').val());
-        editGoToStep(3);
-    });
-    $('#edit-wiz-step3-back').on('click', function() {
-        editGoToStep(2);
-    });
-    $('#edit-wizBtnPass').on('click', function() {
-        $('#edit-wiz-s3-status').val('Pass');
-    });
-    $('#edit-wizBtnFail').on('click', function() {
-        $('#edit-wiz-s3-status').val('Fail');
-    });
-    $('#edit-wizBtnRepair').on('click', function() {
-        $('#edit-wiz-s3-status').val('Repair');
-    });
-
-    $('#edit-wizBtnUpdate').on('click', function() {
-        const inspId = $('#edit-wiz-inspection-id').val(),
-            groupId = $('#edit-wiz-group-id').val();
-        $.ajax({
-            url: URL_UPDATE_INSP,
-            method: 'POST',
-            dataType: 'json',
-            data: {
-                inspection_id: inspId,
-                equipment_id: $('#edit-wiz-equipment-id').val(),
-                site_id: SITE_ID,
-                manufacturer: $('#edit-wiz-s2-manufacturer').val(),
-                model_name: $('#edit-wiz-s2-model').val(),
-                description: $('#edit-wiz-s2-description').val(),
-                serial_number: $('#edit-wiz-s2-serial').val(),
-                asset_tag: $('#edit-wiz-s2-assetid').val(),
-                department: $('#edit-wiz-s2-department').val(),
-                location: $('#edit-wiz-s2-location').val(),
-                pm_frequency: $('#edit-wiz-s3-pmfreq').val(),
-                inspection_type: $('#edit-wiz-s3-insptype').val(),
-                technician_id: $('#edit-wiz-s3-technician').val(),
-                scheduled_at: $('#edit-wiz-s3-inspdate').val(),
-                notes: $('#edit-wiz-s3-notes').val(),
-                status: $('#edit-wiz-s3-status').val(),
-                device_complete: $('#edit-wiz-s3-devicecomplete').val()
-            },
-            success: function(res) {
-                if (res.success) {
-                    alert('Inspection updated successfully!');
-                    $('#editInspectionWizardModal').modal('hide');
+            $('#equipmentSubmitBtn').prop('disabled', true).html(
+                '<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
+            $.ajax({
+                url: $(this).attr('action'),
+                method: 'POST',
+                data: $(this).serialize(),
+                success: function() {
+                    $('#addEquipmentModal').modal('hide');
                     location.reload();
-                } else {
-                    alert('Error: ' + res.message);
+                },
+                error: function() {
+                    alert('Error saving equipment.');
+                    $('#equipmentSubmitBtn').prop('disabled', false).html('Save Equipment');
                 }
-            },
-            error: function() {
-                alert('Failed to update inspection.');
+            });
+        });
+
+        // ════════════════════════════════════════════════════
+        // INSPECTION WIZARD — 3-step new inspection
+        // ════════════════════════════════════════════════════
+        let wizardAssetFound = false;
+        let wizardMatchedEquip = null;
+        let inspectionQueue = [];
+        let wizGroupId = '';
+
+        function generateGroupId() {
+            return 'INSP-' + new Date().toISOString().split('T')[0].replace(/-/g, '') + '-' + Math.random()
+                .toString(36).substr(2, 9).toUpperCase();
+        }
+
+        function showStep(n) {
+            $('#wizardStep1,#wizardStep2,#wizardStep3').removeClass('active');
+            $('#wizardStep' + n).addClass('active');
+            $('#wizBtnComplete').toggle(n === 3 && inspectionQueue.length > 0);
+        }
+
+        function resetWizard() {
+            wizardAssetFound = false;
+            wizardMatchedEquip = null;
+            $('#wiz-serial-number,#wiz-search-model,#wiz-s2-manufacturer,#wiz-s2-model,#wiz-s2-description,#wiz-s2-serial')
+                .val('');
+            $('#wiz-s3-model,#wiz-s3-description,#wiz-s3-serial,#wiz-s3-assetid,#wiz-s3-department,#wiz-s3-location')
+                .val('');
+            $('#wiz-equipment-id,#wiz-s3-pmfreq,#wiz-s3-insptype,#wiz-s3-technician,#wiz-s3-notes').val('');
+            $('#wiz-s3-inspdate').val('<?= date('Y-m-d') ?>');
+            $('#wiz-s3-status').val('Pass');
+            $('#wiz-s3-devicecomplete').val('Yes');
+            showStep(1);
+        }
+
+        function updateQueueDisplay() {
+            const $q = $('#inspectionQueue').empty();
+            if (!inspectionQueue.length) {
+                $('#inspectionQueueContainer').hide();
+                $('#wizBtnComplete').hide();
+                return;
+            }
+            $('#inspectionQueueContainer').show();
+            $('#queueCount').text(inspectionQueue.length);
+            inspectionQueue.forEach(function(item, idx) {
+                $q.append(
+                    '<div class="queue-item"><div class="queue-item-info"><div class="queue-item-model">' +
+                    (item.make || '') + ' ' + (item.model || '') +
+                    '</div><div class="queue-item-details">S/N: ' + (item.serial_number || 'N/A') +
+                    ' | ' + item.status + '</div></div><button class="queue-item-remove" data-index="' +
+                    idx + '">Remove</button></div>');
+            });
+            if (inspectionQueue.length > 0) $('#wizBtnComplete').show();
+        }
+
+        $(document).on('click', '.queue-item-remove', function() {
+            inspectionQueue.splice($(this).data('index'), 1);
+            updateQueueDisplay();
+        });
+
+        // Open wizard
+        // The workflow partial calls startInspection() which is defined inside the partial's script.
+        // The wizard modal is kept here and opened by the "New Inspection" button in details.php
+        // via a separate openInspectionWizardBtn if needed, but the partial's startInspection()
+        // switches to the detail view; the wizard modal is for batch entry.
+        // The partial calls startInspection() for the Pass/Fail workflow.
+        // For batch wizard (New Inspection button in dashboard list), wire it here:
+        $(document).on('click', '#openInspectionWizardBtn', function() {
+            inspectionQueue = [];
+            wizGroupId = generateGroupId();
+            $('#wiz-group-id').val(wizGroupId);
+            resetWizard();
+            updateQueueDisplay();
+            $('#inspectionWizardModal').modal('show');
+        });
+
+        $('#inspectionWizardModal').on('hidden.bs.modal', function() {
+            inspectionQueue = [];
+            resetWizard();
+            updateQueueDisplay();
+        });
+
+        // Step 1 → Next
+        $('#wizStep1Next').on('click', function() {
+            const serial = $.trim($('#wiz-serial-number').val());
+            if (!serial) {
+                alert('Please enter a serial number.');
+                return;
+            }
+            $(this).prop('disabled', true).text('Searching…');
+            $.ajax({
+                url: URL_SEARCH_SERIAL,
+                method: 'GET',
+                data: {
+                    serial_number: serial,
+                    site_id: SITE_ID
+                },
+                success: function(res) {
+                    $('#wizStep1Next').prop('disabled', false).text('Next');
+                    if (res.found) {
+                        wizardAssetFound = true;
+                        wizardMatchedEquip = res;
+                        $('#wiz-equipment-id').val(res.id);
+                        $('#wiz-s3-model').val(res.model);
+                        $('#wiz-s3-description').val(res.device_type);
+                        $('#wiz-s3-serial').val(res.serial_number);
+                        $('#wiz-s3-assetid').val(res.asset_tag);
+                        $('#wiz-s3-department').val(res.department);
+                        $('#wiz-s3-location').val(res.location);
+                        showStep(3);
+                    } else {
+                        wizardAssetFound = false;
+                        wizardMatchedEquip = null;
+                        $('#wiz-s2-serial').val(serial);
+                        showStep(2);
+                    }
+                },
+                error: function() {
+                    $('#wizStep1Next').prop('disabled', false).text('Next');
+                    alert('Search failed.');
+                }
+            });
+        });
+
+        $('#wizStep2Back').on('click', function() {
+            showStep(1);
+        });
+
+        // Model search autocomplete
+        let modelTimer = null;
+        $('#wiz-search-model').on('keyup', function() {
+            const val = $.trim($(this).val());
+            $('#wiz-model-dropdown').remove();
+            if (val.length < 2) return;
+            clearTimeout(modelTimer);
+            modelTimer = setTimeout(function() {
+                $.get(URL_SEARCH_MODEL, {
+                    keyword: val
+                }, function(results) {
+                    $('#wiz-model-dropdown').remove();
+                    if (!results || !results.length) return;
+                    const $wrap = $('#wiz-search-model').parent();
+                    $wrap.css('position', 'relative');
+                    let html =
+                        '<div id="wiz-model-dropdown" style="position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1px solid #cbd5e1;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;margin-top:2px;">';
+                    results.forEach(function(item) {
+                        const label = $.trim((item.make || '') + ' ' + (item
+                            .model || '')) || item.device_type || 'Unknown';
+                        html += '<div class="wiz-model-option" data-make="' + (item
+                                .make || '') + '" data-model="' + (item.model ||
+                                '') + '" data-serial_number="' + (item
+                                .serial_number ||
+                                '') + '" data-device_type="' + (item.device_type ||
+                                '') +
+                            '" style="padding:.55rem .75rem;cursor:pointer;border-bottom:1px solid #f1f5f9;" onmouseover="$(this).css(\'background\',\'#eef2ff\')" onmouseout="$(this).css(\'background\',\'#fff\')">';
+                        html += '<strong>' + label + '</strong>';
+                        if (item.serial_number) html +=
+                            ' <span style="color:#64748b;font-size:.82rem;">S/N: ' +
+                            item.serial_number + '</span>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    $('#wiz-search-model').after(html);
+                });
+            }, 350);
+        });
+        $(document).on('click', '.wiz-model-option', function() {
+            $('#wiz-s2-manufacturer').val($(this).data('make'));
+            $('#wiz-s2-model').val($(this).data('model'));
+            $('#wiz-s2-description').val($(this).data('device_type'));
+            $('#wiz-search-model').val($.trim(($(this).data('make') || '') + ' ' + ($(this).data('model') ||
+                '')));
+            $('#wiz-model-dropdown').remove();
+        });
+        $(document).on('click', function(e) {
+            if (!$(e.target).is('#wiz-search-model') && !$(e.target).closest('#wiz-model-dropdown').length)
+                $('#wiz-model-dropdown').remove();
+        });
+
+        $('#wizStep2Next').on('click', function() {
+            $('#wiz-s3-model').val($('#wiz-s2-model').val());
+            $('#wiz-s3-description').val($('#wiz-s2-description').val());
+            $('#wiz-s3-serial').val($('#wiz-s2-serial').val());
+            $('#wiz-s3-assetid,#wiz-s3-department,#wiz-s3-location').val('');
+            $('#wiz-equipment-id').val('');
+            showStep(3);
+        });
+        $('#wizStep3Back').on('click', function() {
+            showStep(wizardAssetFound ? 1 : 2);
+        });
+
+        function addToQueue(status) {
+            inspectionQueue.push({
+                site_id: SITE_ID,
+                equipment_id: $('#wiz-equipment-id').val(),
+                scheduled_at: $('#wiz-s3-inspdate').val(),
+                status,
+                technician_id: $('#wiz-s3-technician').val(),
+                notes: $('#wiz-s3-notes').val(),
+                pm_frequency: $('#wiz-s3-pmfreq').val(),
+                inspection_type: $('#wiz-s3-insptype').val(),
+                device_complete: $('#wiz-s3-devicecomplete').val(),
+                make: wizardMatchedEquip ? (wizardMatchedEquip.make || '') : $('#wiz-s2-manufacturer')
+                    .val(),
+                model: $('#wiz-s3-model').val(),
+                serial_number: $('#wiz-s3-serial').val(),
+                device_type: $('#wiz-s3-description').val(),
+                asset_tag: $('#wiz-s3-assetid').val(),
+                department: $('#wiz-s3-department').val(),
+                location: $('#wiz-s3-location').val(),
+                manufacturer: $('#wiz-s2-manufacturer').val(),
+                model_name: $('#wiz-s2-model').val(),
+                description: $('#wiz-s2-description').val(),
+                asset_not_found: wizardAssetFound ? '0' : '1'
+            });
+            updateQueueDisplay();
+        }
+
+        $('#wizBtnPass').on('click', function() {
+            addToQueue('Pass');
+            alert('Added to queue as Pass.');
+        });
+        $('#wizBtnFail').on('click', function() {
+            addToQueue('Fail');
+            alert('Added to queue as Fail.');
+        });
+        $('#wizBtnRepair').on('click', function() {
+            addToQueue('Repair');
+            alert('Added to queue as Repair.');
+        });
+        $('#wizBtnNextDevice').on('click', function() {
+            resetWizard();
+            updateQueueDisplay();
+        });
+
+        $('#wizBtnComplete').on('click', function() {
+            if (!inspectionQueue.length) {
+                alert('No inspections in queue.');
+                return;
+            }
+            $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
+            const fd = new FormData();
+            const csrf = $('input[name="csrf_token"]').first();
+            if (csrf.length) fd.append(csrf.attr('name'), csrf.val());
+            fd.append('group_id', wizGroupId);
+            fd.append('inspection_items', JSON.stringify(inspectionQueue));
+            $.ajax({
+                url: URL_CREATE_INSP,
+                method: 'POST',
+                data: fd,
+                contentType: false,
+                processData: false,
+                success: function() {
+                    $('#inspectionWizardModal').modal('hide');
+                    sessionStorage.setItem('siteDetailsActiveTab', 'inspections-tab');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText);
+                    alert('Failed to save inspections.');
+                    $('#wizBtnComplete').prop('disabled', false).html(
+                        '<i class="fa fa-check-double me-1"></i>Complete Inspections');
+                }
+            });
+        });
+
+        // ── View Inspection (from inspections list table) ─────────────────
+        $(document).on('click', '.view-inspection-btn', function() {
+            const groupId = $(this).data('group_id');
+            $.ajax({
+                url: URL_GET_BY_GROUP,
+                method: 'GET',
+                data: {
+                    group_id: groupId
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (!res.success) {
+                        alert('Error: ' + res.message);
+                        return;
+                    }
+                    const tbody = $('#inspection-details-body').empty();
+                    res.data.forEach(function(insp) {
+                        const badge = insp.inspection_status === 'Pass' ?
+                            '<span class="badge bg-success">Pass</span>' :
+                            (insp.inspection_status === 'Fail' ?
+                                '<span class="badge bg-danger">Fail</span>' :
+                                '<span class="badge bg-warning text-dark">' + insp
+                                .inspection_status + '</span>');
+                        tbody.append(
+                            '<tr><td><button class="btn btn-sm btn-primary btn-edit-inspection" data-inspection-id="' +
+                            insp.inspections_id + '" data-group-id="' + insp
+                            .group_id +
+                            '"><i class="fa fa-edit"></i> Edit</button></td>' +
+                            '<td>' + badge + '</td>' +
+                            '<td>' + (insp.customer_site || 'N/A') + '</td>' +
+                            '<td>' + (insp.model || 'N/A') + '</td>' +
+                            '<td>' + (insp.device_type || 'N/A') + '</td>' +
+                            '<td>' + (insp.serial_number || 'N/A') + '</td>' +
+                            '<td>' + (insp.inspection_type || 'N/A') + '</td>' +
+                            '<td>' + (insp.asset_tag || 'N/A') + '</td>' +
+                            '<td>' + (insp.department || 'N/A') + '</td>' +
+                            '<td>' + (insp.location || insp.room || 'N/A') +
+                            '</td>' +
+                            '<td>' + (insp.technician_name || 'N/A') + '</td>' +
+                            '<td>' + (insp.updated_at ? new Date(insp.updated_at)
+                                .toLocaleDateString() : 'N/A') + '</td>' +
+                            '<td>' + (insp.notes || '') + '</td></tr>'
+                        );
+                    });
+                    $('#viewInspectionModal').modal('show');
+                },
+                error: function() {
+                    alert('Failed to fetch inspection details.');
+                }
+            });
+        });
+
+        // ── Edit Inspection Wizard ────────────────────────────────────────
+        function editGoToStep(n) {
+            $('#edit-wiz-step1,#edit-wiz-step2,#edit-wiz-step3').removeClass('active');
+            $('#edit-wiz-step' + n).addClass('active');
+        }
+
+        $(document).on('click', '.btn-edit-inspection', function() {
+            const inspId = $(this).data('inspection-id');
+            $.ajax({
+                url: URL_GET_INSP_BY_ID + '/' + inspId,
+                method: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (!res.success) {
+                        alert('Failed to load inspection.');
+                        return;
+                    }
+                    const d = res.data;
+                    $('#edit-wiz-inspection-id').val(d.id);
+                    $('#edit-wiz-group-id').val(d.group_id);
+                    $('#edit-wiz-equipment-id').val(d.equipment_id);
+                    $('#edit-wiz-s1-serial').val(d.serial_number || '');
+                    $('#edit-wiz-s2-manufacturer').val(d.make || '');
+                    $('#edit-wiz-s2-model').val(d.model || '');
+                    $('#edit-wiz-s2-description').val(d.device_type || '');
+                    $('#edit-wiz-s2-serial').val(d.serial_number || '');
+                    $('#edit-wiz-s2-assetid').val(d.asset_tag || '');
+                    $('#edit-wiz-s2-department').val(d.department || '');
+                    $('#edit-wiz-s2-location').val(d.location || '');
+                    $('#edit-wiz-s3-model-ro').val(d.model || '');
+                    $('#edit-wiz-s3-desc-ro').val(d.device_type || '');
+                    $('#edit-wiz-s3-serial-ro').val(d.serial_number || '');
+                    $('#edit-wiz-s3-assetid-ro').val(d.asset_tag || '');
+                    $('#edit-wiz-s3-dept-ro').val(d.department || '');
+                    $('#edit-wiz-s3-location-ro').val(d.location || '');
+                    $('#edit-wiz-s3-pmfreq').val(d.pm_frequency || '');
+                    $('#edit-wiz-s3-insptype').val(d.inspection_type || '');
+                    $('#edit-wiz-s3-technician').val(d.technician_id || '');
+                    $('#edit-wiz-s3-inspdate').val(d.scheduled_at ? d.scheduled_at.split(' ')[
+                        0] : '');
+                    $('#edit-wiz-s3-notes').val(d.notes || '');
+                    $('#edit-wiz-s3-status').val(d.status || 'Pass');
+                    $('#edit-wiz-s3-devicecomplete').val(d.device_complete || 'Yes');
+                    $('#viewInspectionModal').modal('hide');
+                    $('#editInspectionWizardModal').modal('show');
+                    editGoToStep(1);
+                },
+                error: function() {
+                    alert('Failed to load inspection data.');
+                }
+            });
+        });
+
+        function searchEditSerial() {
+            const serial = $.trim($('#edit-wiz-s1-serial').val());
+            if (!serial) return;
+            $.ajax({
+                url: URL_SEARCH_SERIAL,
+                method: 'GET',
+                data: {
+                    serial_number: serial,
+                    site_id: SITE_ID
+                },
+                dataType: 'json',
+                success: function(res) {
+                    if (res.found) {
+                        $('#edit-wiz-equipment-id').val(res.id);
+                        $('#edit-wiz-asset-not-found-alert').hide();
+                        $('#edit-wiz-s2-manufacturer').val(res.make || '');
+                        $('#edit-wiz-s2-model').val(res.model || '');
+                        $('#edit-wiz-s2-description').val(res.device_type || '');
+                        $('#edit-wiz-s2-serial').val(res.serial_number || '');
+                        $('#edit-wiz-s2-assetid').val(res.asset_tag || '');
+                        $('#edit-wiz-s2-department').val(res.department || '');
+                        $('#edit-wiz-s2-location').val(res.location || '');
+                    } else {
+                        $('#edit-wiz-equipment-id').val('');
+                        $('#edit-wiz-asset-not-found-alert').show();
+                        $('#edit-wiz-s2-serial').val(serial);
+                    }
+                }
+            });
+        }
+        $('#edit-wiz-s1-search-btn').on('click', searchEditSerial);
+        $('#edit-wiz-s1-serial').on('keypress', function(e) {
+            if (e.which === 13) {
+                e.preventDefault();
+                searchEditSerial();
             }
         });
-    });
-    $('#editInspectionWizardModal').on('hidden.bs.modal', function() {
-        editGoToStep(1);
-        $('#edit-wiz-asset-not-found-alert').hide();
-    });
+        $('#edit-wiz-step1-next').on('click', function() {
+            editGoToStep(2);
+        });
+        $('#edit-wiz-step2-back').on('click', function() {
+            editGoToStep(1);
+        });
+        $('#edit-wiz-step2-next').on('click', function() {
+            $('#edit-wiz-s3-model-ro').val($('#edit-wiz-s2-model').val());
+            $('#edit-wiz-s3-desc-ro').val($('#edit-wiz-s2-description').val());
+            $('#edit-wiz-s3-serial-ro').val($('#edit-wiz-s2-serial').val());
+            $('#edit-wiz-s3-assetid-ro').val($('#edit-wiz-s2-assetid').val());
+            $('#edit-wiz-s3-dept-ro').val($('#edit-wiz-s2-department').val());
+            $('#edit-wiz-s3-location-ro').val($('#edit-wiz-s2-location').val());
+            editGoToStep(3);
+        });
+        $('#edit-wiz-step3-back').on('click', function() {
+            editGoToStep(2);
+        });
+        $('#edit-wizBtnPass').on('click', function() {
+            $('#edit-wiz-s3-status').val('Pass');
+        });
+        $('#edit-wizBtnFail').on('click', function() {
+            $('#edit-wiz-s3-status').val('Fail');
+        });
+        $('#edit-wizBtnRepair').on('click', function() {
+            $('#edit-wiz-s3-status').val('Repair');
+        });
 
-    // ── Work Orders — Edit (unchanged) ────────────────────────────────
-    $(document).on('click', '.edit-workorder-btn', function() {
-        const id = $(this).data('id');
-        $('#workorder-id').val(id);
-        $('#workorder-title').val($(this).data('title'));
-        $('#workorder-equipment').val($(this).data('equipment_id'));
-        $('#workorder-status').val($(this).data('status'));
-        $('#workorder-priority').val($(this).data('priority'));
-        $('#workorder-assigned-to').val($(this).data('assigned_to'));
-        $('#workorder-start-date').val($(this).data('start_date'));
-        $('#workorder-end-date').val($(this).data('end_date'));
-        $('#workorder-description').val($(this).data('description'));
-        $('#workOrderModalLabel').text('Edit Work Order');
-        $('#workOrderSubmitBtn').text('Update Work Order');
-        $('#workOrderForm').attr('action', BASE_TEC + '/work-orders/update/' + id);
-        $('#addWorkOrderModal').modal('show');
-    });
-    $('#addWorkOrderModal').on('hidden.bs.modal', function() {
-        $('#workOrderForm')[0].reset();
-        $('#workorder-id').val('');
-        $('#workOrderModalLabel').text('Add Work Order');
-        $('#workOrderSubmitBtn').text('Save Work Order');
-        $('#workOrderForm').attr('action', BASE_TEC + '/work-orders/create');
-    });
+        $('#edit-wizBtnUpdate').on('click', function() {
+            const inspId = $('#edit-wiz-inspection-id').val(),
+                groupId = $('#edit-wiz-group-id').val();
+            $.ajax({
+                url: URL_UPDATE_INSP,
+                method: 'POST',
+                dataType: 'json',
+                data: {
+                    inspection_id: inspId,
+                    equipment_id: $('#edit-wiz-equipment-id').val(),
+                    site_id: SITE_ID,
+                    manufacturer: $('#edit-wiz-s2-manufacturer').val(),
+                    model_name: $('#edit-wiz-s2-model').val(),
+                    description: $('#edit-wiz-s2-description').val(),
+                    serial_number: $('#edit-wiz-s2-serial').val(),
+                    asset_tag: $('#edit-wiz-s2-assetid').val(),
+                    department: $('#edit-wiz-s2-department').val(),
+                    location: $('#edit-wiz-s2-location').val(),
+                    pm_frequency: $('#edit-wiz-s3-pmfreq').val(),
+                    inspection_type: $('#edit-wiz-s3-insptype').val(),
+                    technician_id: $('#edit-wiz-s3-technician').val(),
+                    scheduled_at: $('#edit-wiz-s3-inspdate').val(),
+                    notes: $('#edit-wiz-s3-notes').val(),
+                    status: $('#edit-wiz-s3-status').val(),
+                    device_complete: $('#edit-wiz-s3-devicecomplete').val()
+                },
+                success: function(res) {
+                    if (res.success) {
+                        alert('Inspection updated successfully!');
+                        $('#editInspectionWizardModal').modal('hide');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + res.message);
+                    }
+                },
+                error: function() {
+                    alert('Failed to update inspection.');
+                }
+            });
+        });
+        $('#editInspectionWizardModal').on('hidden.bs.modal', function() {
+            editGoToStep(1);
+            $('#edit-wiz-asset-not-found-alert').hide();
+        });
 
-});
+        // ── Work Orders — Edit (unchanged) ────────────────────────────────
+        $(document).on('click', '.edit-workorder-btn', function() {
+            const id = $(this).data('id');
+            $('#workorder-id').val(id);
+            $('#workorder-title').val($(this).data('title'));
+            $('#workorder-equipment').val($(this).data('equipment_id'));
+            $('#workorder-status').val($(this).data('status'));
+            $('#workorder-priority').val($(this).data('priority'));
+            $('#workorder-assigned-to').val($(this).data('assigned_to'));
+            $('#workorder-start-date').val($(this).data('start_date'));
+            $('#workorder-end-date').val($(this).data('end_date'));
+            $('#workorder-description').val($(this).data('description'));
+            $('#workOrderModalLabel').text('Edit Work Order');
+            $('#workOrderSubmitBtn').text('Update Work Order');
+            $('#workOrderForm').attr('action', BASE_TEC + '/work-orders/update/' + id);
+            $('#addWorkOrderModal').modal('show');
+        });
+        $('#addWorkOrderModal').on('hidden.bs.modal', function() {
+            $('#workOrderForm')[0].reset();
+            $('#workorder-id').val('');
+            $('#workOrderModalLabel').text('Add Work Order');
+            $('#workOrderSubmitBtn').text('Save Work Order');
+            $('#workOrderForm').attr('action', BASE_TEC + '/work-orders/create');
+        });
+
+    });
 </script>
 
 <?= $this->endSection() ?>

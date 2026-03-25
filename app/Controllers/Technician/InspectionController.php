@@ -8,7 +8,6 @@ use App\Models\EquipmentModel;
 use App\Models\SiteModel;
 use App\Models\TechnicianModel;
 use Dompdf\Dompdf;
-use Dompdf\Options;
 
 class InspectionController extends BaseController
 {
@@ -317,13 +316,12 @@ class InspectionController extends BaseController
         // Build the full standalone HTML page for PDF rendering
         $html = $this->buildReportHtml($latest, $rows ?? [], $groupId, false);
 
+        // Use Dompdf if available (no Options class required)
         try {
-            $options = new Options();
-            $options->set('isHtml5ParserEnabled', true);
-            $options->set('isRemoteEnabled', true);   // needed for logo images
-            $options->set('defaultFont', 'Arial');
-
-            $dompdf = new Dompdf($options);
+            if (!class_exists('\Dompdf\Dompdf')) {
+                throw new \Exception('Dompdf not installed');
+            }
+            $dompdf = new Dompdf();
             $dompdf->loadHtml($html, 'UTF-8');
             $dompdf->setPaper('A4', 'landscape');
             $dompdf->render();
@@ -336,11 +334,10 @@ class InspectionController extends BaseController
                 ->setHeader('Cache-Control', 'private, max-age=0, must-revalidate')
                 ->setBody($pdfOutput);
         } catch (\Throwable $e) {
-            log_message('error', '[reportPdf] Dompdf failed: ' . $e->getMessage());
-            // Last-resort fallback
+            log_message('info', '[reportPdf] Falling back to HTML: ' . $e->getMessage());
+            // Fallback: serve as printable HTML
             return $this->response
                 ->setHeader('Content-Type', 'text/html; charset=utf-8')
-                ->setHeader('Content-Disposition', 'attachment; filename="inspection-report-' . $groupId . '.html"')
                 ->setBody($html);
         }
     }
@@ -515,4 +512,64 @@ class InspectionController extends BaseController
 </body>
 </html>';
     }
+    /**
+     * Return all inspections for this technician as JSON for the reports DataTable.
+     * Route: GET /technician/inspections/listData
+     */
+    public function listData()
+    {
+        $companyId    = (int) session('company_id');
+        $technicianId = $this->resolveTechnicianId();
+
+        if (!$companyId) {
+            return $this->response->setJSON(['data' => []]);
+        }
+
+        $db = \Config\Database::connect();
+
+        $sql = "
+            SELECT
+                i.id,
+                i.group_id,
+                i.status           AS result,
+                i.notes,
+                i.inspection_type  AS action_performed,
+                i.completed_at     AS inspection_date,
+                i.next_due_date,
+                i.est,
+                i.cal,
+                i.pm_frequency,
+                e.asset_tag,
+                e.make,
+                e.model,
+                e.device_type,
+                e.serial_number,
+                e.department,
+                e.location         AS room,
+                s.name             AS site_name,
+                c.name             AS customer_name,
+                u.full_name        AS technician_name
+            FROM inspections i
+            LEFT JOIN equipment e  ON e.id = i.equipment_id
+            LEFT JOIN sites s      ON s.id = i.site_id
+            LEFT JOIN customers c  ON c.id = s.customer_id
+            LEFT JOIN technicians t ON t.id = i.technician_id
+            LEFT JOIN users u      ON u.id = t.user_id
+            WHERE i.company_id = ?
+              AND i.status IN ('Pass','Fail','Repair','completed','pass','fail','repair')
+        ";
+        $params = [$companyId];
+
+        if ($technicianId) {
+            $sql .= " AND i.technician_id = ?";
+            $params[] = $technicianId;
+        }
+
+        $sql .= " ORDER BY i.id DESC LIMIT 500";
+
+        $rows = $db->query($sql, $params)->getResultArray();
+
+        return $this->response->setJSON(['data' => $rows]);
+    }
+
 }

@@ -201,9 +201,26 @@ class SystemSettings extends BaseController
     public function iqNotes()
     {
         $companyId = session('company_id');
-        $model = new IqNoteModel();
+        $model     = new IqNoteModel();
+        $db        = \Config\Database::connect();
+
+        // Check if title column exists - if not, use note as title fallback
+        $hasTitleCol = false;
+        try {
+            $cols = $db->query("SHOW COLUMNS FROM iq_notes LIKE 'title'")->getResultArray();
+            $hasTitleCol = !empty($cols);
+        } catch (\Throwable $e) {}
 
         $rows = $model->where('company_id', $companyId)->orderBy('id', 'DESC')->findAll();
+
+        // Ensure every row has a title key so the frontend always receives it
+        foreach ($rows as &$row) {
+            if (!$hasTitleCol || !isset($row['title']) || $row['title'] === '') {
+                $row['title'] = mb_substr($row['note'] ?? '', 0, 60);
+            }
+        }
+        unset($row);
+
         return $this->response->setJSON(['data' => $rows]);
     }
 
@@ -218,21 +235,52 @@ class SystemSettings extends BaseController
     // ---------- IQ NOTE SAVE ----------
     public function iqNoteSave()
     {
-        $model = new IqNoteModel();
+        $model     = new IqNoteModel();
+        $db        = \Config\Database::connect();
+        $companyId = session('company_id');
 
-        $id = $this->request->getPost('id');
-        $data = [
-            'company_id' => session('company_id'),
-            'note'       => $this->request->getPost('note')
-        ];
+        $id    = $this->request->getPost('id');
+        $title = trim((string) $this->request->getPost('title'));
+        $note  = trim((string) $this->request->getPost('note'));
+
+        if ($title === '' && $note === '') {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Title is required'])->setStatusCode(422);
+        }
+
+        // If note is empty, use title as note fallback
+        if ($note === '') $note = $title;
+
+        // Check if title column exists in the live DB
+        $hasTitleCol = false;
+        try {
+            $cols = $db->query("SHOW COLUMNS FROM iq_notes LIKE 'title'")->getResultArray();
+            $hasTitleCol = !empty($cols);
+        } catch (\Throwable $e) {
+            $hasTitleCol = false;
+        }
+
+        // Auto-add the title column if missing (safe ALTER TABLE)
+        if (!$hasTitleCol) {
+            try {
+                $db->query("ALTER TABLE iq_notes ADD COLUMN title VARCHAR(255) NOT NULL DEFAULT '' AFTER company_id");
+                $hasTitleCol = true;
+            } catch (\Throwable $e) {
+                log_message('error', 'Could not add title column to iq_notes: ' . $e->getMessage());
+            }
+        }
+
+        $data = ['company_id' => $companyId, 'note' => $note];
+        if ($hasTitleCol) {
+            $data['title'] = $title ?: $note;
+        }
 
         if ($id) {
             $model->update($id, $data);
-            return $this->response->setJSON(['message' => 'Note updated']);
+            return $this->response->setJSON(['status' => 'success', 'message' => 'Note updated']);
         }
 
         $model->insert($data);
-        return $this->response->setJSON(['message' => 'Note added']);
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Note added']);
     }
 
 

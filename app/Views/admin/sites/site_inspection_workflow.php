@@ -1596,14 +1596,26 @@ function generateInspectionReportHTML(latest, rows, groupId) {
     .then(function(data) {
         var notes = data.data || [];
         if (!notes.length) return; // keep defaults if no IQ notes configured
-        // Clear existing options and repopulate from IQ notes
-        sel.innerHTML = '';
+        // Clear existing options and repopulate from IQ notes (show title, value = note)
+        sel.innerHTML = '<option value="">-- Select Action Performed --</option>';
         notes.forEach(function(n) {
             var opt = document.createElement('option');
-            opt.value = n.note;
-            opt.textContent = n.note;
+            opt.value = n.note || n.title;
+            opt.setAttribute('data-title', n.title || '');
+            opt.setAttribute('data-note', n.note || '');
+            opt.textContent = n.title || n.note;
             sel.appendChild(opt);
         });
+        // When an IQ Note is selected, auto-populate the Notes textarea
+        sel.removeEventListener('change', window._iqNoteChangeHandler);
+        window._iqNoteChangeHandler = function() {
+            var selected = sel.options[sel.selectedIndex];
+            if (!selected) return;
+            var noteText = selected.getAttribute('data-note') || '';
+            var notesArea = document.getElementById('inspectNotes');
+            if (notesArea && noteText) notesArea.value = noteText;
+        };
+        sel.addEventListener('change', window._iqNoteChangeHandler);
     })
     .catch(function() { /* keep static defaults on error */ });
 })();
@@ -1998,4 +2010,26 @@ function escapeHtml(str) {
         });
         </script>
     </div>
-</div>
+</div><script>
+// Auto-fill Department & Room in Add Device modal from last saved device (server-side, persists across logout)
+(function() {
+    var LAST_DEVICE_URL = '<?= site_url("admin/site-inspection/last-device") ?>';
+    var SITE_ID_VAL = '<?= $site["id"] ?? 0 ?>';
+    var modalEl = document.getElementById('addDeviceModal');
+    if (!modalEl) return;
+    modalEl.addEventListener('show.bs.modal', function() {
+        var deptEl = document.getElementById('addDept');
+        var roomEl = document.getElementById('addRoom');
+        if (!deptEl || !roomEl) return;
+        fetch(LAST_DEVICE_URL + '?site_id=' + encodeURIComponent(SITE_ID_VAL), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.department && !deptEl.value) deptEl.value = data.department;
+            if (data.location   && !roomEl.value) roomEl.value = data.location;
+        })
+        .catch(function() {});
+    });
+})();
+</script>

@@ -1,5 +1,71 @@
 <?= $this->extend('layouts/technician-header') ?>
 <?= $this->section('content') ?>
+<style>
+/* ===== DARK THEME: Modals & DataTables ===== */
+.modal-content {
+    background: #0E1630 !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: #E9EDFF !important;
+    border-radius: 16px !important;
+}
+.modal-header {
+    background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(34,211,238,.8)) !important;
+    border-bottom: none !important;
+    border-radius: 16px 16px 0 0 !important;
+}
+.modal-footer {
+    border-top: 1px solid rgba(255,255,255,.08) !important;
+    background: rgba(7,10,18,.4) !important;
+    border-radius: 0 0 16px 16px !important;
+}
+.modal-body { background: rgba(14,22,48,.6) !important; }
+.modal-title, .modal-body .form-label, .modal-body label,
+.modal-body h5, .modal-body p { color: #E9EDFF !important; }
+.modal-body .form-control, .modal-body .form-select {
+    background: rgba(255,255,255,.06) !important;
+    border: 1px solid rgba(255,255,255,.14) !important;
+    color: #E9EDFF !important;
+    border-radius: 10px !important;
+}
+.modal-body .form-control::placeholder { color: rgba(233,237,255,.35) !important; }
+.modal-body .form-select option { color: #000 !important; background: #fff !important; }
+.modal-body .form-control[readonly] { background: rgba(255,255,255,.03) !important; color: rgba(233,237,255,.5) !important; }
+.modal-body .alert { border-radius: 10px !important; }
+/* DataTables */
+table.dataTable thead th {
+    background: rgba(7,10,18,.6) !important;
+    color: rgba(233,237,255,.55) !important;
+    border-bottom: 1px solid rgba(255,255,255,.08) !important;
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+}
+table.dataTable tbody tr { background: transparent !important; }
+table.dataTable tbody tr:hover { background: rgba(255,255,255,.04) !important; }
+table.dataTable tbody td {
+    border-bottom: 1px solid rgba(255,255,255,.05) !important;
+    color: #E9EDFF !important;
+}
+table.dataTable.stripe tbody tr.odd,
+table.dataTable.stripe tbody tr.even { background: transparent !important; }
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    background: rgba(255,255,255,.06) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: #E9EDFF !important; border-radius: 8px !important; padding: 4px 8px;
+}
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter { color: rgba(233,237,255,.6) !important; }
+.dataTables_wrapper .dataTables_paginate .paginate_button { color: #E9EDFF !important; }
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: linear-gradient(135deg,rgba(124,58,237,.8),rgba(34,211,238,.6)) !important;
+    border-color: transparent !important; color: #fff !important;
+}
+/* Buttons in modals */
+.modal .btn-primary { background: linear-gradient(90deg,rgba(34,211,238,.9),rgba(124,58,237,.8)) !important; border: none !important; color: #fff !important; }
+.modal .btn-danger  { background: rgba(239,68,68,.85) !important; border: none !important; }
+.modal .btn-outline-secondary { color: rgba(233,237,255,.7) !important; border-color: rgba(255,255,255,.2) !important; }
+/* ===== END DARK THEME ===== */
+</style>
 
 <!-- Service History view -->
 <section id="serviceHistory" class="view-section active">
@@ -48,22 +114,30 @@
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="text-end">
-                                    <span class="badge bg-info text-dark">Open</span>
-                                    <br>
-
+                                <div class="text-end d-flex flex-column align-items-end gap-1">
+                                    <?php
+                                        $wostatus = strtolower($wo['status'] ?? 'open');
+                                        $statusBadge = $wostatus === 'closed' ? 'bg-success' : ($wostatus === 'in_progress' ? 'bg-warning' : 'bg-info text-dark');
+                                        $statusLabel = ucwords(str_replace('_',' ',$wostatus));
+                                    ?>
+                                    <span class="badge <?= $statusBadge ?>"><?= esc($statusLabel) ?></span>
                                     <?php if (($wo['priority'] ?? '') === 'critical'): ?>
-                                        <span class="badge bg-danger mt-1">Critical</span>
+                                        <span class="badge bg-danger">Critical</span>
                                     <?php elseif (($wo['priority'] ?? '') === 'high'): ?>
-                                        <span class="badge bg-danger mt-1">High</span>
+                                        <span class="badge bg-danger">High</span>
                                     <?php elseif (($wo['priority'] ?? '') === 'medium'): ?>
-                                        <span class="badge bg-warning mt-1">Medium</span>
+                                        <span class="badge bg-warning">Medium</span>
                                     <?php elseif (($wo['priority'] ?? '') === 'low'): ?>
-                                        <span class="badge bg-success mt-1">Low</span>
-                                    <?php else: ?>
-                                        <span
-                                            class="badge bg-light text-dark mt-1"><?= esc(ucwords($wo['priority'] ?? 'N/A')) ?></span>
+                                        <span class="badge bg-success">Low</span>
                                     <?php endif; ?>
+                                    <button class="btn btn-sm btn-outline-secondary mt-1 update-wo-btn"
+                                        data-id="<?= esc($wo['id']) ?>"
+                                        data-title="<?= esc($wo['title'] ?? '', 'attr') ?>"
+                                        data-status="<?= esc($wostatus, 'attr') ?>"
+                                        data-priority="<?= esc($wo['priority'] ?? 'medium', 'attr') ?>"
+                                        data-description="<?= esc($wo['description'] ?? '', 'attr') ?>">
+                                        <i class="fa-solid fa-pen-to-square me-1"></i>Update
+                                    </button>
                                 </div>
                             </li>
                         <?php endforeach; ?>
@@ -119,7 +193,100 @@
     </div>
 </section>
 
+<!-- Update Work Order Status Modal -->
+<div class="modal fade" id="updateWOModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="updateWOForm">
+                <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-radius:12px 12px 0 0;">
+                    <h5 class="modal-title text-white fw-bold"><i class="fa-solid fa-pen-to-square me-2"></i>Update Work Order</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <?= csrf_field() ?>
+                    <input type="hidden" id="updateWoId" name="wo_id">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Work Order Title</label>
+                        <input type="text" class="form-control" id="updateWoTitle" name="title" readonly
+                            style="background:rgba(255,255,255,.05);color:inherit;border:1px solid rgba(255,255,255,.15);">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+                        <select class="form-select" id="updateWoStatus" name="status" required>
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="closed">Closed / Completed</option>
+                            <option value="on_hold">On Hold</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Priority</label>
+                        <select class="form-select" id="updateWoPriority" name="priority">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Notes / Description</label>
+                        <textarea class="form-control" id="updateWoDescription" name="description" rows="3"
+                            placeholder="Add update notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Open update modal and populate fields
+$(document).on('click', '.update-wo-btn', function() {
+    var btn = $(this);
+    $('#updateWoId').val(btn.data('id'));
+    $('#updateWoTitle').val(btn.data('title'));
+    $('#updateWoStatus').val(btn.data('status') || 'open');
+    $('#updateWoPriority').val(btn.data('priority') || 'medium');
+    $('#updateWoDescription').val(btn.data('description') || '');
+    $('#updateWOModal').modal('show');
+});
+
+// Submit update via AJAX
+$('#updateWOForm').on('submit', function(e) {
+    e.preventDefault();
+    var woId = $('#updateWoId').val();
+    var data = $(this).serialize();
+
+    $.ajax({
+        url: '<?= site_url('technician/work-orders/update') ?>/' + woId,
+        type: 'POST',
+        data: data,
+        dataType: 'json',
+        success: function(res) {
+            $('#updateWOModal').modal('hide');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'success', title: 'Updated!', text: 'Work order status has been updated.', timer: 1800, showConfirmButton: false })
+                    .then(function() { location.reload(); });
+            } else {
+                alert('Work order updated successfully.');
+                location.reload();
+            }
+        },
+        error: function() {
+            alert('Failed to update work order. Please try again.');
+        }
+    });
+});
+</script>
+
 <!-- Work Order Modal -->
+
 <div class="modal fade" id="addWorkOrderModal" tabindex="-1" aria-labelledby="addWorkOrderModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">

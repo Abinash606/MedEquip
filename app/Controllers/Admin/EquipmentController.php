@@ -72,7 +72,7 @@ class EquipmentController extends BaseController
                 'device_type' => $this->request->getPost('device_type'),
                 'location' => $this->request->getPost('location'),
                 'department' => $this->request->getPost('department'),
-                'status' => $this->request->getPost('status') ?: 'active',
+                'status' => in_array($this->request->getPost('status'), ['ready','need_attention','out_of_service']) ? $this->request->getPost('status') : 'ready',
                 'site_id' => $this->request->getPost('site_id'),
                 'est' => $this->request->getPost('est') ? ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1' ? '1' : '0') : '0',
                 'cal' => $this->request->getPost('cal') ? ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1' ? '1' : '0') : '0',
@@ -101,9 +101,12 @@ class EquipmentController extends BaseController
                         'site_id'     => $data['site_id'],
                     ]);
                 }
+                $dbError = $equipmentModel->errors() ?: [];
+                $errMsg  = !empty($dbError) ? implode(', ', $dbError) : 'Failed to add equipment (check status enum value)';
+                log_message('error', '[EquipmentController::create] Insert failed. Data: ' . json_encode($data) . ' Errors: ' . json_encode($dbError));
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => 'Failed to add equipment',
+                    'message' => $errMsg,
                 ]);
             }
 
@@ -333,6 +336,184 @@ class EquipmentController extends BaseController
         return $this->response->setJSON([
             'status'  => 'success',
             'message' => 'Equipment deleted'
+        ]);
+    }
+
+
+    /**
+     * Bulk import equipment from Excel/CSV.
+     * Matches columns: Make, Model, Device Type, Asset Tag, Serial Number, Department, Location Or Room
+     * Route: POST /admin/equipment/bulk-import
+     */
+    public function bulkImport()
+    {
+        $companyId = (int) session('company_id');
+        $siteId    = (int) $this->request->getPost('site_id');
+
+        if (!$siteId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No site_id provided.']);
+        }
+
+        $file = $this->request->getFile('excel_file');
+        if (!$file || !$file->isValid()) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No valid file uploaded.']);
+        }
+
+        $ext     = strtolower($file->getClientExtension());
+        $tmpPath = $file->getTempName();
+        $rows    = [];
+
+        if ($ext === 'csv') {
+            if (($handle = fopen($tmpPath, 'r')) !== false) {
+                $headers = null;
+                while (($line = fgetcsv($handle)) !== false) {
+                    if ($headers === null) {
+                        $headers = array_map('trim', array_map('strtolower', $line));
+                        continue;
+                    }
+                    if (!empty(array_filter($line))) {
+                        $rows[] = array_combine($headers, array_pad($line, count($headers), ''));
+                    }
+                }
+                fclose($handle);
+            }
+        } elseif (in_array($ext, ['xlsx', 'xls'])) {
+            if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                // Fallback: use openpyxl-style reading via direct file parse
+                // Try using openpyxl via Python as a system call
+                $jsonOut = shell_exec('python3 -c "
+import json, sys
+try:
+    from openpyxl import load_workbook
+    wb = load_workbook(\"' . addslashes($tmpPath) . '\", read_only=True)
+    ws = wb.active
+    data = []
+    for row in ws.iter_rows(values_only=True):
+        data.append([str(v) if v is not None else \"\" for v in row])
+    print(json.dumps(data))
+except Exception as e:
+    print(json.dumps({\"error\": str(e)}))
+" 2>/dev/null');
+
+                if ($jsonOut) {
+                    $parsed = json_decode($jsonOut, true);
+                    if (!empty($parsed) && !isset($parsed['error']) && count($parsed) > 1) {
+                        $headers = array_map('trim', array_map('strtolower', $parsed[0]));
+                        for ($i = 1; $i < count($parsed); $i++) {
+                            if (!empty(array_filter($parsed[$i]))) {
+                                $rows[] = array_combine($headers, array_pad($parsed[$i], count($headers), ''));
+                            }
+                        }
+                    }
+                }
+
+                if (empty($rows)) {
+                    return $this->response->setJSON(['success' => false, 'message' => 'PhpSpreadsheet not installed and Python fallback failed. Please upload a CSV file.']);
+                }
+            } else {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $data  = $sheet->toArray(null, true, true, false);
+                    if (!empty($data)) {
+                        $headers = array_map('trim', array_map('strtolower', $data[0]));
+                        for ($i = 1; $i < count($data); $i++) {
+                            if (!empty(array_filter($data[$i]))) {
+                                $rows[] = array_combine($headers, array_pad($data[$i], count($headers), ''));
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return $this->response->setJSON(['success' => false, 'message' => 'Could not read Excel file: ' . $e->getMessage()]);
+                }
+            }
+        } else {
+            return $this->response->setJSON(['success' => false, 'message' => 'Only .xlsx, .xls, or .csv files accepted.']);
+        }
+
+        if (empty($rows)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No data rows found in file. Check the file has a header row.']);
+        }
+
+        $equipmentModel = new \App\Models\EquipmentModel();
+        $db       = \Config\Database::connect(); // needed for INSERT IGNORE and duplicate checks
+        $imported = 0;
+        $skipped  = 0;
+
+        foreach ($rows as $row) {
+            // Normalize keys: trim + lowercase all header names
+            $norm = [];
+            foreach ($row as $k => $v) {
+                $norm[trim(strtolower((string)$k))] = trim((string)$v);
+            }
+
+            // Map Excel column headers to DB fields
+            // Handles: 'Make ', 'Asset Tag ', 'Device Type ', 'Serial Number ', 'Location Or Room '
+            $assetTag   = $norm['asset tag']         ?? $norm['asset_tag']      ?? $norm['asset #']   ?? '';
+            $make       = $norm['make']               ?? $norm['manufacturer']   ?? '';
+            $model      = $norm['model']              ?? $norm['model number']   ?? '';
+            $serial     = $norm['serial number']      ?? $norm['serial_number']  ?? $norm['s/n']       ?? $norm['sn'] ?? '';
+            $deviceType = $norm['device type']        ?? $norm['device_type']    ?? $norm['type']      ?? '';
+            $department = $norm['department']         ?? $norm['dept']           ?? '';
+            $location   = $norm['location or room']   ?? $norm['room']           ?? $norm['location']  ?? '';
+
+            // Convert numeric Excel values to strings
+            if (is_numeric($assetTag) && $assetTag !== '') $assetTag = (string)(int)$assetTag;
+            if (is_numeric($serial)   && $serial   !== '') $serial   = (string)(int)$serial;
+
+            // Clean N/A serial numbers
+            if (strtoupper(trim($serial)) === 'N/A') $serial = '';
+
+            // Skip completely empty rows
+            if (empty($make) && empty($model)) { $skipped++; continue; }
+
+            // Check for duplicate asset tag using direct DB query (avoids model state issues)
+            if (!empty($assetTag)) {
+                $dup = $db->query(
+                    "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                    [$companyId, $assetTag]
+                )->getRow();
+                if ($dup) { $skipped++; continue; }
+            } else {
+                // Auto-generate a unique asset tag
+                $lastTag = $db->query(
+                    "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
+                    [$companyId]
+                )->getRow();
+                $num = 1000;
+                if ($last && preg_match('/ASSET-(\d+)/', $last['asset_tag'], $m)) {
+                    $num = (int)$m[1] + 1;
+                }
+                $assetTag = 'ASSET-' . $num;
+            }
+
+            // Use INSERT IGNORE so the DB unique constraint never throws a fatal error
+            // (handles any race condition where a duplicate slips past the check above)
+            try {
+                $db->query(
+                    "INSERT IGNORE INTO equipment
+                     (company_id, site_id, asset_tag, make, model, serial_number, device_type, department, location, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
+                    [$companyId, $siteId, $assetTag, $make, $model, $serial, $deviceType, $department, $location]
+                );
+                // INSERT IGNORE returns 0 affected rows for duplicates
+                if ($db->affectedRows() > 0) {
+                    $imported++;
+                } else {
+                    $skipped++; // Was a duplicate the check above missed
+                }
+            } catch (\Throwable $e) {
+                // Catch any remaining DB errors (shouldn't happen with INSERT IGNORE, but be safe)
+                log_message('warning', '[bulkImport] Skipping row due to DB error: ' . $e->getMessage());
+                $skipped++;
+            }
+        }
+
+        return $this->response->setJSON([
+            'success'  => true,
+            'imported' => $imported,
+            'skipped'  => $skipped,
+            'message'  => "$imported imported, $skipped skipped.",
         ]);
     }
 }

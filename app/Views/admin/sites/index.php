@@ -44,7 +44,7 @@ foreach ($customers as $cust) {
     <select id="customer-filter" class="form-select">
         <option value="">All Customers</option>
         <?php foreach ($customers as $cust): ?>
-            <option value="<?= esc($cust['name']) ?>"><?= esc($cust['name']) ?></option>
+            <option value="<?= esc($cust['id']) ?>"><?= esc($cust['name']) ?></option>
         <?php endforeach; ?>
     </select>
         </div>
@@ -199,13 +199,7 @@ foreach ($customers as $cust) {
 </div>
 
 
-<?php if (isset($_GET['customer_id']) && $_GET['customer_id']): ?>
-    <script>
-        const modal = new bootstrap.Modal(siteModal);
-        modal.show();
-        document.getElementById('site-customer-id').value = '<?= $_GET['customer_id'] ?>';
-    </script>
-<?php endif; ?>
+
 
 <script>
     $(document).ready(function() {
@@ -323,16 +317,28 @@ foreach ($customers as $cust) {
             table.search(this.value).draw(); // Trigger DataTable search
         });
 
-        // Handle customer filter
-        $('#customer-filter').on('change', function() {
-            var selectedCustomer = this.value;
-
-            if (selectedCustomer === "") {
-                table.column(1).search('').draw(); // Show all rows if "All Customers" is selected
-            } else {
-                table.column(1).search(selectedCustomer).draw(); // Filter by customer name
+        // ---- Customer Filter ----
+        function applyCustomerFilter(selectedId) {
+            $.fn.dataTable.ext.search = [];
+            if (selectedId && selectedId !== '') {
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    var row = table.row(dataIndex).node();
+                    return $(row).data('customer-id') == selectedId;
+                });
             }
+            table.draw();
+        }
+
+        $('#customer-filter').on('change', function() {
+            applyCustomerFilter(this.value);
         });
+
+        // Auto-apply filter if arriving from Customer Directory (session-based)
+        var _preselect = '<?= (int)($active_customer_id ?? 0) ?>';
+        if (_preselect && _preselect !== '0') {
+            document.getElementById('customer-filter').value = _preselect;
+            applyCustomerFilter(_preselect);
+        }
     });
 
 

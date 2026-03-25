@@ -18,12 +18,17 @@ class SitesController extends BaseController
      */
     public function index()
     {
-        $siteModel = new SiteModel();
+        $siteModel     = new SiteModel();
         $customerModel = new CustomerModel();
-        $companyId = $this->session->get('company_id');
+        $companyId     = $this->session->get('company_id');
 
-        $data['sites'] = $siteModel->where('company_id', $companyId)->findAll();
-        $data['customers'] = $customerModel->where('company_id', $companyId)->findAll();
+        // Read customer filter from session (set by filterSites) then clear it
+        $activeCustomerId = session()->get('admin_site_customer_filter');
+        session()->remove('admin_site_customer_filter');
+
+        $data['sites']            = $siteModel->where('company_id', $companyId)->findAll();
+        $data['customers']        = $customerModel->where('company_id', $companyId)->findAll();
+        $data['active_customer_id'] = $activeCustomerId;
 
         return view('admin/sites/index', $data);
     }

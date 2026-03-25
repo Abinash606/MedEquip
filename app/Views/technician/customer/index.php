@@ -43,7 +43,7 @@
                                             <?= esc($customer['name']) ?>
                                         </a>
                                     <?php else: ?>
-                                        <a href="<?= site_url('technician/sites?customer_id=' . $customer['id']) ?>"
+                                        <a href="<?= site_url('technician/customers/filter-sites/' . $customer['id']) ?>"
                                             class="text-primary fw-bold">
                                             <?= esc($customer['name']) ?>
                                         </a>

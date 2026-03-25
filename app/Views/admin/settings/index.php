@@ -140,6 +140,7 @@
               <table class="table table-sm w-100" id="iqNotesTable">
                 <thead>
                   <tr>
+                    <th>Title</th>
                     <th>Note</th>
                     <th width="120">Action</th>
                   </tr>
@@ -157,12 +158,11 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
               <div>
                 <h5 class="fw-bold mb-0">Equipment Inventory</h5>
-                <small class="text-muted">Dynamically populated from Equipment DB. Toggle EST &amp; CAL
-                  flags per device row.</small>
+                <small class="text-muted">Dynamically populated from Equipment DB. Toggle EST &amp; CAL flags per device row. New equipment added via Sites appears here after refresh.</small>
               </div>
-              <!-- <button class="btn btn-primary btn-sm" id="btnAddEquipment">
-              <i class="fas fa-plus"></i> Add Equipment
-            </button> -->
+              <button class="btn btn-outline-secondary btn-sm" id="btnRefreshEquipment" title="Reload equipment list from database">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+              </button>
             </div>
             <div class="glass-card mb-3 p-3 mt-3">
               <div class="table-responsive">
@@ -281,8 +281,12 @@
 
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Note</label>
-            <textarea name="note" id="iq-note-text" class="form-control" rows="4" required></textarea>
+            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+            <input type="text" name="title" id="iq-note-title" class="form-control" placeholder="Enter note title..." required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="note" id="iq-note-text" class="form-control" rows="4" placeholder="Enter note description..."></textarea>
           </div>
         </div>
 
@@ -388,10 +392,15 @@
       $(`#settings-nav a[data-target="${targetId}"]`).addClass('active');
       $('#' + targetId).removeClass('d-none');
 
-      // ✅ Ensure IQ Notes always loads
-      // if (targetId === 'iqNotesSettings') {
-      //   loadIqNotes();
-      // }
+      // Auto-reload equipment DataTable every time the tab is opened
+      // This ensures newly-added equipment from Sites page shows immediately
+      if (targetId === 'equipmentSettings' && typeof equipmentTable !== 'undefined') {
+        equipmentTable.ajax.reload(null, false);
+      }
+      // Auto-reload IQ Notes DataTable when that tab is opened
+      if (targetId === 'iqNotesSettings' && typeof iqTable !== 'undefined') {
+        iqTable.ajax.reload(null, false);
+      }
     }
 
     // ---------------------------------------
@@ -701,9 +710,9 @@
         dataSrc: 'data'
       },
       pageLength: 10,
-      columns: [{
-          data: 'note'
-        },
+      columns: [
+        { data: 'title' },
+        { data: 'note', render: function(d){ return d ? d.substring(0,80)+(d.length>80?'...':'') : '' } },
         {
           data: null,
           orderable: false,
@@ -737,7 +746,8 @@
         data: $(this).serialize(),
         dataType: "json",
         success: function(res) {
-          $('#iqNoteModal').modal('hide'); // ✅ FIX 1
+          if(res.status === 'error'){ swalError(res.message || 'Error'); return; }
+          $('#iqNoteModal').modal('hide');
           swalSuccess(res.message || 'Saved');
           iqTable.ajax.reload(null, false);
 
@@ -754,6 +764,7 @@
 
       $.get("<?= site_url('admin/settings/iq-notes') ?>/" + id, function(res) {
         $('#iq-note-id').val(res.data.id);
+        $('#iq-note-title').val(res.data.title || '');
         $('#iq-note-text').val(res.data.note);
         $('#iqNoteModal').modal('show');
       }, 'json');
@@ -810,7 +821,9 @@
     const equipmentTable = $('#equipment-datatable').DataTable({
       ajax: {
         url: "<?= site_url('admin/settings/equipment') ?>",
-        dataSrc: 'data'
+        dataSrc: 'data',
+        cache: false,
+        data: function(d) { d._ts = Date.now(); return d; }
       },
       columns: [{
           data: null,
@@ -900,6 +913,15 @@
         $cb.prop('checked', !$cb.prop('checked'));
         swalError('Connection error');
       });
+    });
+
+    // Refresh equipment list button
+    $('#btnRefreshEquipment').on('click', function() {
+      var $btn = $(this);
+      $btn.prop('disabled', true).html('<i class="fas fa-spin fa-spinner me-1"></i> Refreshing...');
+      equipmentTable.ajax.reload(function() {
+        $btn.prop('disabled', false).html('<i class="fas fa-sync-alt me-1"></i> Refresh');
+      }, false);
     });
 
     // Open edit modal

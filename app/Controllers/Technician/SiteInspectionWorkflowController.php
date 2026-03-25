@@ -237,9 +237,9 @@ class SiteInspectionWorkflowController extends BaseController
 
         // ── Sync equipment status ────────────────────────────────
         $statusMap = [
-            'Pass'   => 'Ready',
-            'Fail'   => 'Needs Attention',
-            'Repair' => 'Repair',
+            'Pass'   => 'ready',
+            'Fail'   => 'need_attention',
+            'Repair' => 'need_attention',
         ];
         if (isset($statusMap[$result])) {
             $em->update($equipmentId, ['status' => $statusMap[$result]]);
@@ -441,7 +441,7 @@ class SiteInspectionWorkflowController extends BaseController
         $db->table('inspections')->where('id', $inspectionId)->update($updateData);
 
         $result    = $this->request->getPost('status');
-        $statusMap = ['Pass' => 'Ready', 'Fail' => 'Needs Attention', 'Repair' => 'Repair'];
+        $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
         if ($equipmentId > 0 && isset($statusMap[$result])) {
             $em->update($equipmentId, ['status' => $statusMap[$result]]);
         }
@@ -606,7 +606,7 @@ class SiteInspectionWorkflowController extends BaseController
                     $db->table('inspections')->insert($insData);
                 }
 
-                $statusMap = ['Pass' => 'Ready', 'Fail' => 'Needs Attention', 'Repair' => 'Repair'];
+                $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
                 if (isset($statusMap[$status])) {
                     $em->update($equipmentId, ['status' => $statusMap[$status]]);
                 }
@@ -617,4 +617,133 @@ class SiteInspectionWorkflowController extends BaseController
 
         return $this->response->setJSON(['success' => true, 'group_id' => $groupId]);
     }
+    // ─────────────────────────────────────────────────────────────────
+    // POST technician/site-inspection/add-device
+    // ─────────────────────────────────────────────────────────────────
+    public function addDevice()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $companyId = (int) session('company_id');
+        $siteId    = (int) $this->request->getPost('site_id');
+
+        if ($siteId === 0 || $companyId === 0) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Site ID or Company ID missing.']);
+        }
+
+        $assetTag   = trim((string) $this->request->getPost('asset_tag'));
+        $model      = trim((string) $this->request->getPost('model'));
+        $serial     = trim((string) $this->request->getPost('serial_number'));
+        $make       = trim((string) $this->request->getPost('make'));
+        $deviceType = trim((string) $this->request->getPost('device_type'));
+        $description = trim((string) $this->request->getPost('description'));
+        $dept       = trim((string) $this->request->getPost('department'));
+        $location   = trim((string) $this->request->getPost('location'));
+        $technician = trim((string) $this->request->getPost('technician'));
+        $est        = trim((string) $this->request->getPost('est')) ?: 'No';
+        $cal        = trim((string) $this->request->getPost('cal')) ?: 'No';
+        $groupId    = trim((string) $this->request->getPost('group_id'));
+
+        if ($assetTag === '') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Asset # is required.']);
+        }
+
+        $em = new EquipmentModel();
+
+        // Check for duplicate asset tag in this site
+        $existing = $em->where('company_id', $companyId)
+            ->where('site_id',   $siteId)
+            ->where('asset_tag', $assetTag)
+            ->first();
+
+        if ($existing) {
+            return $this->response->setJSON([
+                'success'          => false,
+                'message'          => 'Asset # "' . $assetTag . '" already exists in this site\'s inventory.',
+                'start_inspection' => false,
+            ]);
+        }
+
+        $candidate = [
+            'company_id'    => $companyId,
+            'site_id'       => $siteId,
+            'asset_tag'     => $assetTag,
+            'model'         => $model,
+            'make'          => $make,
+            'serial_number' => $serial,
+            'device_type'   => $deviceType,
+            'description'   => $description,
+            'department'    => $dept,
+            'location'      => $location,
+            'technician'    => $technician,
+            'est'           => $est,
+            'cal'           => $cal,
+            'status'        => 'Not Inspected',
+            'created_at'    => date('Y-m-d H:i:s'),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ];
+
+        // Strip keys not in actual DB columns
+        $insertData = $this->filterToColumns($candidate, 'equipment');
+
+        $em->insert($insertData);
+        $newId = $em->getInsertID();
+
+        if (!$newId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to save device to database.']);
+        }
+
+        return $this->response->setJSON([
+            'success'          => true,
+            'message'          => 'Device added successfully.',
+            'equipment_id'     => $newId,
+            'asset_tag'        => $assetTag,
+            'start_inspection' => true,
+            'csrf_hash'        => csrf_hash(),
+        ]);
+    }
+    /**
+     * Return the department and room from the most recently saved equipment
+     * record for a given site. Server-side persistent autofill for Add Device modal.
+     */
+    public function getLastDeviceForSite()
+    {
+        $siteId    = (int) $this->request->getGet('site_id');
+        $companyId = (int) session('company_id');
+
+        if ($siteId === 0) {
+            return $this->response->setJSON(['department' => '', 'location' => '']);
+        }
+
+        $equipmentModel = new \App\Models\EquipmentModel();
+        $eq = $equipmentModel
+            ->where('company_id', $companyId)
+            ->where('site_id', $siteId)
+            ->orderBy('id', 'DESC')
+            ->first();
+
+        return $this->response->setJSON([
+            'department' => $eq['department'] ?? '',
+            'location'   => $eq['location']   ?? '',
+        ]);
+    }
+
+    /**
+     * Return IQ Notes for this company so the technician workflow
+     * can populate the Action Performed dropdown with Title/Note pairs.
+     */
+    public function getIqNotes()
+    {
+        $companyId = (int) session('company_id');
+        $db  = \Config\Database::connect();
+        $rows = $db->table('iq_notes')
+            ->where('company_id', $companyId)
+            ->orderBy('id', 'DESC')
+            ->get()->getResultArray();
+
+        return $this->response->setJSON(['data' => $rows]);
+    }
+
 }

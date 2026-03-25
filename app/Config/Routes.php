@@ -57,6 +57,9 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
 
     $routes->get('scheduling', 'Admin\SchedulingController::index');
+    $routes->get('scheduling/events', 'Admin\\SchedulingController::events');
+    $routes->post('scheduling/store', 'Admin\\SchedulingController::store');
+    $routes->get('customers/filter-sites/(:num)', 'Admin\\CustomersController::filterSites/$1');
     $routes->get('technicians', 'Admin\\TechniciansController::index');
     $routes->get('states', 'Admin\\TechniciansController::states');
     $routes->get('technicians/data', 'Admin\\TechniciansController::getData');
@@ -95,6 +98,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('equipment-db/(:num)', 'Admin\EquipmentController::show/$1');
     $routes->post('equipment-db/save', 'Admin\EquipmentController::save');
     $routes->post('equipment-db/delete/(:num)', 'Admin\EquipmentController::deletedb/$1');
+    $routes->post('equipment/bulk-import', 'Admin\\EquipmentController::bulkImport');
 
     $routes->post(
         'data-operations/import-equipment',
@@ -153,6 +157,8 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('settings/equipment', 'Admin\SystemSettings::equipmentList');
     $routes->post('settings/equipment/save', 'Admin\SystemSettings::equipmentSave');
     $routes->get('site-inspection/get-equipment', 'Admin\SiteInspectionWorkflowController::getEquipment');
+    $routes->get('site-inspection/last-device', 'Admin\\SiteInspectionWorkflowController::getLastDeviceForSite');
+    $routes->get('inspection-reports/list', 'Admin\\InspectionReportsController::listData');
     $routes->post('settings/equipment/toggle', 'Admin\SystemSettings::equipmentToggle');
     $routes->post('site-inspection/record', 'Admin\SiteInspectionWorkflowController::recordInspection');
     $routes->delete('settings/equipment/delete/(:num)', 'Admin\SystemSettings::equipmentDelete/$1');
@@ -165,6 +171,8 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
 
 
     $routes->get('assets', 'Customer\\AssetsController::index');
+    $routes->post('assets/report-issue', 'Customer\\AssetsController::reportIssue');
+    $routes->post('assets/bulk-import', 'Customer\\AssetsController::bulkImport');
     $routes->get('inspections', 'Customer\\InspectionsController::index');
     $routes->get('documents', 'Customer\\DocumentsController::index');
 });
@@ -174,6 +182,7 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->get('dashboard',                                   'Technician\\DashboardController::index');
     $routes->get('customers',                                   'Technician\\CustomerController::index');
     $routes->post('sites/add', 'Technician\\SitesController::siteCreate');
+    $routes->get('customers/filter-sites/(:num)', 'Technician\\CustomerController::filterSites/$1');
     // ── Inspections ─────────────────────────────────────────────
     $routes->get('inspections',                                 'Technician\\InspectionController::index');
     $routes->get('inspections/getEquipment',                    'Technician\\InspectionController::getEquipment');
@@ -184,9 +193,16 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->post('inspections/deleteRecord/(:num)',            'Technician\\InspectionController::deleteRecord/$1');
     $routes->get('inspections/reportPreview/(:any)',            'Technician\\InspectionController::reportPreview/$1');
     $routes->get('inspections/reportPdf/(:any)',                'Technician\\InspectionController::reportPdf/$1');
+    $routes->get('inspections/listData',                        'Technician\\InspectionController::listData');
 
     // ── Inspection Workflow (new — routed to SiteInspectionWorkflowController) ──
+    $routes->post(
+        'site-inspection/add-device',
+        'Technician\\SiteInspectionWorkflowController::addDevice'
+    );
     $routes->get('site-inspection/get-equipment',               'Technician\\SiteInspectionWorkflowController::getEquipment');
+    $routes->get('site-inspection/last-device',                 'Technician\\SiteInspectionWorkflowController::getLastDeviceForSite');
+    $routes->get('iq-notes',                                    'Technician\\SiteInspectionWorkflowController::getIqNotes');
     $routes->post('site-inspection/record',                     'Technician\\SiteInspectionWorkflowController::recordInspection');
     $routes->post('inspections/create',                         'Technician\\SiteInspectionWorkflowController::create');
     $routes->get('inspections/searchBySerial',                  'Technician\\SiteInspectionWorkflowController::searchBySerial');

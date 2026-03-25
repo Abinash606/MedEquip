@@ -12,37 +12,56 @@ class SitesController extends BaseController
         $db        = Database::connect();
         $userId    = session()->get('user_id');
         $companyId = session()->get('company_id');
-        $customerId = $this->request->getGet('customer_id');
+
+        // ── Read filter from session then immediately clear it ───
+        $customerId = session()->get('site_customer_filter');
+        session()->remove('site_customer_filter');
 
         $states = $this->getTechnicianStates($db, $userId);
 
         if (empty($states)) {
-            return view('technician/site/index', ['sites' => [], 'customers' => [], 'customer_id' => $customerId]);
+            return view('technician/site/index', [
+                'sites'              => [],
+                'customers'          => [],
+                'active_customer_id' => null,
+            ]);
         }
 
         $customerIds = $this->getAllowedCustomerIds($db, $companyId, $states);
 
         if (empty($customerIds)) {
-            return view('technician/site/index', ['sites' => [], 'customers' => [], 'customer_id' => $customerId]);
+            return view('technician/site/index', [
+                'sites'              => [],
+                'customers'          => [],
+                'active_customer_id' => null,
+            ]);
         }
 
         $query = $db->table('sites')
-            ->select('sites.id, sites.name AS site_name, sites.address AS site_address,
-                  sites.contact_name AS site_contact_name, sites.phone AS site_phone,
-                  sites.email AS site_email, customers.name AS customer_name')
+            ->select('
+            sites.id,
+            sites.name          AS site_name,
+            sites.address       AS site_address,
+            sites.contact_name  AS site_contact_name,
+            sites.phone         AS site_phone,
+            sites.email         AS site_email,
+            customers.name      AS customer_name,
+            customers.id        AS customer_id
+        ')
             ->join('customers', 'customers.id = sites.customer_id AND customers.deleted_at IS NULL', 'left')
             ->where('sites.company_id', $companyId)
             ->whereIn('sites.customer_id', $customerIds)
             ->where('sites.deleted_at IS NULL', null, false)
             ->orderBy('sites.name', 'ASC');
 
+        // ── Apply customer filter if coming from customer page ───
         if (!empty($customerId)) {
             $query->where('sites.customer_id', $customerId);
         }
 
         $sites = $query->get()->getResultArray();
 
-        // ── Pass allowed customers for the Add Site dropdown ──
+        // ── Customers for Add Site dropdown ──────────────────────
         $customers = $db->table('customers')
             ->select('id, name')
             ->where('company_id', $companyId)
@@ -53,9 +72,9 @@ class SitesController extends BaseController
             ->getResultArray();
 
         return view('technician/site/index', [
-            'sites'       => $sites,
-            'customers'   => $customers,
-            'customer_id' => $customerId,
+            'sites'              => $sites,
+            'customers'          => $customers,
+            'active_customer_id' => $customerId, // pre-selects filter dropdown
         ]);
     }
 
@@ -331,7 +350,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => $this->request->getPost('status') ?: 'Ready',
+            'status'            => 'ready', // DB enum: ready|need_attention|out_of_service
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -384,7 +403,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => $this->request->getPost('status') ?: 'Ready',
+            'status'            => 'ready', // DB enum: ready|need_attention|out_of_service
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,

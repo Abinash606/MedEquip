@@ -76,7 +76,7 @@ class AssetsController extends BaseController
             'make' => 'required|min_length[2]',
             'model' => 'required|min_length[2]',
             'device_type' => 'required',
-            'status' => 'required|in_list[Operational,Needs Attention,Out of Service]',
+            'status' => 'required|in_list[ready,need_attention,out_of_service]',
         ], [
             'serial_number' => [
                 'required' => 'Serial number is required.'
@@ -94,7 +94,7 @@ class AssetsController extends BaseController
             ],
             'status' => [
                 'required' => 'Status is required.',
-                'in_list' => 'Invalid status selected.'
+                'in_list' => 'Invalid status. Use: ready, need_attention, out_of_service'
             ]
         ]);
 
@@ -134,7 +134,7 @@ class AssetsController extends BaseController
             'device_type' => $this->request->getPost('device_type'),
             'department' => $this->request->getPost('department'),
             'location' => $this->request->getPost('location'),
-            'status' => $this->request->getPost('status'),
+            'status' => (function($s) { $m = ['Operational'=>'ready','Needs Attention'=>'need_attention','Out of Service'=>'out_of_service']; return $m[$s] ?? strtolower(str_replace(' ','_',$s)) ?: 'ready'; })($this->request->getPost('status')),
         ];
 
         if ($equipModel->insert($data)) {
@@ -168,5 +168,250 @@ class AssetsController extends BaseController
         }
 
         return 'ASSET-' . $newNumber;
+    }
+
+    /**
+     * Handle Report Issue form submission.
+     * Auto-fills equipment details from the posted data and sends an email
+     * notification to the company admin.
+     */
+    public function reportIssue()
+    {
+        $equipModel = new EquipmentModel();
+        $companyId  = $this->session->get('company_id');
+        $customerId = $this->session->get('customer_id');
+        $username   = $this->session->get('username') ?? 'Customer';
+        $db         = \Config\Database::connect();
+
+        $equipmentId      = (int) $this->request->getPost('equipment_id');
+        $issueDescription = trim((string) $this->request->getPost('issue_description'));
+        $priority         = trim((string) $this->request->getPost('priority')) ?: 'normal';
+        $assetTag         = trim((string) $this->request->getPost('asset_tag'));
+        $make             = trim((string) $this->request->getPost('make'));
+        $model            = trim((string) $this->request->getPost('model'));
+        $serialNumber     = trim((string) $this->request->getPost('serial_number'));
+        $deviceType       = trim((string) $this->request->getPost('device_type'));
+
+        if ($issueDescription === '') {
+            return redirect()->back()->with('error', 'Please describe the issue.');
+        }
+
+        // Map priority to work_orders enum: low|normal|high
+        $priorityMap = ['low'=>'low','medium'=>'normal','normal'=>'normal','high'=>'high','critical'=>'high','urgent'=>'high'];
+        $dbPriority  = $priorityMap[strtolower($priority)] ?? 'normal';
+
+        // Resolve site_id (work_orders.site_id is NOT NULL)
+        $siteId = 0;
+        if ($equipmentId) {
+            $eq = $db->query("SELECT site_id FROM equipment WHERE id = ? AND deleted_at IS NULL LIMIT 1", [$equipmentId])->getRow();
+            if ($eq) $siteId = (int)$eq->site_id;
+        }
+        if (!$siteId && $customerId) {
+            $site = $db->query("SELECT id FROM sites WHERE customer_id = ? AND deleted_at IS NULL LIMIT 1", [$customerId])->getRow();
+            if ($site) $siteId = (int)$site->id;
+        }
+        if (!$siteId) {
+            $site = $db->query("SELECT id FROM sites WHERE company_id = ? AND deleted_at IS NULL LIMIT 1", [$companyId])->getRow();
+            if ($site) $siteId = (int)$site->id;
+        }
+
+        // Get customer email from customers table
+        $customerEmail = null;
+        if ($customerId) {
+            $cust = $db->query("SELECT email FROM customers WHERE id = ? LIMIT 1", [$customerId])->getRow();
+            if ($cust && !empty($cust->email)) $customerEmail = $cust->email;
+        }
+        // Fallback: admin user email
+        if (!$customerEmail) {
+            $admin = $db->query(
+                "SELECT email FROM users WHERE company_id = ? AND role_id = 1 AND deleted_at IS NULL ORDER BY id ASC LIMIT 1",
+                [$companyId]
+            )->getRow();
+            if ($admin && !empty($admin->email)) $customerEmail = $admin->email;
+        }
+
+        // Send email to customer email address
+        if ($customerEmail) {
+            try {
+                $email = \Config\Services::email();
+                $email->setTo($customerEmail);
+                $email->setSubject('[' . strtoupper($priority) . '] Equipment Issue Reported: ' . ($assetTag ?: 'Unknown'));
+                $body  = "<h3>Equipment Issue Report</h3>";
+                $body .= "<p><strong>Reported by:</strong> " . htmlspecialchars($username) . "</p>";
+                $body .= "<p><strong>Priority:</strong> " . htmlspecialchars(ucfirst($priority)) . "</p><hr>";
+                $body .= "<h4>Equipment Details</h4>";
+                $body .= "<p><strong>Asset Tag:</strong> " . htmlspecialchars($assetTag) . "</p>";
+                $body .= "<p><strong>Type:</strong> " . htmlspecialchars($deviceType) . "</p>";
+                $body .= "<p><strong>Make/Model:</strong> " . htmlspecialchars($make . ' ' . $model) . "</p>";
+                $body .= "<p><strong>S/N:</strong> " . htmlspecialchars($serialNumber) . "</p><hr>";
+                $body .= "<h4>Issue Description</h4>";
+                $body .= "<p>" . nl2br(htmlspecialchars($issueDescription)) . "</p>";
+                $email->setMessage($body);
+                $email->setMailType('html');
+                $email->send();
+            } catch (\Exception $e) {
+                log_message('error', 'Report Issue email failed: ' . $e->getMessage());
+            }
+        }
+
+        // Create work order — all NOT NULL columns provided
+        try {
+            $db->table('work_orders')->insert([
+                'company_id'   => $companyId,
+                'site_id'      => $siteId ?: 1,
+                'equipment_id' => $equipmentId ?: 0,
+                'title'        => 'Issue Reported: ' . ($assetTag ?: 'Unknown Asset'),
+                'description'  => $issueDescription,
+                'status'       => 'open',
+                'priority'     => $dbPriority,
+                'created_at'   => date('Y-m-d H:i:s'),
+                'updated_at'   => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Report Issue WO insert failed: ' . $e->getMessage());
+        }
+
+        return redirect()->to('/customer/assets')
+            ->with('success', 'Issue reported.' . ($customerEmail ? ' Email notification sent to ' . $customerEmail . '.' : ''));
+    }
+
+
+    /**
+     * Bulk import equipment from an Excel/CSV file.
+     * Expects columns: asset_tag, make, model, serial_number, device_type, department, room
+     */
+    public function bulkImport()
+    {
+        $companyId = $this->session->get('company_id');
+        $siteId    = (int) $this->request->getPost('site_id');
+
+        if (!$siteId) {
+            return redirect()->back()->with('error', 'Please select a site for the import.');
+        }
+
+        $file = $this->request->getFile('excel_file');
+        if (!$file || !$file->isValid()) {
+            return redirect()->back()->with('error', 'Please upload a valid Excel or CSV file.');
+        }
+
+        $ext = strtolower($file->getClientExtension());
+        if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
+            return redirect()->back()->with('error', 'Only .xlsx, .xls, or .csv files are accepted.');
+        }
+
+        $tmpPath = $file->getTempName();
+        $rows    = [];
+
+        if ($ext === 'csv') {
+            // Parse CSV
+            if (($handle = fopen($tmpPath, 'r')) !== false) {
+                $headers = null;
+                while (($line = fgetcsv($handle)) !== false) {
+                    if ($headers === null) {
+                        $headers = array_map('strtolower', array_map('trim', $line));
+                        continue;
+                    }
+                    $rows[] = array_combine($headers, array_pad($line, count($headers), ''));
+                }
+                fclose($handle);
+            }
+        } else {
+            // Use PhpSpreadsheet if available, otherwise parse as CSV fallback
+            if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+                    $sheet = $spreadsheet->getActiveSheet();
+                    $data  = $sheet->toArray(null, true, true, false);
+                    if (!empty($data)) {
+                        $headers = array_map('strtolower', array_map('trim', $data[0]));
+                        for ($i = 1; $i < count($data); $i++) {
+                            if (array_filter($data[$i])) {
+                                $rows[] = array_combine($headers, array_pad($data[$i], count($headers), ''));
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    return redirect()->back()->with('error', 'Could not read Excel file: ' . $e->getMessage());
+                }
+            } else {
+                return redirect()->back()->with('error', 'PhpSpreadsheet not installed. Please upload a CSV file instead.');
+            }
+        }
+
+        if (empty($rows)) {
+            return redirect()->back()->with('error', 'No data rows found in the file.');
+        }
+
+        $equipModel = new EquipmentModel();
+        $db         = \Config\Database::connect();
+        $imported   = 0;
+        $skipped    = 0;
+
+        foreach ($rows as $row) {
+            // Normalize column names: trim whitespace + lowercase all keys
+            // Handles Excel headers like: 'Make ', 'Asset Tag ', 'Device Type ', 'Location Or Room '
+            $norm = [];
+            foreach ($row as $k => $v) {
+                $norm[trim(strtolower((string)$k))] = (string)$v;
+            }
+
+            // Map all known header variants to internal field names
+            $assetTag   = trim($norm['asset tag'] ?? $norm['asset_tag'] ?? $norm['asset #'] ?? $norm['asset#'] ?? '');
+            $make       = trim($norm['make'] ?? $norm['manufacturer'] ?? '');
+            $model      = trim($norm['model'] ?? $norm['model number'] ?? '');
+            $serial     = trim($norm['serial number'] ?? $norm['serial_number'] ?? $norm['serial #'] ?? $norm['s/n'] ?? $norm['sn'] ?? '');
+            $deviceType = trim($norm['device type'] ?? $norm['device_type'] ?? $norm['type'] ?? '');
+            $department = trim($norm['department'] ?? $norm['dept'] ?? '');
+            $location   = trim($norm['location or room'] ?? $norm['room'] ?? $norm['location'] ?? '');
+
+            // Numeric values from Excel (asset tags & serials stored as integers)
+            if (is_numeric($assetTag) && $assetTag !== '') $assetTag = (string)(int)$assetTag;
+            if (is_numeric($serial)   && $serial   !== '') $serial   = (string)(int)$serial;
+            if ($serial === 'N/A' || $serial === 'n/a') $serial = '';
+
+            if (empty($make) && empty($model)) { $skipped++; continue; }
+
+            // Check duplicate using direct query (avoids CI4 model state issues)
+            if (!empty($assetTag)) {
+                $dup = $db->query(
+                    "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                    [$companyId, $assetTag]
+                )->getRow();
+                if ($dup) { $skipped++; continue; }
+            } else {
+                $lastTag = $db->query(
+                    "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
+                    [$companyId]
+                )->getRow();
+                $num = 1000;
+                if ($lastTag && preg_match('/ASSET-(\d+)/', $lastTag->asset_tag, $m)) {
+                    $num = (int)$m[1] + 1;
+                }
+                $assetTag = 'ASSET-' . $num;
+            }
+
+            try {
+                $db->query(
+                    "INSERT IGNORE INTO equipment
+                     (company_id, site_id, asset_tag, make, model, serial_number, device_type, department, location, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
+                    [$companyId, $siteId, $assetTag, $make, $model, $serial, $deviceType, $department, $location]
+                );
+                if ($db->affectedRows() > 0) {
+                    $imported++;
+                } else {
+                    $skipped++;
+                }
+            } catch (\Throwable $e) {
+                log_message('warning', '[bulkImport] Skipping row: ' . $e->getMessage());
+                $skipped++;
+                continue;
+            }
+        }
+
+        $msg = "Import complete: {$imported} item(s) imported";
+        if ($skipped > 0) $msg .= ", {$skipped} skipped (duplicate or empty).";
+
+        return redirect()->to('/customer/assets')->with('success', $msg);
     }
 }

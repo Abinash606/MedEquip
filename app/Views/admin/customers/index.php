@@ -38,19 +38,10 @@
                 <tr>
 
                     <td>
-                        <?php if (!empty($customer['first_site_id'])): ?>
-                            <?php if ($customer['site_count'] == 1): ?>
-                                <a href="<?= site_url('admin/sites/' . $customer['first_site_id']) ?>" class="text-primary fw-bold">
-                                    <?= esc($customer['name']) ?>
-                                </a>
-                            <?php else: ?>
-                                <a href="<?= site_url('admin/sites') ?>" class="text-primary fw-bold">
-                                    <?= esc($customer['name']) ?>
-                                </a>
-                            <?php endif; ?>
-                        <?php else: ?>
+                        <!-- Use filter-sites route (session-based, same as technician pattern) -->
+                        <a href="<?= site_url('admin/customers/filter-sites/' . $customer['id']) ?>" class="text-primary fw-bold">
                             <?= esc($customer['name']) ?>
-                        <?php endif; ?>
+                        </a>
                     </td>
 
                     <td><?= $customer['billing_address'] ?></td>

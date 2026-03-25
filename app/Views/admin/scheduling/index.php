@@ -1,158 +1,289 @@
 <?= $this->extend('layouts/main') ?>
-
-
 <?= $this->section('content') ?>
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2  topbar">
-            <div>
-                <h3 class="fw-bold mb-0">Master Schedule</h3>
-                <p class="text-muted small mb-0">Manage appointments, routes, and technician availability.</p>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <div class="btn-group b-group" role="group">
-                    <button id="btnScheduleTimeline" class="btn btn-outline-secondary active">Timeline</button>
-                    <button id="btnScheduleCalendar" class="btn btn-outline-secondary">Calendar</button>
-                    <button id="btnScheduleMap" class="btn btn-outline-secondary">Map Route</button>
-                </div>
-                <div class="btn-group  b-group" role="group">
-                    <button id="btnScheduleDay" class="btn btn-outline-secondary active">Day</button>
-                    <button id="btnScheduleWeek" class="btn btn-outline-secondary">Week</button>
-                    <button id="btnScheduleMonth" class="btn btn-outline-secondary">Month</button>
-                </div>
-            </div>
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 topbar">
+    <div>
+        <h3 class="fw-bold mb-0">Master Schedule</h3>
+        <p class="text-muted small mb-0">Manage appointments, routes, and technician availability.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap align-items-center">
+        <div class="btn-group" role="group">
+            <button id="btnTimeline" class="btn btn-outline-secondary active" onclick="switchView('timeline')">Timeline</button>
+            <button id="btnCalendar" class="btn btn-outline-secondary"        onclick="switchView('calendar')">Calendar</button>
         </div>
- <div class="content">
-        <div class="glass-card">
-            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom p-3 flex-wrap gap-2">
-                <div class="d-flex gap-2 align-items-center">
-                    <button class="btn btn-light btn-sm border"><i class="fa-solid fa-chevron-left"></i></button>
-                    <span class="fw-bold mx-2">Today, Oct 24, 2025</span>
-                    <button class="btn btn-light btn-sm border"><i class="fa-solid fa-chevron-right"></i></button>
-                </div>
-                <button class="btn btn-primary btn-new btn-sm" data-bs-toggle="modal" data-bs-target="#appointmentModal"><i class="fa-solid fa-plus"></i> Add Appointment</button>
-            </div>
-
-            <!-- Status legend and site information -->
-            <div class="d-flex justify-content-between align-items-start mb-3 p-3">
-                <div>
-                    <span class="badge bg-success me-2">Ready</span>
-                    <span class="badge bg-warning text-dark me-2">Needs Attention</span>
-                    <span class="badge bg-danger">Past Due</span>
-                </div>
-                <div class="glass-card p-2" style="min-width: 200px;">
-                    <h6 class="fw-bold mb-1">Mercy Hospital</h6>
-                    <div class="small text-muted mb-1">123 Healthcare Blvd, New York, NY</div>
-                    <div class="small"><i class="fa-solid fa-phone me-1"></i> 555-0123</div>
-                </div>
-            </div>
-
-            <!-- Unified schedule views container -->
-            <div id="scheduleViews">
-                <!-- Timeline container holding day/week/month subviews -->
-                <div id="timelineView" class="schedule-view active">
-                    <!-- Day timeline using original Gantt-style bars -->
-                    <div id="timelineDayView" class="timeline-view active">
-                        <div class="gantt-container p-3">
-                            <div class="d-flex ms-5 ps-5 mb-2 text-muted small">
-                                <div style="width: 12.5%">8 AM</div>
-                                <div style="width: 12.5%">10 AM</div>
-                                <div style="width: 12.5%">12 PM</div>
-                                <div style="width: 12.5%">2 PM</div>
-                                <div style="width: 12.5%">4 PM</div>
-                                <div style="width: 12.5%">6 PM</div>
-                            </div>
-
-                            <div class="gantt-row">
-                                <div class="gantt-label">
-                                    <img src="https://ui-avatars.com/api/?name=John+Doe" class="avatar-circle me-2"> John D.
-                                </div>
-                                <div class="gantt-timeline">
-                                    <div class="gantt-bar bg-primary" style="left: 10%; width: 30%;" title="Mercy Hospital - MRI Repair">Mercy Hospital (MRI)</div>
-                                    <div class="gantt-bar bg-success" style="left: 50%; width: 20%;" title="Clinic A - Routine">Clinic A (PM)</div>
-                                </div>
-                            </div>
-
-                            <div class="gantt-row">
-                                <div class="gantt-label">
-                                    <img src="https://ui-avatars.com/api/?name=Sarah+Lee" class="avatar-circle me-2"> Sarah L.
-                                </div>
-                                <div class="gantt-timeline">
-                                    <div class="gantt-bar bg-danger" style="left: 5%; width: 85%;" title="City Hospital - Emergency Repair">City Hospital - EMERGENCY</div>
-                                </div>
-                            </div>
-
-                            <div class="gantt-row">
-                                <div class="gantt-label">
-                                    <img src="https://ui-avatars.com/api/?name=Mike+Ross" class="avatar-circle me-2"> Mike R.
-                                </div>
-                                <div class="gantt-timeline">
-                                     <div class="gantt-bar bg-warning " style="left: 60%; width: 15%;" title="Travel">Travel</div>
-                                     <div class="gantt-bar bg-primary" style="left: 75%; width: 20%;" title="Dental Plus - Install">Dental Plus</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Week timeline summarising events for each day -->
-                    <div id="timelineWeekView" class="timeline-view">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                <strong>Mon, Oct 20</strong>
-                                <div class="small text-muted">John D. – Mercy Hospital (MRI Repair) – 9 AM – 12 PM</div>
-                                <div class="small text-muted">Sarah L. – City Hospital (Emergency) – 8:30 AM – 6 PM</div>
-                            </div>
-                            <div class="list-group-item">
-                                <strong>Tue, Oct 21</strong>
-                                <div class="small text-muted">John D. – Clinic A (PM) – 1 PM – 3 PM</div>
-                            </div>
-                            <div class="list-group-item">
-                                <strong>Thu, Oct 23</strong>
-                                <div class="small text-muted">Mike R. – Dental Plus (Install) – 4 PM – 6:30 PM</div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Month timeline summarising monthly appointment counts -->
-                    <div id="timelineMonthView" class="timeline-view">
-                        <div class="list-group">
-                            <div class="list-group-item">
-                                <strong>October 2025</strong>
-                                <div class="small text-muted">4 scheduled appointments</div>
-                            </div>
-                            <div class="list-group-item">
-                                <strong>November 2025</strong>
-                                <div class="small text-muted">2 scheduled appointments</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Calendar view using FullCalendar -->
-                <div id="calendarView" class="schedule-view">
-                    <div id="calendar"></div>
-                </div>
-                <!-- Map view using Leaflet -->
-                <div id="mapView" class="schedule-view">
-                    <div id="mapid" style="width: 100%; height: 450px;"></div>
-                </div>
-            </div>
+        <div class="btn-group" role="group">
+            <button id="btnDay"   class="btn btn-outline-secondary active" onclick="switchPeriod('day')">Day</button>
+            <button id="btnWeek"  class="btn btn-outline-secondary"        onclick="switchPeriod('week')">Week</button>
+            <button id="btnMonth" class="btn btn-outline-secondary"        onclick="switchPeriod('month')">Month</button>
         </div>
+        <button class="btn btn-primary btn-new btn-sm" data-bs-toggle="modal" data-bs-target="#appointmentModal">
+            <i class="fa-solid fa-plus"></i> Add Appointment
+        </button>
+    </div>
 </div>
-<?= $this->endSection() ?>
 
-<?= $this->section('scripts') ?>
+<div class="content">
+<div class="glass-card">
+
+    <!-- Date navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom p-3 flex-wrap gap-2" style="border-color:rgba(255,255,255,.08)!important;">
+        <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-light btn-sm" id="btnPrev"><i class="fa-solid fa-chevron-left"></i></button>
+            <span class="fw-bold mx-2" id="currentDateLabel">Today, <?= date('M j, Y') ?></span>
+            <button class="btn btn-light btn-sm" id="btnNext"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="badge bg-success me-1">Ready</span>
+            <span class="badge bg-warning me-1">Needs Attention</span>
+            <span class="badge bg-danger">Past Due</span>
+        </div>
+    </div>
+
+    <!-- Timeline View -->
+    <div id="timelineView" class="schedule-view active px-3 pb-3">
+        <div class="gantt-container">
+            <!-- Hour header -->
+            <div class="d-flex ms-5 ps-5 mb-2 text-muted small">
+                <div style="width:12.5%">8 AM</div>
+                <div style="width:12.5%">10 AM</div>
+                <div style="width:12.5%">12 PM</div>
+                <div style="width:12.5%">2 PM</div>
+                <div style="width:12.5%">4 PM</div>
+                <div style="width:12.5%">6 PM</div>
+            </div>
+
+            <?php if (!empty($techSchedule)): ?>
+                <?php foreach ($techSchedule as $idx => $tech): ?>
+                <div class="gantt-row">
+                    <div class="gantt-label d-flex align-items-center gap-2">
+                        <div class="avatar-circle" style="font-size:10px;"><?= esc($tech['initials'] ?: 'UN') ?></div>
+                        <span class="small fw-semibold"><?= esc(explode(' ', $tech['name'])[0]) ?> <?= esc(substr(explode(' ', $tech['name'])[1] ?? '', 0, 1)) ?>.</span>
+                    </div>
+                    <div class="gantt-timeline position-relative" style="height:36px;">
+                        <?php
+                        $colors = ['bg-primary','bg-success','bg-danger','bg-warning','bg-info'];
+                        $wos = array_slice($tech['work_orders'], 0, 4);
+                        $totalWOs = count($tech['work_orders']);
+                        foreach ($wos as $wi => $wo):
+                            $left  = ($wi * 22) + 2;
+                            $width = min(28, 96 - $left);
+                            $color = $colors[$wi % count($colors)];
+                            if (strtolower($wo['priority'] ?? '') === 'critical') $color = 'bg-danger';
+                            $label = ($wo['site_name'] ?? $wo['title']) . ($wo['make'] ? ' (' . $wo['make'] . ')' : '');
+                        ?>
+                        <div class="gantt-bar <?= $color ?>" style="left:<?= $left ?>%;width:<?= $width ?>%;" title="<?= esc($wo['title'] . ' — ' . ($wo['site_name'] ?? '')) ?>">
+                            <?= esc(mb_substr($label, 0, 22)) ?>
+                        </div>
+                        <?php endforeach; ?>
+                        <?php if ($totalWOs === 0): ?>
+                            <div class="text-muted small d-flex align-items-center h-100 ps-2" style="font-size:11px;">No appointments today</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div class="text-center text-muted py-4">
+                    <i class="fa-solid fa-calendar-xmark fa-2x mb-2 opacity-25"></i>
+                    <p class="mb-0">No technicians or appointments found. <a href="<?= site_url('admin/technicians') ?>">Add a technician</a> to get started.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Calendar View (FullCalendar) -->
+    <div id="calendarView" class="schedule-view px-3 pb-3">
+        <div id="fcCalendar"></div>
+    </div>
+
+</div>
+
+<!-- Upcoming Appointments Table -->
+<div class="glass-card mt-4 p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">All Scheduled Work Orders</h5>
+        <span class="badge" style="background:rgba(34,211,238,.15);color:rgba(34,211,238,.9);"><?= count($upcomingWO ?? []) ?> total</span>
+    </div>
+    <div class="table-responsive">
+        <table id="schedTable" class="table service-table align-middle" style="width:100%">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Title</th>
+                    <th>Site / Customer</th>
+                    <th>Equipment</th>
+                    <th>Technician</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($upcomingWO)): ?>
+                    <?php foreach ($upcomingWO as $wo): ?>
+                    <?php
+                        $priClass = match(strtolower($wo['priority'] ?? '')) {
+                            'critical' => 'bg-danger',
+                            'high'     => 'bg-warning',
+                            'medium'   => 'bg-info',
+                            'low'      => 'bg-success',
+                            default    => 'bg-secondary',
+                        };
+                        $stClass = match(strtolower($wo['status'] ?? '')) {
+                            'closed','completed' => 'bg-success',
+                            'in_progress'        => 'bg-warning',
+                            'open'               => 'bg-primary',
+                            default              => 'bg-secondary',
+                        };
+                        $equip = trim(($wo['make'] ?? '') . ' ' . ($wo['model'] ?? '')) ?: '—';
+                    ?>
+                    <tr>
+                        <td><span class="t-pill">#WO-<?= str_pad($wo['id'], 4, '0', STR_PAD_LEFT) ?></span></td>
+                        <td class="fw-medium"><?= esc($wo['title']) ?></td>
+                        <td>
+                            <div><?= esc($wo['site_name'] ?? '—') ?></div>
+                            <div class="text-muted small"><?= esc($wo['customer_name'] ?? '') ?></div>
+                        </td>
+                        <td><?= esc($equip) ?></td>
+                        <td><?= esc($wo['tech_name'] ?? '— Unassigned —') ?></td>
+                        <td><span class="badge <?= $priClass ?>"><?= esc(ucfirst($wo['priority'] ?? '—')) ?></span></td>
+                        <td><span class="badge <?= $stClass ?>"><?= esc(ucwords(str_replace('_', ' ', $wo['status'] ?? '—'))) ?></span></td>
+                        <td class="text-muted small"><?= !empty($wo['start_date']) ? esc(date('M j, Y', strtotime($wo['start_date']))) : '—' ?></td>
+                        <td class="text-muted small"><?= !empty($wo['end_date'])   ? esc(date('M j, Y', strtotime($wo['end_date'])))   : '—' ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="9" class="text-center text-muted py-4">No work orders scheduled yet.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+
+<!-- Add Appointment Modal -->
+<div class="modal fade" id="appointmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <form action="<?= site_url('admin/scheduling/store') ?>" method="POST" id="appointmentForm">
+                <?= csrf_field() ?>
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-calendar-plus me-2"></i>Add Appointment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" required placeholder="e.g. MRI Scanner PM Inspection">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Site <span class="text-danger">*</span></label>
+                            <select class="form-select" name="site_id" required>
+                                <option value="">-- Select Site --</option>
+                                <?php foreach ($sites as $site): ?>
+                                    <option value="<?= $site['id'] ?>"><?= esc($site['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Equipment</label>
+                            <select class="form-select" name="equipment_id">
+                                <option value="">-- Optional --</option>
+                                <?php foreach ($equipment as $eq): ?>
+                                    <option value="<?= $eq['id'] ?>"><?= esc(($eq['make'] ?? '') . ' ' . ($eq['model'] ?? '') . ' (' . ($eq['asset_tag'] ?? '') . ')') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Assign Technician</label>
+                            <select class="form-select" name="assigned_to">
+                                <option value="">-- Unassigned --</option>
+                                <?php foreach ($technicians as $tech): ?>
+                                    <option value="<?= $tech['id'] ?>"><?= esc($tech['full_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Priority</label>
+                            <select class="form-select" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical / Emergency</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Start Date</label>
+                            <input type="date" class="form-control" name="start_date">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">End Date</label>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea class="form-control" name="description" rows="3" placeholder="Describe the appointment..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save me-1"></i>Save Appointment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,listWeek'
-        },
-        events: '<?= base_url('scheduling/events') ?>',
-        eventClick: function(info) {
-            alert('Work Order: ' + info.event.title + '\nStatus: ' + info.event.extendedProps.status);
-        }
+// ── View switching ──────────────────────────────────────────────────────
+function switchView(v) {
+    document.getElementById('timelineView').classList.remove('active');
+    document.getElementById('calendarView').classList.remove('active');
+    document.getElementById('btn' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+    document.getElementById(v + 'View').classList.add('active');
+    if (v === 'calendar' && window._fcCalendar) window._fcCalendar.render();
+}
+
+function switchPeriod(p) {
+    ['Day','Week','Month'].forEach(function(x) {
+        document.getElementById('btn' + x).classList.remove('active');
     });
-    calendar.render();
+    document.getElementById('btn' + p.charAt(0).toUpperCase() + p.slice(1)).classList.add('active');
+    if (window._fcCalendar) {
+        var viewMap = { day: 'timeGridDay', week: 'timeGridWeek', month: 'dayGridMonth' };
+        window._fcCalendar.changeView(viewMap[p] || 'dayGridMonth');
+    }
+}
+
+// ── DataTable for work orders list ─────────────────────────────────────
+$(function() {
+    $('#schedTable').DataTable({ pageLength: 15, order: [[7, 'asc']] });
+});
+
+// ── FullCalendar ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('fcCalendar');
+    if (!calendarEl || typeof FullCalendar === 'undefined') return;
+
+    window._fcCalendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
+        themeSystem: 'bootstrap5',
+        events: '<?= site_url('admin/scheduling/events') ?>',
+        eventClick: function(info) {
+            var p = info.event.extendedProps;
+            alert('Work Order: ' + info.event.title + '\nStatus: ' + (p.status || '—') + '\nPriority: ' + (p.priority || '—') + '\nTech: ' + (p.tech || '—'));
+        },
+        eventColor: '#7C3AED',
+    });
+    window._fcCalendar.render();
+});
+
+// AJAX form submit for appointment
+document.getElementById('appointmentForm')?.addEventListener('submit', function(e) {
+    // allow standard POST — no AJAX needed here
 });
 </script>
 <?= $this->endSection() ?>

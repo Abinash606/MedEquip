@@ -1,161 +1,114 @@
 <?= $this->extend('layouts/technician-header') ?>
 <?= $this->section('content') ?>
- <!-- Dashboard view -->
-    <section id="dashboard" class="view-section active">
-    
-    <header class="d-flex justify-content-between align-items-center mb-5">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-light d-lg-none" id="sidebarToggle"><i class="fa-solid fa-bars"></i></button>
-            <div>
-                <h2 class="fw-bold mb-0">Welcome back, Dr. Smith</h2>
-                <p class="text-muted mb-0">Mercy General Hospital - Main Wing</p>
-            </div>
-        </div>
-        <div class="d-flex align-items-center gap-4">
-            <div class="input-group d-none d-md-flex" style="width: 300px;">
-                <span class="input-group-text bg-white border-end-0 rounded-start-4 ps-3"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                <input type="text" class="form-control border-start-0 rounded-end-4 shadow-sm" placeholder="Search asset tag or serial...">
-            </div>
-            <div class="position-relative cursor-pointer">
-                <i class="fa-regular fa-bell fs-5 text-secondary"></i>
-                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <img src="https://ui-avatars.com/api/?name=Dr+Smith&background=EBF4FF&color=2563EB" class="rounded-circle" width="45" alt="Profile">
-                <div class="d-none d-md-block">
-                    <div class="fw-bold small">Dr. Sarah Smith</div>
-                    <div class="text-muted small" style="font-size: 0.75rem;">Facility Manager</div>
-                </div>
-            </div>
-        </div>
-    </header>
 
-    <div class="row g-4 mb-5">
-        <div class="col-md-6 col-lg-3">
-            <div class="glass-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Total Equipment</div>
-                        <h3 class="fw-bold mb-0">142</h3>
-                        <span class="text-success small"><i class="fa-solid fa-arrow-up"></i> 3 New this month</span>
-                    </div>
-                    <div class="stat-icon-wrapper bg-blue-100 text-primary" style="background-color: #dbeafe;">
-                        <i class="fa-solid fa-stethoscope"></i>
-                    </div>
-                </div>
-                <div class="mt-3 pt-3 border-top">
-                    <div class="d-flex justify-content-between text-muted small">
-                        <span>Operational</span>
-                        <span class="text-success fw-bold">138</span>
-                    </div>
-                    <div class="progress mt-1" style="height: 6px;">
-                        <div class="progress-bar bg-success" style="width: 95%"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="d-flex justify-content-between align-items-center mb-4 topbar">
+    <div>
+        <h3 class="fw-bold mb-0">Dashboard</h3>
+        <p class="text-muted small mb-0">Welcome back, <?= esc(session('username') ?? 'Technician') ?></p>
+    </div>
+</div>
 
-        <div class="col-md-6 col-lg-3">
-            <div class="glass-card border-start border-4 border-danger">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Action Required</div>
-                        <h3 class="fw-bold mb-0 text-danger">4</h3>
-                        <span class="text-muted small">Due for Inspection</span>
-                    </div>
-                    <div class="stat-icon-wrapper text-danger" style="background-color: #fee2e2;">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                </div>
-                <div class="mt-3">
-                     <button class="btn btn-sm btn-outline-danger w-100 rounded-pill">View Schedule</button>
-                </div>
-            </div>
-        </div>
+<div class="content">
 
-        <div class="col-md-6 col-lg-3">
-            <div class="glass-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <div class="text-muted small fw-bold text-uppercase mb-1">Open Requests</div>
-                        <h3 class="fw-bold mb-0">2</h3>
-                        <span class="text-muted small">In Progress</span>
-                    </div>
-                    <div class="stat-icon-wrapper text-warning" style="background-color: #fef3c7;">
-                        <i class="fa-solid fa-screwdriver-wrench"></i>
-                    </div>
-                </div>
-                <div class="mt-3 pt-3 border-top d-flex align-items-center gap-2">
-                    <span class="badge bg-warning text-dark">MRI Scan</span>
-                    <span class="badge bg-info text-dark">X-Ray 02</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="glass-card d-flex align-items-center justify-content-between">
+<!-- 3 Stat Cards: Action Required, Open Requests, Compliance Health -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="glass-card p-3" style="border-left:4px solid rgba(239,68,68,.6);">
+            <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="text-muted small fw-bold text-uppercase mb-1">Compliance Health</div>
-                    <h4 class="fw-bold mb-1">Excellent</h4>
-                    <p class="text-muted small mb-0">Last audit: Oct 24</p>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Action Required</div>
+                    <h3 class="fw-bold mb-0 text-danger" id="actionRequiredCount"><?= esc($actionRequired ?? 0) ?></h3>
+                    <span class="text-muted small">Equipment due for inspection</span>
                 </div>
-                <div class="progress-circle">
-                    <div class="progress-circle-inner">98%</div>
+                <div style="width:50px;height:50px;border-radius:14px;background:rgba(239,68,68,.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#EF4444;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
                 </div>
+            </div>
+            <div class="mt-3">
+                <a href="<?= site_url('technician/sites') ?>" class="btn btn-sm btn-outline-danger w-100 rounded-pill">View Sites</a>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
-        
-        <div class="col-lg-12">
-            <div class="glass-card">
-                <h6 class="fw-bold mb-4">Recent Activity</h6>
-                
-                <div class="d-flex gap-3 mb-4">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                            <i class="fa-solid fa-check small"></i>
-                        </div>
-                        <div class="h-100 border-start mt-2" style="border-color: #f1f5f9 !important;"></div>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Maintenance Completed</div>
-                        <div class="text-muted small mb-1">MRI Scanner - Radiology</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Today, 10:30 AM</div>
-                        <a href="#" class="badge bg-light text-primary text-decoration-none mt-1"><i class="fa-solid fa-download"></i> Report</a>
-                    </div>
+    <div class="col-md-4">
+        <div class="glass-card p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="text-muted small fw-bold text-uppercase mb-1">Open Requests</div>
+                    <h3 class="fw-bold mb-0" id="openRequestsCount"><?= esc($openRequests ?? 0) ?></h3>
+                    <span class="text-muted small">Work orders in progress</span>
                 </div>
-
-                <div class="d-flex gap-3 mb-4">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                            <i class="fa-solid fa-calendar-check small"></i>
-                        </div>
-                        <div class="h-100 border-start mt-2" style="border-color: #f1f5f9 !important;"></div>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Inspection Scheduled</div>
-                        <div class="text-muted small mb-1">X-Ray Machines (All)</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Nov 12, 2025</div>
-                    </div>
+                <div style="width:50px;height:50px;border-radius:14px;background:rgba(245,158,11,.15);display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:#F59E0B;">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
                 </div>
-
-                 <div class="d-flex gap-3">
-                    <div class="d-flex flex-column align-items-center">
-                        <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                            <i class="fa-solid fa-file-signature small"></i>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="fw-bold small">Service Request Logged</div>
-                        <div class="text-muted small mb-1">Broken Display - Bed 4 Monitor</div>
-                        <div class="text-muted" style="font-size: 0.75rem;">Nov 01, 2025</div>
-                    </div>
-                </div>
-
+            </div>
+            <div class="mt-3">
+                <a href="<?= site_url('technician/service-history') ?>" class="btn btn-sm btn-outline-warning w-100 rounded-pill">View Work Orders</a>
             </div>
         </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="glass-card p-3 d-flex align-items-center justify-content-between">
+            <div>
+                <div class="text-muted small fw-bold text-uppercase mb-1">Compliance Health</div>
+                <h4 class="fw-bold mb-1"><?= esc($complianceLabel ?? '—') ?></h4>
+                <p class="text-muted small mb-0"><?= esc($compliancePct ?? 0) ?>% pass rate</p>
+            </div>
+            <?php
+                $pct = (int)($compliancePct ?? 0);
+                $color = $pct >= 90 ? '#22c55e' : ($pct >= 75 ? '#f59e0b' : '#ef4444');
+            ?>
+            <div style="width:70px;height:70px;border-radius:50%;background:conic-gradient(<?= $color ?> <?= $pct ?>%, rgba(255,255,255,.08) 0%);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="width:55px;height:55px;background:var(--panel,#0E1630);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;">
+                    <?= $pct ?>%
+                </div>
+            </div>
         </div>
-    </section>
+    </div>
+</div>
+
+<!-- Recent Inspections Table -->
+<div class="glass-card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Recent Inspections</h5>
+        <a href="<?= site_url('technician/inspections') ?>" class="btn btn-sm btn-primary">View All Reports</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table service-table align-middle" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Inspection ID</th>
+                    <th>Site</th>
+                    <th>Customer</th>
+                    <th>Asset</th>
+                    <th>Date</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($recentInspections)): ?>
+                    <?php foreach ($recentInspections as $insp): ?>
+                    <?php
+                        $st = strtolower($insp['status'] ?? '');
+                        $badge = $st === 'pass' ? 'bg-success' : ($st === 'fail' ? 'bg-danger' : 'bg-warning');
+                    ?>
+                    <tr>
+                        <td class="fw-medium small"><?= esc($insp['group_id'] ? substr($insp['group_id'], 0, 18) : '#INS-' . $insp['id']) ?></td>
+                        <td><?= esc($insp['site_name'] ?? '—') ?></td>
+                        <td><?= esc($insp['customer_name'] ?? '—') ?></td>
+                        <td><?= esc($insp['asset_tag'] ?? ($insp['make'] ?? '') . ' ' . ($insp['model'] ?? '')) ?></td>
+                        <td class="text-muted small"><?= esc($insp['completed_at'] ? substr($insp['completed_at'], 0, 10) : '—') ?></td>
+                        <td><span class="badge <?= $badge ?>"><?= esc(ucfirst($insp['status'])) ?></span></td>
+                    </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr><td colspan="6" class="text-center text-muted py-4">No recent inspections found.</td></tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
 <?= $this->endSection() ?>

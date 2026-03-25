@@ -11,6 +11,7 @@ class IqNoteModel extends Model
 
     protected $allowedFields = [
         'company_id',
+        'title',
         'note'
     ];
 

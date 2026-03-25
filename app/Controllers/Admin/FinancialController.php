@@ -4,28 +4,92 @@ namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
 
-/**
- * Dashboard controller for the Super Admin (company owner).
- */
 class FinancialController extends BaseController
 {
     public function index()
     {
         $companyId = $this->session->get('company_id');
-        // Load models to gather statistics
-        $customerModel   = new \App\Models\CustomerModel();
-        $siteModel       = new \App\Models\SiteModel();
-        $equipmentModel  = new \App\Models\EquipmentModel();
-        $inspectionModel = new \App\Models\InspectionModel();
-        $workModel       = new \App\Models\WorkOrderModel();
+        $db = \Config\Database::connect();
 
-        $data = [
-            'customersCount'   => $customerModel->where('company_id', $companyId)->countAllResults(),
-            'sitesCount'       => $siteModel->where('company_id', $companyId)->countAllResults(),
-            'equipmentCount'   => $equipmentModel->where('company_id', $companyId)->countAllResults(),
-            'inspectionsCount' => $inspectionModel->where('company_id', $companyId)->countAllResults(),
-            'workOrdersCount'  => $workModel->where('company_id', $companyId)->countAllResults(),
-        ];
-        return view('admin/financials/index', $data);
+        // Revenue = sum of work order estimated costs (or count * avg rate)
+        // Since no billing table exists, we derive from work_orders and inspections
+        // Total inspections done = revenue proxy, work orders = cost proxy
+
+        $totalInspections = $db->query(
+            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ?", [$companyId]
+        )->getRow()->cnt ?? 0;
+
+        $totalWorkOrders = $db->query(
+            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ?", [$companyId]
+        )->getRow()->cnt ?? 0;
+
+        // Revenue per inspection: $150 (configurable assumption)
+        // Cost per work order: $80
+        $revenuePerInspection = 150;
+        $costPerWorkOrder     = 80;
+        $totalRevenue = $totalInspections * $revenuePerInspection;
+        $totalCosts   = $totalWorkOrders  * $costPerWorkOrder;
+        $totalProfit  = $totalRevenue - $totalCosts;
+        $margin       = $totalRevenue > 0 ? round(($totalProfit / $totalRevenue) * 100) : 0;
+
+        // Per-customer breakdown
+        $customerStats = $db->query("
+            SELECT
+                c.name AS customer_name,
+                COUNT(DISTINCT i.id)  AS inspection_count,
+                COUNT(DISTINCT wo.id) AS wo_count,
+                COUNT(DISTINCT s.id)  AS site_count,
+                COUNT(DISTINCT e.id)  AS equipment_count
+            FROM customers c
+            LEFT JOIN sites s       ON s.customer_id = c.id AND s.deleted_at IS NULL
+            LEFT JOIN inspections i ON i.site_id = s.id
+            LEFT JOIN work_orders wo ON wo.site_id = s.id
+            LEFT JOIN equipment e   ON e.site_id = s.id AND e.deleted_at IS NULL
+            WHERE c.company_id = ?
+              AND c.deleted_at IS NULL
+            GROUP BY c.id, c.name
+            ORDER BY inspection_count DESC
+        ", [$companyId])->getResultArray();
+
+        // Monthly inspection trend (last 6 months)
+        $monthlyTrend = $db->query("
+            SELECT
+                DATE_FORMAT(completed_at, '%Y-%m') AS month,
+                COUNT(*) AS total,
+                SUM(CASE WHEN status IN ('Pass','pass') THEN 1 ELSE 0 END) AS passed,
+                SUM(CASE WHEN status IN ('Fail','fail') THEN 1 ELSE 0 END) AS failed
+            FROM inspections
+            WHERE company_id = ?
+              AND completed_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+            GROUP BY month
+            ORDER BY month ASC
+        ", [$companyId])->getResultArray();
+
+        // Equipment count and compliance rate
+        $equipCount = $db->query(
+            "SELECT COUNT(*) AS cnt FROM equipment WHERE company_id = ? AND deleted_at IS NULL", [$companyId]
+        )->getRow()->cnt ?? 0;
+
+        $passCount  = $db->query(
+            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ? AND status IN ('Pass','pass')", [$companyId]
+        )->getRow()->cnt ?? 0;
+
+        $complianceRate = $totalInspections > 0
+            ? round(($passCount / $totalInspections) * 100) : 0;
+
+        return view('admin/financials/index', [
+            'totalRevenue'    => $totalRevenue,
+            'totalCosts'      => $totalCosts,
+            'totalProfit'     => $totalProfit,
+            'margin'          => $margin,
+            'totalInspections'=> $totalInspections,
+            'totalWorkOrders' => $totalWorkOrders,
+            'equipCount'      => $equipCount,
+            'complianceRate'  => $complianceRate,
+            'customerStats'   => $customerStats,
+            'monthlyTrend'    => $monthlyTrend,
+            'revenuePerInspection' => $revenuePerInspection,
+            'costPerWorkOrder'     => $costPerWorkOrder,
+        ]);
     }
 }
