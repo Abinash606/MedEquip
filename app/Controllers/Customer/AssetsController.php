@@ -134,7 +134,10 @@ class AssetsController extends BaseController
             'device_type' => $this->request->getPost('device_type'),
             'department' => $this->request->getPost('department'),
             'location' => $this->request->getPost('location'),
-            'status' => (function($s) { $m = ['Operational'=>'ready','Needs Attention'=>'need_attention','Out of Service'=>'out_of_service']; return $m[$s] ?? strtolower(str_replace(' ','_',$s)) ?: 'ready'; })($this->request->getPost('status')),
+            'status' => (function ($s) {
+                $m = ['Operational' => 'ready', 'Needs Attention' => 'need_attention', 'Out of Service' => 'out_of_service'];
+                return $m[$s] ?? strtolower(str_replace(' ', '_', $s)) ?: 'ready';
+            })($this->request->getPost('status')),
         ];
 
         if ($equipModel->insert($data)) {
@@ -197,7 +200,7 @@ class AssetsController extends BaseController
         }
 
         // Map priority to work_orders enum: low|normal|high
-        $priorityMap = ['low'=>'low','medium'=>'normal','normal'=>'normal','high'=>'high','critical'=>'high','urgent'=>'high'];
+        $priorityMap = ['low' => 'low', 'medium' => 'normal', 'normal' => 'normal', 'high' => 'high', 'critical' => 'high', 'urgent' => 'high'];
         $dbPriority  = $priorityMap[strtolower($priority)] ?? 'normal';
 
         // Resolve site_id (work_orders.site_id is NOT NULL)

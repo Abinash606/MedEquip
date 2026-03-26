@@ -218,20 +218,20 @@
 <section id="sites" class="view-section active">
 
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 topbar">
         <h3 class="fw-bold mb-0">Site Directory</h3>
         <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addSiteModal">
             <i class="fa-solid fa-plus me-2"></i> Add Site
         </button>
     </div>
-
+    <div class="content">
     <!-- Search -->
     <div class="glass-card mb-4">
         <div class="input-group">
-            <span class="input-group-text bg-white">
+            <span class="input-group-text">
                 <i class="fa-solid fa-search"></i>
             </span>
-            <input id="site-search" type="text" class="form-control border-start-0 ps-0"
+            <input id="site-search" type="text" class="form-control border-start-0"
                 placeholder="Search by site, address or customer name...">
         </div>
     </div>
@@ -239,7 +239,7 @@
     <!-- Customer Filter -->
     <div class="glass-card mb-4">
         <label class="form-label fw-bold">Filter by Customer</label>
-        <select id="customer-filter" class="form-select" style="width:25%">
+        <select id="customer-filter" class="form-select">
             <option value="">All Customers</option>
             <?php foreach ($customers as $cust): ?>
                 <option value="<?= esc($cust['id']) ?>"><?= esc($cust['name']) ?></option>
@@ -249,6 +249,7 @@
 
     <!-- Sites Table -->
     <div class="glass-card">
+        <div class="table-responsive">
         <table id="sites-datatable" class="table table-striped align-middle">
             <thead>
                 <tr>
@@ -273,7 +274,7 @@
                             <td><?= esc($site['site_email']) ?></td>
                             <td>
                                 <a href="<?= base_url('technician/sites/view/' . $site['id']) ?>"
-                                    class="btn btn-sm btn-outline-primary">
+                                    class="btn btn-sm btn-primary">
                                     View Details
                                 </a>
                             </td>
@@ -286,8 +287,9 @@
                 <?php endif; ?>
             </tbody>
         </table>
+        </div>
     </div>
-
+</div>
 </section>
 
 

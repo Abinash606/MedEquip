@@ -216,7 +216,7 @@ $(function() {
             }},
             { data: null, orderable: false, render: function(row) {
                 if (!row.group_id) return '—';
-                return '<a href="<?= site_url('technician/inspections/reportPdf') ?>/' + row.group_id + '" target="_blank" class="btn btn-sm btn-outline-primary" title="Download PDF"><i class="fa-solid fa-file-pdf"></i></a>';
+                return '<a href="<?= site_url('technician/inspections/reportPdf') ?>/' + row.group_id + '" target="_blank" class="btn btn-sm btn-primary" title="Download PDF"><i class="fa-solid fa-file-pdf"></i></a>';
             }}
         ]
     });

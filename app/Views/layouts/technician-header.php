@@ -283,9 +283,10 @@
         }
 
         /* Buttons */
-        .btn-primary {
+        .btn-primary, .btn-outline-primary {
             background: linear-gradient(90deg, rgba(34, 211, 238, .92), rgba(124, 58, 237, .70)) !important;
             border: none !important;
+            color:#fff!important;
         }
 
 
@@ -505,6 +506,29 @@
         .action-btns .btn {
             white-space: nowrap;
         }
+        .dataTables_scrollBody{
+            scrollbar-width:thin;
+        }
+        table th{
+            white-space: nowrap;
+        }
+        .glass-card .form-select{
+            background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='20' viewBox='0 0 20 20' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M5 7l5 5 5-5z'/></svg>")!important;
+           background-repeat: no-repeat;
+  background-position: right 5px center;
+  background-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+        }
+                 .glass-card input::placeholder, .topbar .search input::placeholder{
+            color:#fff;
+         }
+         input[type="date"]::-webkit-calendar-picker-indicator,
+            input[type="time"]::-webkit-calendar-picker-indicator {
+        filter: invert(1); /* makes icon white */
+        cursor: pointer;
+            }
     </style>
 </head>
 

@@ -234,7 +234,7 @@
                                     </div>
                                 </div>
                                 <!-- ── Add Device button (NEW) ── -->
-                                <button class="btn btn-outline-primary btn-sm" type="button"
+                                <button class="btn btn-primary btn-sm" type="button"
                                     onclick="openAddDeviceModal()">
                                     <i class="fa-solid fa-circle-plus me-1"></i> Add Device
                                 </button>
@@ -257,10 +257,13 @@
                                                 <tr data-asset="<?= esc($eq['asset_tag']) ?>"
                                                     data-eq-id="<?= esc($eq['id']) ?>">
                                                     <td>
-                                                        <button class="btn btn-sm btn-primary" type="button"
+                                                       
+                                                        <button class="btn btn-sm btn-primary d-flex gap-2 align-items-center" type="button"
                                                             onclick="inspectFromNotInspected('<?= esc($eq['asset_tag']) ?>')">
                                                             <i class="fa-solid fa-arrow-right me-1"></i> Inspect
                                                         </button>
+                                                       
+                                                       
                                                     </td>
                                                     <td><?= esc($eq['asset_tag']) ?></td>
                                                     <td><?= esc($eq['model'] ?? $eq['make'] ?? 'N/A') ?></td>
@@ -559,7 +562,7 @@
                                     <div class="text-muted small">Full list of equipment in the site inventory.</div>
                                 </div>
                                 <!-- Add Device shortcut in Inventory tab too -->
-                                <button class="btn btn-outline-primary btn-sm" type="button"
+                                <button class="btn btn-primary btn-sm" type="button"
                                     onclick="openAddDeviceModal()">
                                     <i class="fa-solid fa-circle-plus me-1"></i> Add Device
                                 </button>
@@ -581,7 +584,7 @@
                                             <?php foreach ($equipment as $eq): ?>
                                                 <tr>
                                                     <td>
-                                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                        <button type="button" class="btn btn-sm btn-primary"
                                                             onclick="openWorkOrderModalFromInventory('<?= esc($eq['asset_tag']) ?>')">
                                                             <i class="fa-solid fa-briefcase"></i>
                                                         </button>

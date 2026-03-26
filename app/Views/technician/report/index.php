@@ -1,6 +1,7 @@
 <?= $this->extend('layouts/technician-header') ?>
 <?= $this->section('content') ?>
 <!-- Reports view -->
+ <div class="content">
     <section id="reports" class="view-section active">
         <div class="row g-4">
             <div class="col-12">
@@ -29,9 +30,10 @@
                             <button class="btn btn-sm btn-light"><i class="fa-solid fa-download"></i></button>
                         </li>
                     </ul>
-                    <button class="btn btn-outline-primary btn-sm w-100 mt-3">View All Documents</button>
+                    <button class="btn btn-primary btn-sm w-100 mt-3">View All Documents</button>
                 </div>
             </div>
         </div>
     </section>
+    </div>
 <?= $this->endSection() ?>

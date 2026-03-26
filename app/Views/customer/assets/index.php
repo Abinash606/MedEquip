@@ -133,7 +133,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
             $cnt = $equipBySite[$site['id']] ?? 0;
         ?>
         <div class="col-md-3">
-            <div class="glass-card p-3 site-stat-card" data-site-id="<?= $site['id'] ?>" style="cursor:pointer;">
+            <div class="glass-card p-3 site-stat-card h-100" data-site-id="<?= $site['id'] ?>" style="cursor:pointer;">
                 <div class="text-muted small text-uppercase fw-bold mb-1"><?= esc($site['name']) ?></div>
                 <h3 class="fw-bold mb-0"><?= $cnt ?></h3>
                 <div class="small text-muted mt-1">Assets</div>
@@ -175,7 +175,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                             <td><?= esc($eq['department'] ?? '—') ?></td>
                             <td><?= esc($siteMap[$eq['site_id'] ?? 0] ?? '—') ?></td>
                             <td>
-                                <button class="btn btn-sm btn-danger report-issue-btn"
+                                <button class="btn btn-sm btn-danger report-issue-btn d-flex gap-2 align-items-center"
                                     data-asset-tag="<?= esc($eq['asset_tag'], 'attr') ?>"
                                     data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
                                     data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"

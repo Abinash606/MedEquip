@@ -109,7 +109,7 @@
 
         /* Buttons */
         .btn-primary { background:linear-gradient(90deg,rgba(34,211,238,.92),rgba(124,58,237,.70))!important;border:none!important; }
-        .btn-danger { background:rgba(239,68,68,.85)!important;border:none!important; }
+        .btn-danger { background:rgba(239,68,68,.85)!important;border:none!important; flex: 0 0 auto; }
         .btn-outline-secondary { color:rgba(233,237,255,.80)!important;border-color:rgba(255,255,255,.20)!important; }
 
         /* Badges */
@@ -152,6 +152,17 @@
             .main-content { margin-left:0; }
             .content { padding:1rem; }
         }
+        #siteFilterDash option{
+            color:#000!important;
+        }
+                 .glass-card input::placeholder, .topbar .search input::placeholder{
+            color:#fff;
+         }
+         input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* makes icon white */
+  cursor: pointer;
+}
     </style>
 </head>
 <body>

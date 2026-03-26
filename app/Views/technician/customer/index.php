@@ -2,16 +2,16 @@
 <?= $this->section('content') ?>
 
 <section id="customers" class="view-section active">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 topbar">
         <h3 class="fw-bold mb-0">Customer Directory</h3>
     </div>
-
+<div class="content">
     <div class="glass-card mb-4">
         <div class="input-group">
-            <span class="input-group-text bg-white"><i class="fa-solid fa-search"></i></span>
-            <input type="text" class="form-control border-start-0 ps-0" id="customerSearch"
+            <span class="input-group-text "><i class="fa-solid fa-search"></i></span>
+            <input type="text" class="form-control border-start-0 " id="customerSearch"
                 placeholder="Search for customers by name or address...">
-            <button class="btn btn-outline-primary" id="customerSearchBtn">Search</button>
+            <button class="btn btn-primary" id="customerSearchBtn">Search</button>
         </div>
     </div>
 
@@ -71,6 +71,7 @@
             </tbody>
         </table>
     </div>
+ </div>
 </section>
 
 <?= $this->endSection() ?>

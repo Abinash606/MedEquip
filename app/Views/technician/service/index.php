@@ -68,6 +68,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
 </style>
 
 <!-- Service History view -->
+ <div class="content">
 <section id="serviceHistory" class="view-section active">
     <div class="row g-4">
         <div class="col-12">
@@ -114,7 +115,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="text-end d-flex flex-column align-items-end gap-1">
+                                <div class="text-end d-flex flex-wrap align-items-end gap-1">
                                     <?php
                                         $wostatus = strtolower($wo['status'] ?? 'open');
                                         $statusBadge = $wostatus === 'closed' ? 'bg-success' : ($wostatus === 'in_progress' ? 'bg-warning' : 'bg-info text-dark');
@@ -130,7 +131,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                                     <?php elseif (($wo['priority'] ?? '') === 'low'): ?>
                                         <span class="badge bg-success">Low</span>
                                     <?php endif; ?>
-                                    <button class="btn btn-sm btn-outline-secondary mt-1 update-wo-btn"
+                                    <button class="btn btn-sm btn-primary mt-1 update-wo-btn"
                                         data-id="<?= esc($wo['id']) ?>"
                                         data-title="<?= esc($wo['title'] ?? '', 'attr') ?>"
                                         data-status="<?= esc($wostatus, 'attr') ?>"
@@ -192,7 +193,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
         </div>
     </div>
 </section>
-
+</div>
 <!-- Update Work Order Status Modal -->
 <div class="modal fade" id="updateWOModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

@@ -361,14 +361,7 @@ class SitesController extends BaseController
             }
             return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
         }
-        $statusMap = [
-            'ready'           => 'ready',
-            'need_attention'  => 'need_attention',
-            'repair'          => 'repair',
-            'out_of_service'  => 'out_of_service',
-        ];
-        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
-        $status = $statusMap[$statusInput] ?? 'ready';
+
         $data = [
             'site_id'           => $this->request->getPost('site_id'),
             'asset_tag'         => $assetTag,
@@ -378,7 +371,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => $status,
+            'status'            => 'ready',
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -394,9 +387,9 @@ class SitesController extends BaseController
             $data['id'] = $newId;
 
             if ($isAjax) {
-            return $this->response->setJSON(['success' => true, 'data' => $data]);
+                return $this->response->setJSON(['success' => true, 'data' => $data]);
             }
-        return redirect()->back()->with('success', 'Equipment added successfully.');
+            return redirect()->back()->with('success', 'Equipment added successfully.');
         } catch (\Throwable $e) {
             // Catch any remaining DB constraint violations (race conditions, etc.)
             $userMessage = (stripos($e->getMessage(), 'Duplicate') !== false || stripos($e->getMessage(), 'uk_equipment') !== false)
@@ -461,14 +454,7 @@ class SitesController extends BaseController
             }
             return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
         }
-        $statusMap = [
-            'ready'           => 'ready',
-            'need_attention'  => 'need_attention',
-            'repair'          => 'repair',
-            'out_of_service'  => 'out_of_service',
-        ];
-        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
-        $status = $statusMap[$statusInput] ?? 'ready';
+
         // ── Step 4: Build data array ──────────────────────────────────
         $data = [
             'asset_tag'         => $assetTag,
@@ -478,7 +464,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => $status,
+            'status'            => 'ready',
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -488,12 +474,12 @@ class SitesController extends BaseController
 
         // ── Step 5: Update with try/catch for any race condition ──────
         try {
-        $db->table('equipment')->where('id', $id)->update($data);
+            $db->table('equipment')->where('id', $id)->update($data);
 
             if ($isAjax) {
-            return $this->response->setJSON(['success' => true]);
-        }
-        return redirect()->back()->with('success', 'Equipment updated successfully.');
+                return $this->response->setJSON(['success' => true]);
+            }
+            return redirect()->back()->with('success', 'Equipment updated successfully.');
         } catch (\Throwable $e) {
             $isDuplicate = stripos($e->getMessage(), 'Duplicate') !== false
                 || stripos($e->getMessage(), 'uk_equipment') !== false;

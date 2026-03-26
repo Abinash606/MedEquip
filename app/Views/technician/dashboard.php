@@ -49,7 +49,7 @@
     </div>
 
     <div class="col-md-4">
-        <div class="glass-card p-3 d-flex align-items-center justify-content-between">
+        <div class="glass-card p-3 d-flex align-items-center justify-content-between h-100">
             <div>
                 <div class="text-muted small fw-bold text-uppercase mb-1">Compliance Health</div>
                 <h4 class="fw-bold mb-1"><?= esc($complianceLabel ?? '—') ?></h4>

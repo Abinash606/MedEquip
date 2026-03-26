@@ -672,9 +672,10 @@
             white-space: nowrap;
         }
 
-        .btn-primary {
+        .btn-primary, .btn-outline-primary {
             background: linear-gradient(90deg, rgba(34, 211, 238, .92), rgba(124, 58, 237, .70)) !important;
             border: none !important;
+            color:#fff!important;
         }
 
         .btn-info {
@@ -950,8 +951,6 @@
         }
 
 
-        <style>
-
         /* Select2 dropdown - white background, dark text */
         .select2-dropdown {
             background: #ffffff !important;
@@ -1010,6 +1009,20 @@
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             top: 5px !important;
         }
+        .glass-card select option{
+            color:#000!important;
+        }
+         .glass-card input::placeholder, .topbar .search input::placeholder{
+            color:#fff;
+         }
+         .input-group .input-group-text{
+            border-right:0px!important;
+         }
+         input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
     </style>
 </head>
 
