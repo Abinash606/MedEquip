@@ -282,103 +282,96 @@ class AssetsController extends BaseController
      */
     public function bulkImport()
     {
-        $companyId = $this->session->get('company_id');
+        // Always return JSON for this endpoint
+        $isAjax = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+            || stripos($this->request->getHeaderLine('X-Requested-With'), 'XMLHttpRequest') !== false;
+
+        $companyId = (int) $this->session->get('company_id');
         $siteId    = (int) $this->request->getPost('site_id');
 
         if (!$siteId) {
-            return redirect()->back()->with('error', 'Please select a site for the import.');
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Please select a site before importing.',
+            ]);
         }
 
         $file = $this->request->getFile('excel_file');
         if (!$file || !$file->isValid()) {
-            return redirect()->back()->with('error', 'Please upload a valid Excel or CSV file.');
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No valid file uploaded. Please select a CSV file.',
+            ]);
         }
 
         $ext = strtolower($file->getClientExtension());
-        if (!in_array($ext, ['xlsx', 'xls', 'csv'])) {
-            return redirect()->back()->with('error', 'Only .xlsx, .xls, or .csv files are accepted.');
+        if ($ext !== 'csv') {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Only .csv files are accepted. Please save your Excel file as CSV first.',
+            ]);
         }
 
         $tmpPath = $file->getTempName();
         $rows    = [];
 
-        if ($ext === 'csv') {
-            // Parse CSV
-            if (($handle = fopen($tmpPath, 'r')) !== false) {
-                $headers = null;
-                while (($line = fgetcsv($handle)) !== false) {
-                    if ($headers === null) {
-                        $headers = array_map('strtolower', array_map('trim', $line));
-                        continue;
-                    }
-                    $rows[] = array_combine($headers, array_pad($line, count($headers), ''));
+        if (($handle = fopen($tmpPath, 'r')) !== false) {
+            $headers = null;
+            while (($line = fgetcsv($handle)) !== false) {
+                if ($headers === null) {
+                    $headers = array_map('strtolower', array_map('trim', $line));
+                    continue;
                 }
-                fclose($handle);
-            }
-        } else {
-            // Use PhpSpreadsheet if available, otherwise parse as CSV fallback
-            if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
-                try {
-                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
-                    $sheet = $spreadsheet->getActiveSheet();
-                    $data  = $sheet->toArray(null, true, true, false);
-                    if (!empty($data)) {
-                        $headers = array_map('strtolower', array_map('trim', $data[0]));
-                        for ($i = 1; $i < count($data); $i++) {
-                            if (array_filter($data[$i])) {
-                                $rows[] = array_combine($headers, array_pad($data[$i], count($headers), ''));
-                            }
-                        }
-                    }
-                } catch (\Exception $e) {
-                    return redirect()->back()->with('error', 'Could not read Excel file: ' . $e->getMessage());
+                if (!empty(array_filter($line))) {
+                    $rows[] = array_combine(
+                        $headers,
+                        array_pad($line, count($headers), '')
+                    );
                 }
-            } else {
-                return redirect()->back()->with('error', 'PhpSpreadsheet not installed. Please upload a CSV file instead.');
             }
+            fclose($handle);
         }
 
         if (empty($rows)) {
-            return redirect()->back()->with('error', 'No data rows found in the file.');
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'No data rows found. Make sure Row 1 contains column headers.',
+            ]);
         }
 
-        $equipModel = new EquipmentModel();
-        $db         = \Config\Database::connect();
-        $imported   = 0;
-        $skipped    = 0;
+        $db       = \Config\Database::connect();
+        $imported = 0;
+        $skipped  = 0;
 
         foreach ($rows as $row) {
-            // Normalize column names: trim whitespace + lowercase all keys
-            // Handles Excel headers like: 'Make ', 'Asset Tag ', 'Device Type ', 'Location Or Room '
+            // Normalize keys
             $norm = [];
             foreach ($row as $k => $v) {
-                $norm[trim(strtolower((string)$k))] = (string)$v;
+                $norm[trim(strtolower((string)$k))] = trim((string)$v);
             }
 
-            // Map all known header variants to internal field names
-            $assetTag   = trim($norm['asset tag'] ?? $norm['asset_tag'] ?? $norm['asset #'] ?? $norm['asset#'] ?? '');
-            $make       = trim($norm['make'] ?? $norm['manufacturer'] ?? '');
-            $model      = trim($norm['model'] ?? $norm['model number'] ?? '');
-            $serial     = trim($norm['serial number'] ?? $norm['serial_number'] ?? $norm['serial #'] ?? $norm['s/n'] ?? $norm['sn'] ?? '');
-            $deviceType = trim($norm['device type'] ?? $norm['device_type'] ?? $norm['type'] ?? '');
-            $department = trim($norm['department'] ?? $norm['dept'] ?? '');
-            $location   = trim($norm['location or room'] ?? $norm['room'] ?? $norm['location'] ?? '');
+            $assetTag   = $norm['asset tag']       ?? $norm['asset_tag']     ?? $norm['asset #'] ?? '';
+            $make       = $norm['make']             ?? $norm['manufacturer']  ?? '';
+            $model      = $norm['model']            ?? $norm['model number']  ?? '';
+            $serial     = $norm['serial number']    ?? $norm['serial_number'] ?? $norm['s/n']     ?? $norm['sn'] ?? '';
+            $deviceType = $norm['device type']      ?? $norm['device_type']   ?? $norm['type']    ?? '';
+            $department = $norm['department']       ?? $norm['dept']          ?? '';
+            $location   = $norm['location or room'] ?? $norm['location']      ?? $norm['room']    ?? '';
 
-            // Numeric values from Excel (asset tags & serials stored as integers)
+            // Clean numeric values (Excel stores numbers without quotes)
             if (is_numeric($assetTag) && $assetTag !== '') $assetTag = (string)(int)$assetTag;
             if (is_numeric($serial)   && $serial   !== '') $serial   = (string)(int)$serial;
-            if ($serial === 'N/A' || $serial === 'n/a') $serial = '';
+            if (strtoupper(trim($serial)) === 'N/A') $serial = '';
 
-            if (empty($make) && empty($model)) { $skipped++; continue; }
+            // Skip completely empty rows
+            if (empty($make) && empty($model)) {
+                $skipped++;
+                continue;
+            }
 
-            // Check duplicate using direct query (avoids CI4 model state issues)
-            if (!empty($assetTag)) {
-                $dup = $db->query(
-                    "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
-                    [$companyId, $assetTag]
-                )->getRow();
-                if ($dup) { $skipped++; continue; }
-            } else {
+            // Auto-generate asset tag if blank
+            if (empty($assetTag)) {
                 $lastTag = $db->query(
                     "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
                     [$companyId]
@@ -390,12 +383,34 @@ class AssetsController extends BaseController
                 $assetTag = 'ASSET-' . $num;
             }
 
+            // Duplicate check
+            $dup = $db->query(
+                "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                [$companyId, $assetTag]
+            )->getRow();
+
+            if ($dup) {
+                $skipped++;
+                continue;
+            }
+
             try {
                 $db->query(
                     "INSERT IGNORE INTO equipment
-                     (company_id, site_id, asset_tag, make, model, serial_number, device_type, department, location, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
-                    [$companyId, $siteId, $assetTag, $make, $model, $serial, $deviceType, $department, $location]
+                 (company_id, site_id, asset_tag, make, model, serial_number,
+                  device_type, department, location, status, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
+                    [
+                        $companyId,
+                        $siteId,
+                        $assetTag,
+                        $make,
+                        $model,
+                        $serial,
+                        $deviceType,
+                        $department,
+                        $location
+                    ]
                 );
                 if ($db->affectedRows() > 0) {
                     $imported++;
@@ -403,15 +418,16 @@ class AssetsController extends BaseController
                     $skipped++;
                 }
             } catch (\Throwable $e) {
-                log_message('warning', '[bulkImport] Skipping row: ' . $e->getMessage());
+                log_message('warning', '[CustomerBulkImport] Row skipped: ' . $e->getMessage());
                 $skipped++;
-                continue;
             }
         }
 
-        $msg = "Import complete: {$imported} item(s) imported";
-        if ($skipped > 0) $msg .= ", {$skipped} skipped (duplicate or empty).";
-
-        return redirect()->to('/customer/assets')->with('success', $msg);
+        return $this->response->setJSON([
+            'success'  => true,
+            'imported' => $imported,
+            'skipped'  => $skipped,
+            'message'  => "$imported imported, $skipped skipped.",
+        ]);
     }
 }

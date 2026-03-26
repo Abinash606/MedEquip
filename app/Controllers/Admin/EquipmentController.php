@@ -63,50 +63,66 @@ class EquipmentController extends BaseController
         if ($this->request->getMethod() === 'POST') {
             $equipmentModel = new EquipmentModel();
             $companyId = (int) session('company_id');
-            $data = [
-                'company_id' => $companyId,
-                'asset_tag' => $this->request->getPost('asset_tag'),
-                'make' => $this->request->getPost('make'),
-                'model' => $this->request->getPost('model'),
-                'serial_number' => $this->request->getPost('serial_number'),
-                'device_type' => $this->request->getPost('device_type'),
-                'location' => $this->request->getPost('location'),
-                'department' => $this->request->getPost('department'),
-                'status' => in_array($this->request->getPost('status'), ['ready','need_attention','out_of_service']) ? $this->request->getPost('status') : 'ready',
-                'site_id' => $this->request->getPost('site_id'),
-                'est' => $this->request->getPost('est') ? ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1' ? '1' : '0') : '0',
-                'cal' => $this->request->getPost('cal') ? ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1' ? '1' : '0') : '0',
-            ];
-            $inserted = $equipmentModel->insert($data);
 
-            // Return JSON for AJAX requests
+            $assetTag = $this->request->getPost('asset_tag');
+
+            // ── Duplicate check ──────────────────────────────────────
+            $existing = $equipmentModel
+                ->where('company_id', $companyId)
+                ->where('asset_tag', $assetTag)
+                ->where('deleted_at', null)
+                ->first();
+
             $wantsJson = $this->request->isAJAX()
-                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
-                || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
+
+            if ($existing) {
+                if ($wantsJson) {
+                    return $this->response->setJSON([
+                        'success' => false,
+                        'message' => 'Asset Tag "' . $assetTag . '" already exists for this company. Please use a unique Asset Tag.',
+                    ]);
+                }
+                return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
+            }
+            $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
+            $statusInput = trim($this->request->getPost('status') ?? 'ready');
+            $data = [
+                'company_id'    => $companyId,
+                'asset_tag'     => $assetTag,
+                'make'          => $this->request->getPost('make'),
+                'model'         => $this->request->getPost('model'),
+                'serial_number' => $this->request->getPost('serial_number'),
+                'device_type'   => $this->request->getPost('device_type'),
+                'location'      => $this->request->getPost('location'),
+                'department'    => $this->request->getPost('department'),
+                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
+                'site_id'       => $this->request->getPost('site_id'),
+                'est'           => ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1') ? '1' : '0',
+                'cal'           => ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1') ? '1' : '0',
+            ];
+
+            $inserted = $equipmentModel->insert($data);
 
             if ($wantsJson) {
                 if ($inserted) {
-                    $newId = $equipmentModel->getInsertID();
                     return $this->response->setJSON([
-                        'success'     => true,
-                        'message'     => 'Equipment added successfully',
-                        'id'          => $newId,
-                        'asset_tag'   => $data['asset_tag'],
-                        'make'        => $data['make'],
-                        'model'       => $data['model'],
+                        'success'       => true,
+                        'message'       => 'Equipment added successfully',
+                        'id'            => $equipmentModel->getInsertID(),
+                        'asset_tag'     => $data['asset_tag'],
+                        'make'          => $data['make'],
+                        'model'         => $data['model'],
                         'serial_number' => $data['serial_number'],
-                        'device_type' => $data['device_type'],
-                        'department'  => $data['department'],
-                        'location'    => $data['location'],
-                        'site_id'     => $data['site_id'],
+                        'device_type'   => $data['device_type'],
+                        'department'    => $data['department'],
+                        'location'      => $data['location'],
+                        'site_id'       => $data['site_id'],
                     ]);
                 }
-                $dbError = $equipmentModel->errors() ?: [];
-                $errMsg  = !empty($dbError) ? implode(', ', $dbError) : 'Failed to add equipment (check status enum value)';
-                log_message('error', '[EquipmentController::create] Insert failed. Data: ' . json_encode($data) . ' Errors: ' . json_encode($dbError));
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => $errMsg,
+                    'message' => implode(', ', $equipmentModel->errors() ?: ['Failed to add equipment']),
                 ]);
             }
 
@@ -126,18 +142,45 @@ class EquipmentController extends BaseController
         if ($this->request->getMethod() === 'POST') {
             $equipmentModel = new EquipmentModel();
             $companyId = (int) session('company_id');
+
+            $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
+            $statusInput = trim($this->request->getPost('status') ?? 'ready');
+
             $data = [
-                'company_id' => $companyId,
-                'asset_tag' => $this->request->getPost('asset_tag'),
-                'make' => $this->request->getPost('make'),
-                'model' => $this->request->getPost('model'),
-                'serial_number' => $this->request->getPost('serial_number'),
-                'device_type' => $this->request->getPost('device_type'),
-                'location' => $this->request->getPost('location'),
-                'department' => $this->request->getPost('department'),
-                'status' => $this->request->getPost('status'),
+                'company_id'         => $companyId,
+                'asset_tag'          => $this->request->getPost('asset_tag'),
+                'make'               => $this->request->getPost('make'),
+                'model'              => $this->request->getPost('model'),
+                'serial_number'      => $this->request->getPost('serial_number'),
+                'device_type'        => $this->request->getPost('device_type'),
+                'location'           => $this->request->getPost('location'),
+                'department'         => $this->request->getPost('department'),
+                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
+                'site_id'            => $this->request->getPost('site_id'),
+                'pm_kit'             => $this->request->getPost('pm_kit'),
+                'fast_notes'         => $this->request->getPost('fast_notes'),
+                'installation_date'  => $this->request->getPost('installation_date') ?: null,
+                'warranty_expires'   => $this->request->getPost('warranty_expires') ?: null,
             ];
-            $equipmentModel->update($id, $data);
+
+            $wantsJson = $this->request->isAJAX()
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
+
+            $updated = $equipmentModel->update((int)$id, $data);
+
+            if ($wantsJson) {
+                if ($updated !== false) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Equipment updated successfully',
+                    ]);
+                }
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => implode(', ', $equipmentModel->errors() ?: ['Failed to update equipment']),
+                ]);
+            }
+
             return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
         }
     }
@@ -475,16 +518,23 @@ except Exception as e:
                 )->getRow();
                 if ($dup) { $skipped++; continue; }
             } else {
-                // Auto-generate a unique asset tag
-                $lastTag = $db->query(
-                    "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
-                    [$companyId]
-                )->getRow();
-                $num = 1000;
-                if ($last && preg_match('/ASSET-(\d+)/', $last['asset_tag'], $m)) {
-                    $num = (int)$m[1] + 1;
-                }
-                $assetTag = 'ASSET-' . $num;
+                // Keep incrementing until we find an unused tag (handles bulk rows)
+                do {
+                    $lastTag = $db->query(
+                        "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
+                        [$companyId]
+                    )->getRow();
+                    $num = 1000;
+                    if ($lastTag && preg_match('/ASSET-(\d+)/', $lastTag->asset_tag, $m)) {
+                        $num = (int)$m[1] + 1;
+                    }
+                    $assetTag = 'ASSET-' . $num;
+                    // Check the tag isn't already used (in DB or already planned this batch)
+                    $tagExists = $db->query(
+                        "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                        [$companyId, $assetTag]
+                    )->getRow();
+                } while ($tagExists);
             }
 
             // Use INSERT IGNORE so the DB unique constraint never throws a fatal error

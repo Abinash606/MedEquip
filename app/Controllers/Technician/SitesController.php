@@ -340,17 +340,45 @@ class SitesController extends BaseController
     {
         $db        = Database::connect();
         $companyId = session()->get('company_id');
+        $isAjax    = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
 
+        $assetTag = trim((string) $this->request->getPost('asset_tag'));
+
+        // ── Duplicate asset tag check ─────────────────────────────────
+        $duplicate = $db->table('equipment')
+            ->where('company_id', $companyId)
+            ->where('asset_tag',  $assetTag)
+            ->where('deleted_at IS NULL', null, false)
+            ->countAllResults();
+
+        if ($duplicate > 0) {
+            if ($isAjax) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Asset Tag "' . esc($assetTag) . '" is already registered. Please use a different Asset Tag.',
+                ]);
+            }
+            return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
+        }
+        $statusMap = [
+            'ready'           => 'ready',
+            'need_attention'  => 'need_attention',
+            'repair'          => 'repair',
+            'out_of_service'  => 'out_of_service',
+        ];
+        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
+        $status = $statusMap[$statusInput] ?? 'ready';
         $data = [
             'site_id'           => $this->request->getPost('site_id'),
-            'asset_tag'         => $this->request->getPost('asset_tag'),
+            'asset_tag'         => $assetTag,
             'serial_number'     => $this->request->getPost('serial_number'),
             'make'              => $this->request->getPost('make'),
             'model'             => $this->request->getPost('model'),
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => 'ready', // DB enum: ready|need_attention|out_of_service
+            'status'            => $status,
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -360,16 +388,29 @@ class SitesController extends BaseController
             'updated_at'        => date('Y-m-d H:i:s'),
         ];
 
-        // If request is AJAX, return JSON; otherwise redirect
-        if ($this->request->isAJAX()) {
+        try {
             $db->table('equipment')->insert($data);
-            $newId = $db->insertID();
+            $newId      = $db->insertID();
             $data['id'] = $newId;
-            return $this->response->setJSON(['success' => true, 'data' => $data]);
-        }
 
-        $db->table('equipment')->insert($data);
+            if ($isAjax) {
+            return $this->response->setJSON(['success' => true, 'data' => $data]);
+            }
         return redirect()->back()->with('success', 'Equipment added successfully.');
+        } catch (\Throwable $e) {
+            // Catch any remaining DB constraint violations (race conditions, etc.)
+            $userMessage = (stripos($e->getMessage(), 'Duplicate') !== false || stripos($e->getMessage(), 'uk_equipment') !== false)
+                ? 'Asset Tag "' . esc($assetTag) . '" is already registered. Please use a different Asset Tag.'
+                : 'Failed to save equipment. Please try again.';
+
+            if ($isAjax) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => $userMessage,
+                ]);
+            }
+            return redirect()->back()->withInput()->with('error', $userMessage);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -380,8 +421,10 @@ class SitesController extends BaseController
     {
         $db        = Database::connect();
         $companyId = session()->get('company_id');
+        $isAjax    = $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
 
-        // Verify ownership
+        // ── Step 1: Verify ownership ──────────────────────────────────
         $exists = $db->table('equipment')
             ->where('id', $id)
             ->where('company_id', $companyId)
@@ -389,21 +432,53 @@ class SitesController extends BaseController
             ->countAllResults();
 
         if (!$exists) {
-            if ($this->request->isAJAX()) {
-                return $this->response->setJSON(['success' => false, 'message' => 'Equipment not found.']);
+            if ($isAjax) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Equipment not found.',
+                ]);
             }
             return redirect()->back()->with('error', 'Equipment not found.');
         }
 
+        // ── Step 2: Get asset tag from POST ───────────────────────────
+        $assetTag = trim((string) $this->request->getPost('asset_tag'));
+
+        // ── Step 3: Duplicate check (exclude current record) ─────────
+        $duplicate = $db->table('equipment')
+            ->where('company_id', $companyId)
+            ->where('asset_tag',  $assetTag)
+            ->where('id !=',      $id)
+            ->where('deleted_at IS NULL', null, false)
+            ->countAllResults();
+
+        if ($duplicate > 0) {
+            if ($isAjax) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Asset Tag "' . esc($assetTag) . '" is already registered on another device. Please use a unique Asset Tag.',
+                ]);
+            }
+            return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
+        }
+        $statusMap = [
+            'ready'           => 'ready',
+            'need_attention'  => 'need_attention',
+            'repair'          => 'repair',
+            'out_of_service'  => 'out_of_service',
+        ];
+        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
+        $status = $statusMap[$statusInput] ?? 'ready';
+        // ── Step 4: Build data array ──────────────────────────────────
         $data = [
-            'asset_tag'         => $this->request->getPost('asset_tag'),
+            'asset_tag'         => $assetTag,
             'serial_number'     => $this->request->getPost('serial_number'),
             'make'              => $this->request->getPost('make'),
             'model'             => $this->request->getPost('model'),
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => 'ready', // DB enum: ready|need_attention|out_of_service
+            'status'            => $status,
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -411,12 +486,30 @@ class SitesController extends BaseController
             'updated_at'        => date('Y-m-d H:i:s'),
         ];
 
+        // ── Step 5: Update with try/catch for any race condition ──────
+        try {
         $db->table('equipment')->where('id', $id)->update($data);
 
-        if ($this->request->isAJAX()) {
+            if ($isAjax) {
             return $this->response->setJSON(['success' => true]);
         }
         return redirect()->back()->with('success', 'Equipment updated successfully.');
+        } catch (\Throwable $e) {
+            $isDuplicate = stripos($e->getMessage(), 'Duplicate') !== false
+                || stripos($e->getMessage(), 'uk_equipment') !== false;
+
+            $userMessage = $isDuplicate
+                ? 'Asset Tag "' . esc($assetTag) . '" is already registered on another device. Please use a unique Asset Tag.'
+                : 'Failed to update equipment. Please try again.';
+
+            if ($isAjax) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => $userMessage,
+                ]);
+            }
+            return redirect()->back()->withInput()->with('error', $userMessage);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════
