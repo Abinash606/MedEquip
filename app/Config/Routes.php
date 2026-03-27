@@ -89,7 +89,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('sites/(:num)', 'Admin\SitesController::view/$1'); // Site detail view with tabs
 
     $routes->get('equipment', 'Admin\EquipmentController::index');
-
+    $routes->get('equipment/dropdown-options', 'Admin\EquipmentController::getDropdownOptions');
     $routes->post('equipment/create', 'Admin\EquipmentController::create');
     $routes->post('equipment/update/(:num)', 'Admin\EquipmentController::update/$1');
     $routes->get('equipment/delete/(:num)', 'Admin\EquipmentController::delete/$1');

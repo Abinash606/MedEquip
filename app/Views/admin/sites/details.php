@@ -612,6 +612,41 @@
         object-fit: cover;
         /* Ensures the image scales and stays within the circle */
     }
+
+    .suggest-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: #fff;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 0;
+        margin: 2px 0 0 0;
+        list-style: none;
+    }
+
+    .suggest-dropdown li {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+    }
+
+    .suggest-dropdown li:last-child {
+        border-bottom: none;
+    }
+
+    .suggest-dropdown li:hover,
+    .suggest-dropdown li.active {
+        background: #eef2ff;
+        color: #2563eb;
+    }
 </style>
 
 <!-- Back Button -->
@@ -1026,26 +1061,40 @@
                                 <input type="text" class="form-control" id="equipment-serial-number"
                                     name="serial_number" placeholder="" required>
                             </div>
-
                             <!-- Make -->
                             <div class="col-md-6">
-                                <label for="equipment-make" class="form-label">Make</label>
-                                <input type="text" class="form-control" id="equipment-make" name="make"
-                                    placeholder="e.g., Philips, GE" required>
+                                <label for="equipment-make" class="form-label">Make <span
+                                        class="text-danger">*</span></label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control equipment-suggest" id="equipment-make"
+                                        name="make" placeholder="Select or type make" autocomplete="off" required
+                                        data-list="make-list">
+                                    <ul class="suggest-dropdown d-none" id="make-list-dropdown"></ul>
+                                </div>
                             </div>
 
                             <!-- Model -->
                             <div class="col-md-6">
-                                <label for="equipment-model" class="form-label">Model</label>
-                                <input type="text" class="form-control" id="equipment-model" name="model"
-                                    placeholder="Enter model" required>
+                                <label for="equipment-model" class="form-label">Model <span
+                                        class="text-danger">*</span></label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control equipment-suggest" id="equipment-model"
+                                        name="model" placeholder="Select or type model" autocomplete="off" required
+                                        data-list="model-list">
+                                    <ul class="suggest-dropdown d-none" id="model-list-dropdown"></ul>
+                                </div>
                             </div>
 
                             <!-- Device Type -->
                             <div class="col-md-6">
-                                <label for="equipment-device-type" class="form-label">Device Type</label>
-                                <input type="text" class="form-control" id="equipment-device-type" name="device_type"
-                                    placeholder="e.g., MRI, CT, Ultrasound" required>
+                                <label for="equipment-device-type" class="form-label">Device Type <span
+                                        class="text-danger">*</span></label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control equipment-suggest" id="equipment-device-type"
+                                        name="device_type" placeholder="Select or type device type" autocomplete="off"
+                                        required data-list="device-type-list">
+                                    <ul class="suggest-dropdown d-none" id="device-type-list-dropdown"></ul>
+                                </div>
                             </div>
 
                             <!-- Department -->
@@ -1958,7 +2007,117 @@
                     }
                 });
             }
+            // ── Load equipment dropdowns from DB ─────────────────────────
+            // Store lists globally
+            var equipmentLists = {
+                make: [],
+                model: [],
+                'device-type': []
+            };
 
+            function loadEquipmentDropdownOptions(selectedMake, selectedModel, selectedDeviceType) {
+                $.ajax({
+                    url: '<?= site_url('admin/equipment/dropdown-options') ?>',
+                    method: 'GET',
+                    dataType: 'json',
+                    success: function(res) {
+                        if (!res.success) return;
+
+                        equipmentLists.make = res.makes;
+                        equipmentLists.model = res.models;
+                        equipmentLists['device-type'] = res.device_types;
+
+                        if (selectedMake) $('#equipment-make').val(selectedMake);
+                        if (selectedModel) $('#equipment-model').val(selectedModel);
+                        if (selectedDeviceType) $('#equipment-device-type').val(selectedDeviceType);
+                    }
+                });
+            }
+
+            // ── Suggest dropdown logic ────────────────────────────────────
+            function showSuggestions($input, items) {
+                var listId = $input.attr('id').replace('equipment-', '') + '-list-dropdown';
+                // handle device-type specially
+                if ($input.attr('id') === 'equipment-device-type') {
+                    listId = 'device-type-list-dropdown';
+                } else if ($input.attr('id') === 'equipment-make') {
+                    listId = 'make-list-dropdown';
+                } else if ($input.attr('id') === 'equipment-model') {
+                    listId = 'model-list-dropdown';
+                }
+
+                var $dropdown = $('#' + listId);
+                var val = $input.val().toLowerCase();
+                var filtered = val.length === 0 ?
+                    items :
+                    items.filter(function(i) {
+                        return i.toLowerCase().indexOf(val) !== -1;
+                    });
+
+                $dropdown.empty();
+
+                if (filtered.length === 0) {
+                    $dropdown.addClass('d-none');
+                    return;
+                }
+
+                $.each(filtered, function(i, item) {
+                    $dropdown.append(
+                        $('<li>').text(item).on('mousedown', function(e) {
+                            e.preventDefault();
+                            $input.val(item);
+                            $dropdown.addClass('d-none');
+                        })
+                    );
+                });
+
+                $dropdown.removeClass('d-none');
+            }
+
+            // Show on focus
+            $(document).on('focus', '#equipment-make', function() {
+                showSuggestions($(this), equipmentLists.make);
+            });
+            $(document).on('focus', '#equipment-model', function() {
+                showSuggestions($(this), equipmentLists.model);
+            });
+            $(document).on('focus', '#equipment-device-type', function() {
+                showSuggestions($(this), equipmentLists['device-type']);
+            });
+
+            // Filter on keyup
+            $(document).on('keyup', '#equipment-make', function() {
+                showSuggestions($(this), equipmentLists.make);
+            });
+            $(document).on('keyup', '#equipment-model', function() {
+                showSuggestions($(this), equipmentLists.model);
+            });
+            $(document).on('keyup', '#equipment-device-type', function() {
+                showSuggestions($(this), equipmentLists['device-type']);
+            });
+
+            // Hide on blur
+            $(document).on('blur', '#equipment-make, #equipment-model, #equipment-device-type', function() {
+                var id = $(this).attr('id');
+                setTimeout(function() {
+                    if (id === 'equipment-make') $('#make-list-dropdown').addClass('d-none');
+                    if (id === 'equipment-model') $('#model-list-dropdown').addClass('d-none');
+                    if (id === 'equipment-device-type') $('#device-type-list-dropdown').addClass(
+                        'd-none');
+                }, 200);
+            });
+
+            // Hide all dropdowns on outside click
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#addEquipmentModal').length) {
+                    $('.suggest-dropdown').addClass('d-none');
+                }
+            });
+
+            // Load when modal opens
+            $('#addEquipmentModal').on('show.bs.modal', function() {
+                loadEquipmentDropdownOptions('', '', '');
+            });
             // Step 1 Next
             $('#edit-wiz-step1-next').click(function() {
                 editWizardGoToStep(2);
@@ -3396,14 +3555,9 @@
                 success: function(response) {
                     if (response.status === 'success') {
                         var data = response.data;
-
-                        // Populate form fields
                         $('#equipment-id').val(data.id);
                         $('#equipment-asset-tag').val(data.asset_tag);
                         $('#equipment-serial-number').val(data.serial_number);
-                        $('#equipment-make').val(data.make);
-                        $('#equipment-model').val(data.model);
-                        $('#equipment-device-type').val(data.device_type);
                         $('#equipment-department').val(data.department);
                         $('#equipment-location').val(data.location);
                         $('#equipment-status').val(data.status);
@@ -3413,8 +3567,17 @@
                         $('#equipment-installation-date').val(data.installation_date);
                         $('#equipment-warranty-expires').val(data.warranty_expires);
 
-                        // Show modal
+                        // Show modal first, then load dropdowns with pre-selected values
                         $('#addEquipmentModal').modal('show');
+
+                        // Wait for modal and dropdown options to load
+                        setTimeout(function() {
+                            loadEquipmentDropdownOptions(
+                                data.make || '',
+                                data.model || '',
+                                data.device_type || ''
+                            );
+                        }, 300);
                     } else {
                         alert('Error loading equipment data');
                     }
@@ -3969,7 +4132,8 @@
 
 
         $('#edit-inspection-completed-at').val(formatDate($(this).data('completed_at')));
-        $('#edit-inspection-next-due-date').val(formatDate($(this).data('next_due_date')));
+        $(
+            '#edit-inspection-next-due-date').val(formatDate($(this).data('next_due_date')));
 
         function formatDate(dateStr) {
             if (!dateStr) return '';
@@ -4585,15 +4749,20 @@
         // ------------------------------------------------------------
         window.startInspection = startInspection;
         window.showDashboard = showDashboard;
-        window.updateStatus = updateStatus;
+        window.updateStatus =
+            updateStatus;
         window.handleAssetGo = handleAssetGo;
-        window.inspectFromNotInspected = inspectFromNotInspected;
+        window.inspectFromNotInspected =
+            inspectFromNotInspected;
         window.openInspectionReport = openInspectionReport;
-        window.showWorkOrdersTab = showWorkOrdersTab;
+        window.showWorkOrdersTab =
+            showWorkOrdersTab;
         window.showReportsView = showReportsView;
-        window.openWorkOrderModalFromInventory = openWorkOrderModalFromInventory;
+        window.openWorkOrderModalFromInventory =
+            openWorkOrderModalFromInventory;
         window.openWorkOrderModal = openWorkOrderModal;
-        window.previewReportPDF = previewReportPDF;
+        window.previewReportPDF =
+            previewReportPDF;
         window.exportReportPDF = exportReportPDF;
 
 

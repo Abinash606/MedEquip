@@ -572,4 +572,44 @@ except Exception as e:
             'message'  => "$imported imported, $skipped skipped.",
         ]);
     }
+
+    public function getDropdownOptions()
+    {
+        $companyId = (int) session('company_id');
+        $db = \Config\Database::connect();
+
+        $makes = $db->query(
+            "SELECT DISTINCT make FROM equipment 
+         WHERE make IS NOT NULL AND make != '' 
+         AND company_id = ? 
+         AND deleted_at IS NULL 
+         ORDER BY make",
+            [$companyId]
+        )->getResultArray();
+
+        $models = $db->query(
+            "SELECT DISTINCT model FROM equipment 
+         WHERE model IS NOT NULL AND model != '' 
+         AND company_id = ? 
+         AND deleted_at IS NULL 
+         ORDER BY model",
+            [$companyId]
+        )->getResultArray();
+
+        $deviceTypes = $db->query(
+            "SELECT DISTINCT device_type FROM equipment 
+         WHERE device_type IS NOT NULL AND device_type != '' 
+         AND company_id = ? 
+         AND deleted_at IS NULL 
+         ORDER BY device_type",
+            [$companyId]
+        )->getResultArray();
+
+        return $this->response->setJSON([
+            'success'      => true,
+            'makes'        => array_column($makes, 'make'),
+            'models'       => array_column($models, 'model'),
+            'device_types' => array_column($deviceTypes, 'device_type'),
+        ]);
+    }
 }
