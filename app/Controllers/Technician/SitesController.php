@@ -361,7 +361,14 @@ class SitesController extends BaseController
             }
             return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
         }
-
+        $statusMap = [
+            'ready'           => 'ready',
+            'need_attention'  => 'need_attention',
+            'repair'          => 'repair',
+            'out_of_service'  => 'out_of_service',
+        ];
+        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
+        $status = $statusMap[$statusInput] ?? 'ready';
         $data = [
             'site_id'           => $this->request->getPost('site_id'),
             'asset_tag'         => $assetTag,
@@ -371,7 +378,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => 'ready',
+            'status'            => $status,
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,
@@ -454,7 +461,14 @@ class SitesController extends BaseController
             }
             return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
         }
-
+        $statusMap = [
+            'ready'           => 'ready',
+            'need_attention'  => 'need_attention',
+            'repair'          => 'repair',
+            'out_of_service'  => 'out_of_service',
+        ];
+        $statusInput = trim((string) $this->request->getPost('status') ?? 'ready');
+        $status = $statusMap[$statusInput] ?? 'ready';
         // ── Step 4: Build data array ──────────────────────────────────
         $data = [
             'asset_tag'         => $assetTag,
@@ -464,7 +478,7 @@ class SitesController extends BaseController
             'device_type'       => $this->request->getPost('device_type'),
             'department'        => $this->request->getPost('department'),
             'location'          => $this->request->getPost('location'),
-            'status'            => 'ready',
+            'status'            => $status,
             'pm_kit'            => $this->request->getPost('pm_kit'),
             'fast_notes'        => $this->request->getPost('fast_notes'),
             'installation_date' => $this->request->getPost('installation_date') ?: null,

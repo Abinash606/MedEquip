@@ -788,17 +788,24 @@
                                     <td><?= esc($eq['department'] ?? 'N/A') ?></td>
                                     <td>
                                         <?php
-                                        $statusClass = 'status-badge ';
-                                        $status = strtolower($eq['status'] ?? 'pending');
-                                        if ($status === 'ready') {
-                                            $statusClass .= 'status-ready';
-                                        } elseif (str_contains($status, 'need') || str_contains($status, 'attention')) {
-                                            $statusClass .= 'status-need-attention';
-                                        } else {
-                                            $statusClass .= 'status-pending';
+                                        $rawStatus = trim($eq['status'] ?? '');
+                                        switch ($rawStatus) {
+                                            case 'ready':
+                                                echo '<span class="badge" style="background:#16a34a;color:#fff;padding:5px 10px;border-radius:20px;">Ready</span>';
+                                                break;
+                                            case 'need_attention':
+                                                echo '<span class="badge" style="background:#d97706;color:#fff;padding:5px 10px;border-radius:20px;">Need Attention</span>';
+                                                break;
+                                            case 'repair':
+                                                echo '<span class="badge" style="background:#0ea5e9;color:#fff;padding:5px 10px;border-radius:20px;">Repair</span>';
+                                                break;
+                                            case 'out_of_service':
+                                                echo '<span class="badge" style="background:#dc2626;color:#fff;padding:5px 10px;border-radius:20px;">Out of Service</span>';
+                                                break;
+                                            default:
+                                                echo '<span class="badge" style="background:#6b7280;color:#fff;padding:5px 10px;border-radius:20px;">' . esc($rawStatus ?: 'No Status') . '</span>';
                                         }
                                         ?>
-                                        <span class="<?= $statusClass ?>"><?= esc($eq['status'] ?? 'Pending') ?></span>
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-info btn-action edit-equipment-btn"
@@ -1056,10 +1063,10 @@
                             <div class="col-md-6">
                                 <label for="equipment-status" class="form-label">Device Status</label>
                                 <select class="form-select" id="equipment-status" name="status">
-                                    <option value="Ready">Ready</option>
-                                    <option value="Need Attention">Need Attention</option>
-                                    <option value="Repair">Repair</option>
-                                    <option value="Out of Service">Out of Service</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="need_attention">Need Attention</option>
+                                    <option value="repair">Repair</option>
+                                    <option value="out_of_service">Out of Service</option>
                                 </select>
                             </div>
 

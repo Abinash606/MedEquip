@@ -51,7 +51,7 @@
 
         html,
         body {
-            height: 100%;
+      
         }
 
         body {
@@ -672,7 +672,7 @@
             white-space: nowrap;
         }
 
-        .btn-primary, .btn-outline-primary {
+        .btn-primary, .btn-outline-primary, #btnExportCsv{
             background: linear-gradient(90deg, rgba(34, 211, 238, .92), rgba(124, 58, 237, .70)) !important;
             border: none !important;
             color:#fff!important;
@@ -1018,11 +1018,17 @@
          .input-group .input-group-text{
             border-right:0px!important;
          }
-         input[type="date"]::-webkit-calendar-picker-indicator,
-input[type="time"]::-webkit-calendar-picker-indicator {
+         .glass-card input[type="date"]::-webkit-calendar-picker-indicator,
+ .glass-card input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;
 }
+.fc-theme-bootstrap5-shaded, .fc .fc-list-sticky .fc-list-day>*{
+    background-color:transparent!important;
+}
+ .fc .fc-list-event:hover td{
+    background-color:#000!important;
+ }
     </style>
 </head>
 

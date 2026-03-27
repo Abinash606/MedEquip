@@ -663,233 +663,247 @@
 </style>
 
 <!-- ── Back button ── -->
- <div class="topbar">
-<button class="btn btn-secondary mb-3" onclick="window.location.href='<?= site_url('technician/sites') ?>'">
-    <i class="fa fa-arrow-left me-2"></i> Back to Sites
-</button>
+<div class="topbar">
+    <button class="btn btn-secondary mb-3" onclick="window.location.href='<?= site_url('technician/sites') ?>'">
+        <i class="fa fa-arrow-left me-2"></i> Back to Sites
+    </button>
 </div>
 <div class="content">
-<!-- ── Site info card ── -->
-<div class="glass-card mb-4" id="siteInfoCard">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 style="font-size:1rem;font-weight:600;color:#475569;margin:0;">
-            <i class="fa fa-circle-info me-1"></i> Site Information
-            <?php if (!empty($customer['name'])): ?> — <?= esc($customer['name']) ?><?php endif; ?>
-        </h6>
-        <button class="btn btn-sm btn-primary rounded-circle" id="toggleSiteInfo" type="button" title="Toggle">
-            <i class="fa fa-chevron-up" id="toggleIcon"></i>
-        </button>
-    </div>
+    <!-- ── Site info card ── -->
+    <div class="glass-card mb-4" id="siteInfoCard">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 style="font-size:1rem;font-weight:600;color:#475569;margin:0;">
+                <i class="fa fa-circle-info me-1"></i> Site Information
+                <?php if (!empty($customer['name'])): ?> — <?= esc($customer['name']) ?><?php endif; ?>
+            </h6>
+            <button class="btn btn-sm btn-primary rounded-circle" id="toggleSiteInfo" type="button" title="Toggle">
+                <i class="fa fa-chevron-up" id="toggleIcon"></i>
+            </button>
+        </div>
 
-    <div id="siteInfoBody">
-        <div class="row align-items-center">
-            <div class="col-md-auto me-4 text-center">
-                <?php
-                $logoPath     = $customer['logo_path'] ?? '';
-                $logoFullPath = FCPATH . 'uploads/logos/' . $logoPath;
-                if (!empty($logoPath) && file_exists($logoFullPath)): ?>
-                    <img src="<?= base_url('uploads/logos/' . $logoPath) ?>" class="site-avatar" alt="Logo">
-                <?php else:
-                    $nameParts = explode(' ', $customer['name'] ?? 'Unknown');
-                    $initials  = count($nameParts) >= 2
-                        ? strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1))
-                        : strtoupper(substr($customer['name'] ?? 'UN', 0, 2));
-                ?>
-                    <div class="site-avatar-initials"><?= esc($initials) ?></div>
-                <?php endif; ?>
-            </div>
-            <div class="col-md">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="site-info-item"><strong>Site Name:</strong> <?= esc($site['name'] ?? 'N/A') ?></div>
-                        <div class="site-info-item"><strong>Site ID:</strong> <?= esc($site['id'] ?? 'N/A') ?></div>
-                        <div class="site-info-item"><strong>Contact:</strong> <?= esc($site['contact_name'] ?? 'N/A') ?>
+        <div id="siteInfoBody">
+            <div class="row align-items-center">
+                <div class="col-md-auto me-4 text-center">
+                    <?php
+                    $logoPath     = $customer['logo_path'] ?? '';
+                    $logoFullPath = FCPATH . 'uploads/logos/' . $logoPath;
+                    if (!empty($logoPath) && file_exists($logoFullPath)): ?>
+                        <img src="<?= base_url('uploads/logos/' . $logoPath) ?>" class="site-avatar" alt="Logo">
+                    <?php else:
+                        $nameParts = explode(' ', $customer['name'] ?? 'Unknown');
+                        $initials  = count($nameParts) >= 2
+                            ? strtoupper(substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1))
+                            : strtoupper(substr($customer['name'] ?? 'UN', 0, 2));
+                    ?>
+                        <div class="site-avatar-initials"><?= esc($initials) ?></div>
+                    <?php endif; ?>
+                </div>
+                <div class="col-md">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="site-info-item"><strong>Site Name:</strong> <?= esc($site['name'] ?? 'N/A') ?></div>
+                            <div class="site-info-item"><strong>Site ID:</strong> <?= esc($site['id'] ?? 'N/A') ?></div>
+                            <div class="site-info-item"><strong>Contact:</strong> <?= esc($site['contact_name'] ?? 'N/A') ?>
+                            </div>
+                            <div class="site-info-item"><strong>Email:</strong> <?= esc($site['email'] ?? 'N/A') ?></div>
+                            <div class="site-info-item"><strong>Phone:</strong> <?= esc($site['phone'] ?? 'N/A') ?></div>
                         </div>
-                        <div class="site-info-item"><strong>Email:</strong> <?= esc($site['email'] ?? 'N/A') ?></div>
-                        <div class="site-info-item"><strong>Phone:</strong> <?= esc($site['phone'] ?? 'N/A') ?></div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="site-info-item"><strong>Customer:</strong> <?= esc($customer['name'] ?? 'N/A') ?>
+                        <div class="col-md-6">
+                            <div class="site-info-item"><strong>Customer:</strong> <?= esc($customer['name'] ?? 'N/A') ?>
+                            </div>
+                            <div class="site-info-item"><strong>Address:</strong> <?= esc($site['address'] ?? 'N/A') ?>,
+                                <?= esc($site['city'] ?? '') ?></div>
+                            <div class="site-info-item"><strong>State:</strong> <?= esc($site['state'] ?? 'N/A') ?></div>
+                            <div class="site-info-item"><strong>Zip:</strong> <?= esc($site['zip'] ?? 'N/A') ?></div>
                         </div>
-                        <div class="site-info-item"><strong>Address:</strong> <?= esc($site['address'] ?? 'N/A') ?>,
-                            <?= esc($site['city'] ?? '') ?></div>
-                        <div class="site-info-item"><strong>State:</strong> <?= esc($site['state'] ?? 'N/A') ?></div>
-                        <div class="site-info-item"><strong>Zip:</strong> <?= esc($site['zip'] ?? 'N/A') ?></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- ── Main tabs ── -->
-<ul class="nav nav-tabs" id="site-details-tabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#tab-equipment"
-            type="button">
-            <i class="fa fa-desktop me-2"></i>Equipment
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="inspections-tab" data-bs-toggle="tab" data-bs-target="#tab-inspections"
-            type="button">
-            <i class="fa fa-clipboard-check me-2"></i>Inspections
-        </button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#tab-workorders"
-            type="button">
-            <i class="fa fa-wrench me-2"></i>Work Orders
-        </button>
-    </li>
-</ul>
+    <!-- ── Main tabs ── -->
+    <ul class="nav nav-tabs" id="site-details-tabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="equipment-tab" data-bs-toggle="tab" data-bs-target="#tab-equipment"
+                type="button">
+                <i class="fa fa-desktop me-2"></i>Equipment
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="inspections-tab" data-bs-toggle="tab" data-bs-target="#tab-inspections"
+                type="button">
+                <i class="fa fa-clipboard-check me-2"></i>Inspections
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="work-orders-tab" data-bs-toggle="tab" data-bs-target="#tab-workorders"
+                type="button">
+                <i class="fa fa-wrench me-2"></i>Work Orders
+            </button>
+        </li>
+    </ul>
 
-<div class="tab-content" id="site-details-tabs-content">
+    <div class="tab-content" id="site-details-tabs-content">
 
-    <!-- ══ EQUIPMENT TAB (unchanged) ══ -->
-    <div class="tab-pane fade show active" id="tab-equipment" role="tabpanel">
-        <div class="glass-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Equipment List</h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
-                    <i class="fa fa-plus me-2"></i> Add Equipment
-                </button>
+        <!-- ══ EQUIPMENT TAB (unchanged) ══ -->
+        <div class="tab-pane fade show active" id="tab-equipment" role="tabpanel">
+            <div class="glass-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Equipment List</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEquipmentModal">
+                        <i class="fa fa-plus me-2"></i> Add Equipment
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table id="equipment-datatable" class="table table-striped table-hover" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Asset Tag</th>
+                                <th>Make</th>
+                                <th>Model</th>
+                                <th>Serial Number</th>
+                                <th>Device Type</th>
+                                <th>Location / Room</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($equipment as $eq): ?>
+                                <tr>
+                                    <td><?= esc($eq['asset_tag']) ?></td>
+                                    <td><?= esc($eq['make'] ?? 'N/A') ?></td>
+                                    <td><?= esc($eq['model'] ?? 'N/A') ?></td>
+                                    <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
+                                    <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
+                                    <td><?= esc($eq['location'] ?? 'N/A') ?></td>
+                                    <td><?= esc($eq['department'] ?? 'N/A') ?></td>
+                                    <td>
+                                        <?php
+                                        $rawStatus = trim($eq['status'] ?? '');
+                                        switch ($rawStatus) {
+                                            case 'ready':
+                                                echo '<span class="status-badge status-ready">Ready</span>';
+                                                break;
+                                            case 'need_attention':
+                                                echo '<span class="status-badge status-need-attention">Need Attention</span>';
+                                                break;
+                                            case 'repair':
+                                                echo '<span class="status-badge status-repair">Repair</span>';
+                                                break;
+                                            case 'out_of_service':
+                                                echo '<span class="status-badge" style="background:#fee2e2;color:#991b1b;">Out of Service</span>';
+                                                break;
+                                            default:
+                                                echo '<span class="status-badge status-pending">' . esc($rawStatus ?: 'Unknown') . '</span>';
+                                        }
+                                        ?>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="action-btns">
+                                            <button class="btn btn-sm btn-primary edit-equipment-btn" data-id="<?= $eq['id'] ?>"
+                                                data-asset_tag="<?= esc($eq['asset_tag'], 'attr') ?>"
+                                                data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
+                                                data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
+                                                data-serial_number="<?= esc($eq['serial_number'] ?? '', 'attr') ?>"
+                                                data-device_type="<?= esc($eq['device_type'] ?? '', 'attr') ?>"
+                                                data-location="<?= esc($eq['location'] ?? '', 'attr') ?>"
+                                                data-department="<?= esc($eq['department'] ?? '', 'attr') ?>"
+                                                data-status="<?= esc($eq['status'] ?? '', 'attr') ?>">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </button>
+                                            <a href="<?= site_url('technician/equipment/delete/' . $eq['id']) ?>"
+                                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this equipment?')">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
+
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="table-responsive">
-            <table id="equipment-datatable" class="table table-striped table-hover" style="width:100%">
-                <thead>
-                    <tr>
-                        <th>Asset Tag</th>
-                        <th>Make</th>
-                        <th>Model</th>
-                        <th>Serial Number</th>
-                        <th>Device Type</th>
-                        <th>Location / Room</th>
-                        <th>Department</th>
-                        <th>Status</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($equipment as $eq): ?>
-                        <tr>
-                            <td><?= esc($eq['asset_tag']) ?></td>
-                            <td><?= esc($eq['make'] ?? 'N/A') ?></td>
-                            <td><?= esc($eq['model'] ?? 'N/A') ?></td>
-                            <td><?= esc($eq['serial_number'] ?? 'N/A') ?></td>
-                            <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
-                            <td><?= esc($eq['location'] ?? 'N/A') ?></td>
-                            <td><?= esc($eq['department'] ?? 'N/A') ?></td>
-                            <td>
-                                <?php
-                                $st  = strtolower($eq['status'] ?? 'pending');
-                                $cls = str_contains($st, 'ready') ? 'status-ready' : (str_contains($st, 'need') ? 'status-need-attention' : 'status-pending');
-                                ?>
-                                <span class="status-badge <?= $cls ?>"><?= esc($eq['status'] ?? 'Pending') ?></span>
-                            </td>
-                            <td class="text-center">
-                                <div class="action-btns">
-                                    <button class="btn btn-sm btn-primary edit-equipment-btn" data-id="<?= $eq['id'] ?>"
-                                    data-asset_tag="<?= esc($eq['asset_tag'], 'attr') ?>"
-                                    data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
-                                    data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
-                                    data-serial_number="<?= esc($eq['serial_number'] ?? '', 'attr') ?>"
-                                    data-device_type="<?= esc($eq['device_type'] ?? '', 'attr') ?>"
-                                    data-location="<?= esc($eq['location'] ?? '', 'attr') ?>"
-                                    data-department="<?= esc($eq['department'] ?? '', 'attr') ?>"
-                                    data-status="<?= esc($eq['status'] ?? '', 'attr') ?>">
-                                    <i class="fa fa-edit"></i> Edit
-                                </button>
-                                <a href="<?= site_url('technician/equipment/delete/' . $eq['id']) ?>"
-                                    class="btn btn-sm btn-danger" onclick="return confirm('Delete this equipment?')">
-                                    <i class="fa fa-trash"></i> Delete
-                                </a>
-                                </div>
-                               
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        </div>
+
+        <!-- ══ INSPECTIONS TAB — full workflow partial ══ -->
+        <div class="tab-pane fade" id="tab-inspections" role="tabpanel">
+            <?= $this->include('technician/site/site_inspection_workflow') ?>
+        </div>
+
+        <!-- ══ WORK ORDERS TAB (unchanged) ══ -->
+        <div class="tab-pane fade" id="tab-workorders" role="tabpanel">
+            <div class="glass-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">Work Orders</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWorkOrderModal">
+                        <i class="fa fa-plus me-2"></i> Add Work Order
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table id="work-orders-datatable" class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Title</th>
+                                <th>Equipment</th>
+                                <th>Status</th>
+                                <th>Priority</th>
+                                <th>Technician</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($workOrders as $wo): ?>
+                                <tr>
+                                    <td>WO-<?= esc($wo['id']) ?></td>
+                                    <td><?= esc($wo['title']) ?></td>
+                                    <td><?= esc($wo['asset_tag'] ?? 'N/A') ?></td>
+                                    <td>
+                                        <?php
+                                        $ws = strtolower($wo['status'] ?? '');
+                                        $wc = $ws === 'completed' ? 'status-completed' : ($ws === 'in progress' || $ws === 'in-progress' ? 'status-in-progress' : 'status-open');
+                                        ?>
+                                        <span class="status-badge <?= $wc ?>"><?= esc($wo['status']) ?></span>
+                                    </td>
+                                    <td><?= esc($wo['priority']) ?></td>
+                                    <td><?= esc($wo['assigned_to_name'] ?? 'Unassigned') ?></td>
+                                    <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '—' ?></td>
+                                    <td><?= $wo['end_date']   ? date('M d, Y', strtotime($wo['end_date']))   : '—' ?></td>
+                                    <td class="text-center">
+                                        <div class="action-btns">
+                                            <button class="btn btn-sm btn-primary edit-workorder-btn" data-id="<?= $wo['id'] ?>"
+                                                data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
+                                                data-serial_number="<?= esc($wo['serial_number'] ?? '', 'attr') ?>"
+                                                data-title="<?= esc($wo['title'], 'attr') ?>"
+                                                data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
+                                                data-status="<?= esc($wo['status'], 'attr') ?>"
+                                                data-priority="<?= esc($wo['priority'], 'attr') ?>"
+                                                data-assigned_to="<?= $wo['assigned_to'] ?? '' ?>"
+                                                data-start_date="<?= $wo['start_date'] ?? '' ?>"
+                                                data-end_date="<?= $wo['end_date'] ?? '' ?>">
+                                                <i class="fa fa-edit"></i> Edit
+                                            </button>
+                                            <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
+                                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a>
+                                        </div>
+
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- ══ INSPECTIONS TAB — full workflow partial ══ -->
-    <div class="tab-pane fade" id="tab-inspections" role="tabpanel">
-        <?= $this->include('technician/site/site_inspection_workflow') ?>
-    </div>
-
-    <!-- ══ WORK ORDERS TAB (unchanged) ══ -->
-    <div class="tab-pane fade" id="tab-workorders" role="tabpanel">
-        <div class="glass-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Work Orders</h5>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addWorkOrderModal">
-                    <i class="fa fa-plus me-2"></i> Add Work Order
-                </button>
-            </div>
-            <div class="table-responsive">
-            <table id="work-orders-datatable" class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Equipment</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Technician</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($workOrders as $wo): ?>
-                        <tr>
-                            <td>WO-<?= esc($wo['id']) ?></td>
-                            <td><?= esc($wo['title']) ?></td>
-                            <td><?= esc($wo['asset_tag'] ?? 'N/A') ?></td>
-                            <td>
-                                <?php
-                                $ws = strtolower($wo['status'] ?? '');
-                                $wc = $ws === 'completed' ? 'status-completed' : ($ws === 'in progress' || $ws === 'in-progress' ? 'status-in-progress' : 'status-open');
-                                ?>
-                                <span class="status-badge <?= $wc ?>"><?= esc($wo['status']) ?></span>
-                            </td>
-                            <td><?= esc($wo['priority']) ?></td>
-                            <td><?= esc($wo['assigned_to_name'] ?? 'Unassigned') ?></td>
-                            <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '—' ?></td>
-                            <td><?= $wo['end_date']   ? date('M d, Y', strtotime($wo['end_date']))   : '—' ?></td>
-                            <td class="text-center">
-                                <div class="action-btns">
-                                    <button class="btn btn-sm btn-primary edit-workorder-btn" data-id="<?= $wo['id'] ?>"
-                                    data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
-                                    data-serial_number="<?= esc($wo['serial_number'] ?? '', 'attr') ?>"
-                                    data-title="<?= esc($wo['title'], 'attr') ?>"
-                                    data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
-                                    data-status="<?= esc($wo['status'], 'attr') ?>"
-                                    data-priority="<?= esc($wo['priority'], 'attr') ?>"
-                                    data-assigned_to="<?= $wo['assigned_to'] ?? '' ?>"
-                                    data-start_date="<?= $wo['start_date'] ?? '' ?>"
-                                    data-end_date="<?= $wo['end_date'] ?? '' ?>">
-                                    <i class="fa fa-edit"></i> Edit
-                                </button>
-                                <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
-                                    class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
-                                    <i class="fa fa-trash"></i> Delete
-                                </a>
-                                </div>
-                               
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            </div>
-        </div>
-    </div>
-</div>
 </div><!-- /tab-content -->
 
 
@@ -931,10 +945,10 @@
                         <div class="col-md-6">
                             <label class="form-label">Status</label>
                             <select class="form-select" id="equipment-status" name="status">
-                                <option value="Ready">Ready</option>
-                                <option value="Need Attention">Need Attention</option>
-                                <option value="Repair">Repair</option>
-                                <option value="Out of Service">Out of Service</option>
+                                <option value="ready">Ready</option>
+                                <option value="need_attention">Need Attention</option>
+                                <option value="repair">Repair</option>
+                                <option value="out_of_service">Out of Service</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -1607,7 +1621,7 @@
                     // ── Success ────────────────────────────────────────────
                     Swal.fire({
                         icon: 'success',
-                        title: 'Equipment Saved!',
+                        title: '<h3 style="color:#000!important;">Equipment Saved!</h3>',
                         html: '<p style="color:#64748b;font-size:.95rem;margin:0;">The equipment record has been saved successfully.</p>',
                         confirmButtonColor: '#7c3aed',
                         timer: 2000,

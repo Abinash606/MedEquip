@@ -85,7 +85,8 @@ class EquipmentController extends BaseController
                 }
                 return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
             }
-
+            $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
+            $statusInput = trim($this->request->getPost('status') ?? 'ready');
             $data = [
                 'company_id'    => $companyId,
                 'asset_tag'     => $assetTag,
@@ -95,8 +96,7 @@ class EquipmentController extends BaseController
                 'device_type'   => $this->request->getPost('device_type'),
                 'location'      => $this->request->getPost('location'),
                 'department'    => $this->request->getPost('department'),
-                'status'        => in_array($this->request->getPost('status'), ['ready', 'need_attention', 'out_of_service', 'Ready', 'Need Attention', 'Repair', 'Out of Service'])
-                    ? $this->request->getPost('status') : 'ready',
+                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
                 'site_id'       => $this->request->getPost('site_id'),
                 'est'           => ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1') ? '1' : '0',
                 'cal'           => ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1') ? '1' : '0',
@@ -142,18 +142,45 @@ class EquipmentController extends BaseController
         if ($this->request->getMethod() === 'POST') {
             $equipmentModel = new EquipmentModel();
             $companyId = (int) session('company_id');
+
+            $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
+            $statusInput = trim($this->request->getPost('status') ?? 'ready');
+
             $data = [
-                'company_id' => $companyId,
-                'asset_tag' => $this->request->getPost('asset_tag'),
-                'make' => $this->request->getPost('make'),
-                'model' => $this->request->getPost('model'),
-                'serial_number' => $this->request->getPost('serial_number'),
-                'device_type' => $this->request->getPost('device_type'),
-                'location' => $this->request->getPost('location'),
-                'department' => $this->request->getPost('department'),
-                'status' => $this->request->getPost('status'),
+                'company_id'         => $companyId,
+                'asset_tag'          => $this->request->getPost('asset_tag'),
+                'make'               => $this->request->getPost('make'),
+                'model'              => $this->request->getPost('model'),
+                'serial_number'      => $this->request->getPost('serial_number'),
+                'device_type'        => $this->request->getPost('device_type'),
+                'location'           => $this->request->getPost('location'),
+                'department'         => $this->request->getPost('department'),
+                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
+                'site_id'            => $this->request->getPost('site_id'),
+                'pm_kit'             => $this->request->getPost('pm_kit'),
+                'fast_notes'         => $this->request->getPost('fast_notes'),
+                'installation_date'  => $this->request->getPost('installation_date') ?: null,
+                'warranty_expires'   => $this->request->getPost('warranty_expires') ?: null,
             ];
-            $equipmentModel->update($id, $data);
+
+            $wantsJson = $this->request->isAJAX()
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
+
+            $updated = $equipmentModel->update((int)$id, $data);
+
+            if ($wantsJson) {
+                if ($updated !== false) {
+                    return $this->response->setJSON([
+                        'success' => true,
+                        'message' => 'Equipment updated successfully',
+                    ]);
+                }
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => implode(', ', $equipmentModel->errors() ?: ['Failed to update equipment']),
+                ]);
+            }
+
             return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
         }
     }

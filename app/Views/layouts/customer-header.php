@@ -23,7 +23,7 @@
             --radius: 18px; --radius2: 14px;
             --sidebar-width: 270px;
         }
-        html,body { height:100%; margin:0; padding:0; }
+        html,body { margin:0; padding:0; }
         body {
             font-family: Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
             color: var(--text);

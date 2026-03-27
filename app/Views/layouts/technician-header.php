@@ -41,7 +41,6 @@
 
         html,
         body {
-            height: 100%;
             margin: 0;
             padding: 0;
         }
@@ -346,7 +345,7 @@
             color: rgba(233, 237, 255, .70) !important;
         }
 
-        .glass-card .form-select option {
+        .glass-card select option {
             color: #000 !important;
         }
 
