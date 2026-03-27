@@ -882,15 +882,18 @@
                                         <?php
                                         $statusClass = 'status-badge ';
                                         $status = strtolower($wo['status']);
+                                        $statusLabel = ucwords(str_replace('_', ' ', $wo['status']));
                                         if ($status === 'completed') {
                                             $statusClass .= 'status-completed';
-                                        } elseif ($status === 'in progress' || $status === 'in-progress') {
+                                        } elseif ($status === 'in_progress' || $status === 'in progress' || $status === 'in-progress') {
                                             $statusClass .= 'status-in-progress';
+                                        } elseif ($status === 'cancelled') {
+                                            $statusClass .= 'status-need-attention';
                                         } else {
                                             $statusClass .= 'status-open';
                                         }
                                         ?>
-                                        <span class="<?= $statusClass ?>"><?= esc($wo['status']) ?></span>
+                                        <span class="<?= $statusClass ?>"><?= esc($statusLabel) ?></span>
                                     </td>
                                     <td><?= esc($wo['priority']) ?></td>
                                     <td><?= esc($wo['assigned_to_name'] ?? 'Unassigned') ?></td>
@@ -2994,9 +2997,9 @@
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="edit-inspection-equipment" class="form-label">Equipment <span
+                                <label for="workorder-equipment" class="form-label">Equipment <span
                                         class="text-danger">*</span></label>
-                                <select class="form-select" id="edit-inspection-equipment" name="equipment_id" required>
+                                <select class="form-select" id="workorder-equipment" name="equipment_id" required>
                                     <option value="">-- Select Equipment --</option>
                                     <?php foreach ($equipment as $eq): ?>
                                         <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> -
@@ -3089,12 +3092,14 @@
                             <input type="text" class="form-control" id="workorder-title" name="title" required>
                         </div>
                         <div class="col-12">
-                            <label for="workorder-sn" class="form-label">S/N <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="workorder-sn" name="sn" readonly>
+                            <label for="workorder-sn" class="form-label">S/N</label>
+                            <input type="text" class="form-control" id="workorder-sn" name="sn"
+                                placeholder="Serial number." autocomplete="off">
                         </div>
                         <div class="col-md-6">
-                            <label for="workorder-equipment" class="form-label">Equipment</label>
-                            <select class="form-select" id="workorder-equipment" name="equipment_id">
+                            <label for="workorder-equipment" class="form-label">Equipment <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="workorder-equipment" name="equipment_id" required>
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
                                     <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?>
@@ -3108,8 +3113,7 @@
                             <select class="form-select" id="workorder-status" name="status" required>
                                 <option value="">-- Select Status --</option>
                                 <option value="open">Open</option>
-                                <option value="in progress">In Progress</option>
-                                <option value="on hold">On Hold</option>
+                                <option value="in_progress">In Progress</option>
                                 <option value="completed">Completed</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
@@ -4006,13 +4010,29 @@
             $('#workOrderSubmitBtn').text('Save Work Order');
             $('#workOrderForm').attr('action', '<?= site_url('admin/work-orders/create') ?>');
         }
-
+        $('#workorder-equipment').on('change', function() {
+            var equipmentId = $(this).val();
+            if (!equipmentId) {
+                $('#workorder-sn').val('');
+                return;
+            }
+            $.ajax({
+                url: '<?= site_url('admin/equipment/show/') ?>' + equipmentId,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#workorder-sn').val(response.data.serial_number || '');
+                    }
+                }
+            });
+        });
         $(document).on('click', '.edit-workorder-btn', function() {
             var id = $(this).data('id');
             $('#workorder-id').val(id);
             $('#workorder-title').val($(this).data('title'));
             $('#workorder-equipment').val($(this).data('equipment_id'));
-            $('#workorder-sn').val($(this).data('serial_number'));
+            $('#workorder-sn').val($(this).attr('data-serial_number'));
 
 
 
