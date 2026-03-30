@@ -17,7 +17,8 @@
 <!-- Row 1: KPI Cards -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-lg-3">
-        <div class="glass-card stat-card metric-card d-flex justify-content-between p-3">
+        <a href="<?= site_url('admin/inspection-reports') ?>" class="text-decoration-none">
+        <div class="glass-card stat-card metric-card d-flex justify-content-between p-3" style="cursor:pointer;">
             <div>
                 <div class="text-muted small fw-bold uppercase">All Customer Inspection Status</div>
                 <div class="fs-2 fw-bold text-white"><?= esc($totalInspections) ?></div>
@@ -28,6 +29,7 @@
             </div>
             <div class="fs-1 text-primary opacity-25"><i class="fa-solid fa-clipboard-list"></i></div>
         </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-3">
         <div class="glass-card stat-card metric-card d-flex justify-content-between p-3">
@@ -43,7 +45,8 @@
         </div>
     </div>
     <div class="col-md-6 col-lg-3">
-        <div class="glass-card stat-card metric-card d-flex justify-content-between p-3">
+        <a href="<?= site_url('admin/work-orders') ?>" class="text-decoration-none">
+        <div class="glass-card stat-card metric-card d-flex justify-content-between p-3" style="cursor:pointer;">
             <div>
                 <div class="text-muted small fw-bold uppercase">Open Work Orders</div>
                 <div class="fs-2 fw-bold text-white"><?= esc($pendingWO) ?></div>
@@ -51,6 +54,7 @@
             </div>
             <div class="fs-1 text-warning opacity-25"><i class="fa-solid fa-file-invoice-dollar"></i></div>
         </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-3">
         <div class="glass-card stat-card metric-card d-flex justify-content-between p-3">
@@ -70,7 +74,8 @@
 <!-- Row 2: Overview Cards -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-lg-4">
-        <div class="glass-card stat-card d-flex justify-content-between align-items-center p-3">
+        <a href="<?= site_url('admin/work-orders') ?>" class="text-decoration-none">
+        <div class="glass-card stat-card d-flex justify-content-between align-items-center p-3" style="cursor:pointer;">
             <div>
                 <div class="text-muted small fw-bold uppercase">Work Order Overview</div>
                 <div class="fs-2 fw-bold text-white"><?= esc($woTotal) ?></div>
@@ -81,9 +86,11 @@
             </div>
             <div class="fs-1 text-primary opacity-25"><i class="fa-solid fa-clipboard-check"></i></div>
         </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-4">
-        <div class="glass-card stat-card d-flex justify-content-between align-items-center p-3">
+        <a href="<?= site_url('admin/inspection-reports') ?>" class="text-decoration-none">
+        <div class="glass-card stat-card d-flex justify-content-between align-items-center p-3" style="cursor:pointer;">
             <div>
                 <div class="text-muted small fw-bold uppercase">Inspection Overview</div>
                 <div class="fs-2 fw-bold text-white"><?= esc($totalInspections) ?></div>
@@ -94,6 +101,7 @@
             </div>
             <div class="fs-1 text-info opacity-25"><i class="fas fa-clipboard"></i></div>
         </div>
+        </a>
     </div>
     <div class="col-md-6 col-lg-4">
         <div class="glass-card stat-card d-flex justify-content-between align-items-center p-3">

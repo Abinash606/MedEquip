@@ -264,21 +264,30 @@ class SitesController extends BaseController
             ->where('technicians.company_id', $companyId)
             ->findAll();
 
+        // Resolve the logged-in technician's technicians.id for pre-selection
+        $loggedInTechId = null;
+        $userId = (int) session('user_id');
+        if ($userId) {
+            $techRow = $technicianModel->where('user_id', $userId)->where('company_id', $companyId)->first();
+            $loggedInTechId = $techRow['id'] ?? null;
+        }
+
         return view('technician/site/details', [
-            'site'            => $site,
-            'customer'        => $customer,
-            'equipment'       => $equipment,
-            'inspections'     => $inspections,
-            'inspectionList'  => $inspectionList,
-            'notInspected'    => $notInspected,
-            'inspectedItems'  => $inspectedItems,
-            'archivedItems'   => $archivedItems,
-            'workOrders'      => $workOrders,
-            'technicians'     => $technicians,
-            'users'           => $technicians,
-            'equipmentCount'  => count($equipment),
-            'inspectionCount' => count($inspections),
-            'workOrderCount'  => count($workOrders),
+            'site'              => $site,
+            'customer'          => $customer,
+            'equipment'         => $equipment,
+            'inspections'       => $inspections,
+            'inspectionList'    => $inspectionList,
+            'notInspected'      => $notInspected,
+            'inspectedItems'    => $inspectedItems,
+            'archivedItems'     => $archivedItems,
+            'workOrders'        => $workOrders,
+            'technicians'       => $technicians,
+            'users'             => $technicians,
+            'equipmentCount'    => count($equipment),
+            'inspectionCount'   => count($inspections),
+            'workOrderCount'    => count($workOrders),
+            'loggedInTechId'    => $loggedInTechId,
         ]);
     }
     public function siteCreate()

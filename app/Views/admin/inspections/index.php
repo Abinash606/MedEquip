@@ -38,7 +38,12 @@
     <div class="glass-card p-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold mb-0">Inspection Report Overview</h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" id="btnInspOpen"   class="btn btn-primary active"        onclick="filterInspStatus('open')">Open</button>
+                    <button type="button" id="btnInspAll"    class="btn btn-outline-secondary"     onclick="filterInspStatus('all')">All</button>
+                    <button type="button" id="btnInspClosed" class="btn btn-outline-secondary"     onclick="filterInspStatus('closed')">Closed</button>
+                </div>
                 <button class="btn btn-sm btn-outline-secondary" id="btnExportCsv">
                     <i class="fa-solid fa-file-csv me-1"></i> Export CSV
                 </button>
@@ -101,6 +106,8 @@
 
 <script>
 $(function () {
+    var _inspStatus = 'open';
+
     var reportsTable = $('#reportsTable').DataTable({
         ajax: {
             url: '<?= site_url('admin/inspection-reports/list') ?>',
@@ -138,6 +145,17 @@ $(function () {
         ]
     });
 
+    // Open/closed toggle
+    window.filterInspStatus = function(mode) {
+        _inspStatus = mode;
+        ['btnInspOpen','btnInspAll','btnInspClosed'].forEach(function(id){
+            document.getElementById(id).className = 'btn btn-sm btn-outline-secondary';
+        });
+        var activeMap = {open:'btnInspOpen', all:'btnInspAll', closed:'btnInspClosed'};
+        document.getElementById(activeMap[mode]).className = 'btn btn-sm btn-primary active';
+        applyFilters();
+    };
+
     // Custom filters
     function applyFilters() {
         $.fn.dataTable.ext.search = [];
@@ -150,6 +168,12 @@ $(function () {
         $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
             var row = reportsTable.row(dataIndex).data();
             if (!row) return true;
+            // Open/closed status filter
+            var res = (row.result || '').toLowerCase();
+            var isClosed = ['pass','fail','repair','completed'].includes(res);
+            if (_inspStatus === 'open'   && isClosed) return false;
+            if (_inspStatus === 'closed' && !isClosed) return false;
+            // Text filters
             if (site     && !(row.site_name||'').toLowerCase().includes(site))         return false;
             if (customer && !(row.customer_name||'').toLowerCase().includes(customer)) return false;
             if (result   && (row.result||'').toLowerCase() !== result)                 return false;
@@ -161,6 +185,9 @@ $(function () {
     }
 
     $('#filterSite, #filterCustomer, #filterResult, #filterDateFrom, #filterDateTo').on('input change', applyFilters);
+
+    // Apply open filter by default on page load after data loads
+    reportsTable.on('init', function() { filterInspStatus('open'); });
 
     // Export CSV
     $('#btnExportCsv').on('click', function () {

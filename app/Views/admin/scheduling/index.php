@@ -6,16 +6,6 @@
         <h3 class="fw-bold mb-0">Master Schedule</h3>
         <p class="text-muted small mb-0">Manage appointments, routes, and technician availability.</p>
     </div>
-    <div class="d-flex gap-3 align-items-center">
-        <div class="glass-card px-3 py-2 text-center" style="min-width:110px;">
-            <div class="small text-muted fw-bold text-uppercase" style="font-size:10px;">Completed WOs</div>
-            <div class="fs-4 fw-bold text-success"><?= esc($completedWO ?? 0) ?></div>
-        </div>
-        <div class="glass-card px-3 py-2 text-center" style="min-width:110px;">
-            <div class="small text-muted fw-bold text-uppercase" style="font-size:10px;">Scheduled Insp.</div>
-            <div class="fs-4 fw-bold" style="color:rgba(34,211,238,.9);"><?= count($upcomingInspections ?? []) ?></div>
-        </div>
-    </div>
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <div class="btn-group" role="group">
             <button id="btnTimeline" class="btn btn-outline-secondary active" onclick="switchView('timeline')">Timeline</button>
@@ -25,13 +15,6 @@
             <button id="btnDay"   class="btn btn-outline-secondary active" onclick="switchPeriod('day')">Day</button>
             <button id="btnWeek"  class="btn btn-outline-secondary"        onclick="switchPeriod('week')">Week</button>
             <button id="btnMonth" class="btn btn-outline-secondary"        onclick="switchPeriod('month')">Month</button>
-        </div>
-        <button id="btnToggleCompleted" class="btn btn-outline-secondary btn-sm" onclick="toggleCompleted()" title="Show/hide completed events">
-            <i class="fa-solid fa-eye-slash me-1"></i> Show Completed
-        </button>
-        <div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
-            <input class="form-check-input" type="checkbox" id="toggleCompleted" style="cursor:pointer;">
-            <label class="form-check-label small text-muted" for="toggleCompleted">Show Completed</label>
         </div>
         <button class="btn btn-primary btn-new btn-sm" data-bs-toggle="modal" data-bs-target="#appointmentModal">
             <i class="fa-solid fa-plus"></i> Add Appointment
@@ -49,9 +32,10 @@
             <span class="fw-bold mx-2" id="currentDateLabel">Today, <?= date('M j, Y') ?></span>
             <button class="btn btn-light btn-sm" id="btnNext"><i class="fa-solid fa-chevron-right"></i></button>
         </div>
-        <div class="d-flex gap-2 align-items-center">
-            <span class="badge me-1" style="background:#16a34a;"><i class="fa-solid fa-clipboard-check me-1"></i>Inspection</span>
-            <span class="badge me-1" style="background:#ef4444;"><i class="fa-solid fa-wrench me-1"></i>Work Order</span>
+        <div class="d-flex gap-2">
+            <span class="badge bg-success me-1">Ready</span>
+            <span class="badge bg-warning me-1">Needs Attention</span>
+            <span class="badge bg-danger">Past Due</span>
         </div>
     </div>
 
@@ -108,6 +92,17 @@
 
     <!-- Calendar View (FullCalendar) -->
     <div id="calendarView" class="schedule-view px-3 pb-3">
+        <!-- Legend & Toggle -->
+        <div class="d-flex align-items-center gap-3 py-2 mb-1 flex-wrap">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge px-2 py-1" style="background:#10b981;"><i class="fa-solid fa-clipboard-check me-1"></i>Inspections</span>
+                <span class="badge px-2 py-1" style="background:#ef4444;"><i class="fa-solid fa-wrench me-1"></i>Work Orders</span>
+            </div>
+            <div class="form-check form-switch ms-auto mb-0">
+                <input class="form-check-input" type="checkbox" id="toggleCompleted">
+                <label class="form-check-label small text-muted" for="toggleCompleted">Show Completed</label>
+            </div>
+        </div>
         <div id="fcCalendar"></div>
     </div>
 
@@ -116,11 +111,8 @@
 <!-- Upcoming Appointments Table -->
 <div class="glass-card mt-4 p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0">All Scheduled Events <span class="text-muted small fw-normal">(sorted by date)</span></h5>
-        <div class="d-flex gap-2">
-            <span class="badge" style="background:rgba(22,163,74,.2);color:#4ade80;"><?= count($upcomingInspections ?? []) ?> inspections</span>
-            <span class="badge" style="background:rgba(239,68,68,.2);color:#f87171;"><?= count($upcomingWO ?? []) ?> work orders</span>
-        </div>
+        <h5 class="fw-bold mb-0">All Scheduled Work Orders</h5>
+        <span class="badge" style="background:rgba(34,211,238,.15);color:rgba(34,211,238,.9);"><?= count($upcomingWO ?? []) ?> total</span>
     </div>
     <div class="table-responsive">
         <table id="schedTable" class="table service-table align-middle" style="width:100%">
@@ -178,6 +170,22 @@
         </table>
     </div>
 </div>
+</div>
+
+<!-- Calendar Event Detail Modal -->
+<div class="modal fade" id="calEventModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-white" id="calEventTitle">Event Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="calEventBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Add Appointment Modal -->
@@ -279,7 +287,6 @@ function switchPeriod(p) {
 // ── DataTable for work orders list ─────────────────────────────────────
 $(function() {
     $('#schedTable').DataTable({ pageLength: 15, order: [[7, 'asc']] });
-    if ($('#inspTable').length) { $('#inspTable').DataTable({ pageLength: 15, order: [[4, 'asc']] }); }
 });
 
 // ── FullCalendar ────────────────────────────────────────────────────────
@@ -287,168 +294,53 @@ document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('fcCalendar');
     if (!calendarEl || typeof FullCalendar === 'undefined') return;
 
-    var _showCompleted = false;
-    document.getElementById('toggleCompleted')?.addEventListener('change', function() {
-        _showCompleted = this.checked;
-        if (window._fcCalendar) {
-            window._fcCalendar.setOption('events', '<?= site_url("admin/scheduling/events") ?>?show_completed=' + (_showCompleted ? '1' : '0'));
-            window._fcCalendar.refetchEvents();
-        }
-    });
+    var showCompleted = false;
+
+    function fetchEvents(fetchInfo, successCallback, failureCallback) {
+        fetch('<?= site_url('admin/scheduling/events') ?>?show_completed=' + (showCompleted ? '1' : '0'))
+            .then(function(r){ return r.json(); })
+            .then(function(data){ successCallback(data); })
+            .catch(function(err){ failureCallback(err); });
+    }
 
     window._fcCalendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
         themeSystem: 'bootstrap5',
-        events: function(info, successCallback, failureCallback) {
-            var url = '<?= site_url('admin/scheduling/events') ?>';
-            if (window._showCompleted) url += '?show_completed=1';
-            fetch(url).then(r => r.json()).then(successCallback).catch(failureCallback);
-        },
+        events: fetchEvents,
         eventClick: function(info) {
-            var p = info.event.extendedProps;
-            var isInsp = (p.type === 'inspection');
-            document.getElementById('calEventTitle').textContent    = info.event.title;
-            document.getElementById('calEventType').textContent     = isInsp ? 'Inspection' : 'Work Order';
-            document.getElementById('calEventType').className       = 'badge fw-bold ' + (isInsp ? 'bg-success' : 'bg-danger');
-            document.getElementById('calEventStatus').textContent   = p.status || '—';
-            document.getElementById('calEventPriority').textContent = p.priority || (isInsp ? 'N/A' : '—');
-            document.getElementById('calEventTech').textContent     = p.tech || 'Unassigned';
-            document.getElementById('calEventSite').textContent     = p.site || '—';
-            document.getElementById('calEventDate').textContent     = (info.event.startStr || '').substring(0,10) || '—';
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('calEventModal')).show();
+            var p   = info.event.extendedProps;
+            var isInsp = (p.event_type === 'inspection');
+            var typeBadge = isInsp
+                ? '<span class="badge bg-success me-1"><i class="fa-solid fa-clipboard-check me-1"></i>Inspection</span>'
+                : '<span class="badge bg-danger me-1"><i class="fa-solid fa-wrench me-1"></i>Work Order</span>';
+            var rows = '<tr><th class="text-muted pe-3" style="white-space:nowrap">Type</th><td>' + typeBadge + '</td></tr>'
+                + '<tr><th class="text-muted pe-3">Status</th><td>' + (p.status || '—') + '</td></tr>'
+                + (!isInsp ? '<tr><th class="text-muted pe-3">Priority</th><td>' + (p.priority || '—') + '</td></tr>' : '')
+                + '<tr><th class="text-muted pe-3">Technician</th><td>' + (p.tech || '—') + '</td></tr>'
+                + '<tr><th class="text-muted pe-3">Site</th><td>' + (p.site_name || '—') + '</td></tr>';
+            document.getElementById('calEventTitle').textContent = info.event.title || 'Event Details';
+            document.getElementById('calEventBody').innerHTML = '<table class="table table-sm table-borderless mb-0">' + rows + '</table>';
+            new bootstrap.Modal(document.getElementById('calEventModal')).show();
         },
-        eventColor: '#7C3AED',
+        eventDidMount: function(info) {
+            info.el.title = info.event.title;
+        },
     });
     window._fcCalendar.render();
+
+    var togEl = document.getElementById('toggleCompleted');
+    if (togEl) {
+        togEl.addEventListener('change', function() {
+            showCompleted = this.checked;
+            window._fcCalendar.refetchEvents();
+        });
+    }
 });
 
 // AJAX form submit for appointment
 document.getElementById('appointmentForm')?.addEventListener('submit', function(e) {
     // allow standard POST — no AJAX needed here
 });
-</script>
-
-<!-- Calendar Event Detail Modal -->
-<div class="modal fade" id="calEventModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:480px;">
-        <div class="modal-content">
-            <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-radius:12px 12px 0 0;border:none;">
-                <div>
-                    <span id="calEventType" class="badge fw-bold me-2">Event</span>
-                    <span id="calEventTitle" class="text-white fw-semibold" style="font-size:14px;"></span>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" style="background:#0E1630;color:#E9EDFF;">
-                <table class="table table-sm mb-0" style="color:#E9EDFF;">
-                    <tr>
-                        <th style="width:35%;color:rgba(233,237,255,.5);font-size:12px;text-transform:uppercase;border:none;padding:8px 0;">Date</th>
-                        <td id="calEventDate" class="fw-medium" style="border:none;padding:8px 0;"></td>
-                    </tr>
-                    <tr>
-                        <th style="color:rgba(233,237,255,.5);font-size:12px;text-transform:uppercase;border:none;padding:8px 0;">Site</th>
-                        <td id="calEventSite" class="fw-medium" style="border:none;padding:8px 0;"></td>
-                    </tr>
-                    <tr>
-                        <th style="color:rgba(233,237,255,.5);font-size:12px;text-transform:uppercase;border:none;padding:8px 0;">Status</th>
-                        <td id="calEventStatus" style="border:none;padding:8px 0;"></td>
-                    </tr>
-                    <tr>
-                        <th style="color:rgba(233,237,255,.5);font-size:12px;text-transform:uppercase;border:none;padding:8px 0;">Priority</th>
-                        <td id="calEventPriority" style="border:none;padding:8px 0;"></td>
-                    </tr>
-                    <tr>
-                        <th style="color:rgba(233,237,255,.5);font-size:12px;text-transform:uppercase;border:none;padding:8px 0;">Technician</th>
-                        <td id="calEventTech" style="border:none;padding:8px 0;"></td>
-                    </tr>
-                </table>
-            </div>
-            <div class="modal-footer" style="background:rgba(7,10,18,.4);border-top:1px solid rgba(255,255,255,.08);border-radius:0 0 12px 12px;">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Upcoming Inspections Table -->
-<div class="glass-card mt-4 p-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0">
-            Scheduled Inspections
-            <span class="badge ms-2" style="background:rgba(22,163,74,.2);color:#4ade80;font-size:12px;">
-                <?= count($upcomingInspections ?? []) ?>
-            </span>
-        </h5>
-    </div>
-    <div class="table-responsive">
-        <table id="inspTable" class="table service-table align-middle" style="width:100%">
-            <thead>
-                <tr>
-                    <th>Equipment</th>
-                    <th>Site / Customer</th>
-                    <th>Technician</th>
-                    <th>Status</th>
-                    <th>Scheduled</th>
-                    <th>Completed</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (!empty($upcomingInspections ?? [])): ?>
-                    <?php foreach ($upcomingInspections as $insp): ?>
-                    <?php
-                        $st = strtolower($insp['status'] ?? '');
-                        $stBadge = $st === 'pass' ? 'bg-success' : ($st === 'fail' ? 'bg-danger' : ($st === 'repair' ? 'bg-warning' : 'bg-secondary'));
-                        $equip = trim(($insp['make'] ?? '') . ' ' . ($insp['model'] ?? '')) ?: 'Unknown';
-                        if (!empty($insp['asset_tag'])) $equip .= ' (' . $insp['asset_tag'] . ')';
-                    ?>
-                    <tr>
-                        <td class="fw-medium"><?= esc($equip) ?></td>
-                        <td>
-                            <div><?= esc($insp['site_name'] ?? '--') ?></div>
-                            <div class="text-muted small"><?= esc($insp['customer_name'] ?? '') ?></div>
-                        </td>
-                        <td><?= esc($insp['tech_name'] ?? '-- Unassigned --') ?></td>
-                        <td>
-                            <?php if ($insp['status']): ?>
-                                <span class="badge <?= $stBadge ?>"><?= esc(ucfirst($insp['status'])) ?></span>
-                            <?php else: ?>
-                                <span class="badge bg-secondary">Scheduled</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="text-muted small">
-                            <?= !empty($insp['start_date']) ? esc(date('M j, Y', strtotime($insp['start_date']))) : '--' ?>
-                        </td>
-                        <td class="text-muted small">
-                            <?= !empty($insp['end_date']) ? esc(date('M j, Y', strtotime($insp['end_date']))) : '<span class="text-warning small">Pending</span>' ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr><td colspan="6" class="text-center text-muted py-4">No inspections found.</td></tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-
-
-<script>
-window._showCompleted = false;
-function toggleCompleted() {
-    window._showCompleted = !window._showCompleted;
-    var btn = document.getElementById('btnToggleCompleted');
-    if (window._showCompleted) {
-        btn.innerHTML = '<i class="fa-solid fa-eye me-1"></i> Hide Completed';
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-outline-warning');
-    } else {
-        btn.innerHTML = '<i class="fa-solid fa-eye-slash me-1"></i> Show Completed';
-        btn.classList.remove('btn-outline-warning');
-        btn.classList.add('btn-outline-secondary');
-    }
-    if (window._fcCalendar) window._fcCalendar.refetchEvents();
-}
 </script>
 <?= $this->endSection() ?>

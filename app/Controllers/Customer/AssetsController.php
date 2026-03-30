@@ -10,30 +10,29 @@ class AssetsController extends BaseController
 {
     public function index()
     {
-        $siteModel = new SiteModel();
+        $siteModel  = new SiteModel();
         $equipModel = new EquipmentModel();
-        $companyId = $this->session->get('company_id');
-        // Get all sites for the company
-        $sites = $siteModel
-            ->where('company_id', $companyId)
-            ->where('deleted_at', null)
-            ->findAll();
+        $companyId  = $this->session->get('company_id');
+        $customerId = $this->session->get('customer_id');
 
-        // Get all equipment for these sites
+        // Filter sites by the logged-in customer's ID
+        $siteQuery = $siteModel->where('company_id', $companyId)->where('deleted_at', null);
+        if ($customerId) {
+            $siteQuery->where('customer_id', $customerId);
+        }
+        $sites   = $siteQuery->findAll();
         $siteIds = array_column($sites, 'id');
-        $equipment = [];
 
+        $equipment = [];
         if (!empty($siteIds)) {
             $equipment = $equipModel
                 ->whereIn('site_id', $siteIds)
                 ->where('deleted_at', null)
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
-
-            log_message('debug', 'Equipment found: ' . count($equipment));
         }
 
-        $data['sites'] = $sites;
+        $data['sites']     = $sites;
         $data['equipment'] = $equipment;
 
         return view('customer/assets/index', $data);

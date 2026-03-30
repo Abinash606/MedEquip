@@ -10,10 +10,23 @@ class WorkOrdersController extends BaseController
 {
     public function index()
     {
-        $model = new WorkOrderModel();
         $companyId = $this->session->get('company_id');
-        $data['workOrders'] = $model->where('company_id', $companyId)->findAll();
-        return view('admin/work_orders/index', $data);
+        $db = \Config\Database::connect();
+
+        $workOrders = $db->query("
+            SELECT wo.id, wo.title, wo.status, wo.priority, wo.start_date, wo.end_date,
+                   s.name AS site_name, c.name AS customer_name,
+                   u.full_name AS tech_name
+            FROM work_orders wo
+            LEFT JOIN sites s       ON s.id = wo.site_id
+            LEFT JOIN customers c   ON c.id = s.customer_id
+            LEFT JOIN technicians t ON t.id = wo.assigned_to
+            LEFT JOIN users u       ON u.id = t.user_id
+            WHERE wo.company_id = ? AND wo.deleted_at IS NULL
+            ORDER BY wo.created_at DESC
+        ", [$companyId])->getResultArray();
+
+        return view('admin/work_orders/index', ['workOrders' => $workOrders]);
     }
 
      public function create()

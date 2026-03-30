@@ -125,22 +125,29 @@ class InspectionsController extends BaseController
             foreach ($inspectionItems as $item) {
                 $equipmentId = $item['equipment_id'];
                 
-                // If asset not found, create new equipment record
+                // If asset not found, create equipment record in site inventory ONLY (master DB is read-only)
                 if (!empty($item['asset_not_found']) && $item['asset_not_found'] === '1') {
-            $equipmentModel = new EquipmentModel();
-            $newEquip = [
-                'company_id'    => $companyId,
-                        'site_id'       => $item['site_id'],
-                        'asset_tag'     => 'NEW-' . strtoupper(uniqid()),
+                    $equipmentModel = new EquipmentModel();
+                    $siteId = (int) ($item['site_id'] ?? 0);
+
+                    // Check for duplicate asset tag in this site before inserting
+                    $autoTag = 'NEW-' . strtoupper(uniqid());
+                    $newEquip = [
+                        'company_id'    => $companyId,
+                        'site_id'       => $siteId,
+                        'asset_tag'     => $autoTag,
                         'make'          => $item['manufacturer'] ?? '',
                         'model'         => $item['model_name'] ?? '',
                         'serial_number' => $item['serial_number'] ?? '',
                         'device_type'   => $item['description'] ?? '',
-                'status'        => 'Pending',
-            ];
-            $equipmentModel->insert($newEquip);
-            $equipmentId = $equipmentModel->getInsertID();
-        }
+                        'status'        => 'Not Inspected',
+                    ];
+                    // Only insert into site inventory — never into master equipment DB (site_id=1)
+                    if ($siteId > 1) {
+                        $equipmentModel->insert($newEquip);
+                        $equipmentId = $equipmentModel->getInsertID();
+                    }
+                }
 
                 // Build findings string
         $findings = '';

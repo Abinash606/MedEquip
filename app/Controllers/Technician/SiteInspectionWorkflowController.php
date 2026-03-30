@@ -651,14 +651,15 @@ class SiteInspectionWorkflowController extends BaseController
         }
 
         $em = new EquipmentModel();
+        $db = \Config\Database::connect();
 
-        // Check for duplicate asset tag in this site
-        $existing = $em->where('company_id', $companyId)
+        // ── Duplicate: asset tag already in this site ────────────────
+        $existingAsset = $em->where('company_id', $companyId)
             ->where('site_id',   $siteId)
             ->where('asset_tag', $assetTag)
+            ->where('deleted_at', null)
             ->first();
-
-        if ($existing) {
+        if ($existingAsset) {
             return $this->response->setJSON([
                 'success'          => false,
                 'message'          => 'Asset # "' . $assetTag . '" already exists in this site\'s inventory.',
@@ -666,6 +667,39 @@ class SiteInspectionWorkflowController extends BaseController
             ]);
         }
 
+        // ── Duplicate: serial number already in this site (if provided) ──
+        if ($serial !== '') {
+            $existingSerial = $em->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('serial_number', $serial)
+                ->where('deleted_at', null)
+                ->first();
+            if ($existingSerial) {
+                return $this->response->setJSON([
+                    'success'          => false,
+                    'message'          => 'Serial number "' . $serial . '" already exists in this site\'s inventory (Asset #' . $existingSerial['asset_tag'] . ').',
+                    'start_inspection' => false,
+                ]);
+            }
+        }
+
+        // ── Master equipment DB is READ-ONLY — look up metadata only ──
+        // If the user selected a model from the master DB, we pull the
+        // make/device_type from there but we do NOT write back to it.
+        if (empty($make) || empty($deviceType)) {
+            $masterRef = $db->query(
+                "SELECT make, device_type FROM equipment
+                 WHERE company_id = ? AND model = ? AND site_id = 1
+                 LIMIT 1",
+                [$companyId, $model]
+            )->getRow();
+            if ($masterRef) {
+                if (empty($make))       $make       = $masterRef->make;
+                if (empty($deviceType)) $deviceType = $masterRef->device_type;
+            }
+        }
+
+        // ── Insert ONLY into site inventory ─────────────────────────
         $candidate = [
             'company_id'    => $companyId,
             'site_id'       => $siteId,
@@ -674,10 +708,8 @@ class SiteInspectionWorkflowController extends BaseController
             'make'          => $make,
             'serial_number' => $serial,
             'device_type'   => $deviceType,
-            'description'   => $description,
             'department'    => $dept,
             'location'      => $location,
-            'technician'    => $technician,
             'est'           => $est,
             'cal'           => $cal,
             'status'        => 'Not Inspected',
@@ -685,14 +717,13 @@ class SiteInspectionWorkflowController extends BaseController
             'updated_at'    => date('Y-m-d H:i:s'),
         ];
 
-        // Strip keys not in actual DB columns
         $insertData = $this->filterToColumns($candidate, 'equipment');
 
         $em->insert($insertData);
         $newId = $em->getInsertID();
 
         if (!$newId) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Failed to save device to database.']);
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to save device to site inventory.']);
         }
 
         return $this->response->setJSON([

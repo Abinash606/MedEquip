@@ -69,9 +69,8 @@ class InspectionReportsController extends BaseController
             LEFT JOIN customers c  ON c.id = s.customer_id
             LEFT JOIN users u      ON u.id = i.technician_id
             WHERE i.company_id = ?
-              AND i.status IN ('Pass','Fail','Repair','completed','pass','fail','repair')
             ORDER BY i.id DESC
-            LIMIT 500
+            LIMIT 1000
         ", [$companyId])->getResultArray();
 
         return $this->response->setJSON(['data' => $rows]);

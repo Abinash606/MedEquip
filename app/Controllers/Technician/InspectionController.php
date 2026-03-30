@@ -230,9 +230,9 @@ class InspectionController extends BaseController
         }
 
         $updateFields = [];
-        if ($dept   !== '') $updateFields['department']    = $dept;
-        if ($room   !== '') $updateFields['location']      = $room;
-        if ($serial !== '') $updateFields['serial_number'] = $serial;
+        if ($dept !== '') $updateFields['department'] = $dept;
+        if ($room !== '') $updateFields['location']   = $room;
+        // Serial number is NOT auto-updated from inspection — technician fills it in addDevice
         if (!empty($updateFields)) $equipmentModel->update($equipmentId, $updateFields);
 
         $existingGroupId = trim((string) $this->request->getPost('group_id'));

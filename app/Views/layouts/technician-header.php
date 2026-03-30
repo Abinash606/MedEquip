@@ -562,9 +562,9 @@
                 href="<?= site_url('technician/reports') ?>">
                 <i class="fa-solid fa-file-pdf"></i><span>Reports</span>
             </a>
-            <a class="nav-link<?= url_is('technician/service-history*') ? ' active' : '' ?>"
-                href="<?= site_url('technician/service-history') ?>">
-                <i class="fa-solid fa-file-invoice"></i><span>Service History</span>
+            <a class="nav-link<?= url_is('technician/inventory*') ? ' active' : '' ?>"
+                href="<?= site_url('technician/inventory') ?>">
+                <i class="fa-solid fa-boxes-stacked"></i><span>Inventory</span>
             </a>
 
         </div>

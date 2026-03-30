@@ -1059,7 +1059,7 @@
                             <div class="col-md-6">
                                 <label for="equipment-serial-number" class="form-label">Serial Number</label>
                                 <input type="text" class="form-control" id="equipment-serial-number"
-                                    name="serial_number" placeholder="Optional">
+                                    name="serial_number" placeholder="" required>
                             </div>
                             <!-- Make -->
                             <div class="col-md-6">
@@ -2928,7 +2928,7 @@
             // Not Inspected tab without a page reload.
             const addDeviceFormEl = document.getElementById('addDeviceForm');
             if (addDeviceFormEl) {
-                addDeviceFormEl.addEventListener('submit', async function(e) {
+                addDeviceFormEl.addEventListener('submit', function(e) {
                     e.preventDefault();
                     const errBox = document.getElementById('addDeviceError');
                     if (errBox) errBox.classList.add('d-none');
@@ -2942,23 +2942,12 @@
                         return;
                     }
 
-                    // Validate serial number is unique (if provided)
-                    const serialVal = (document.getElementById('addSerial')?.value || '').trim();
-                    if (serialVal && serialVal.toUpperCase() !== 'N/A') {
-                        // Check for duplicate serial via quick fetch before proceeding
-                        const checkSerial = await fetch('<?= site_url('admin/equipment/check-duplicate') ?>?serial=' + encodeURIComponent(serialVal) + '&asset=' + encodeURIComponent(assetTag) + '&site_id=' + SITE_ID).then(r=>r.json()).catch(()=>null);
-                        if (checkSerial && checkSerial.serial_exists) {
-                            if (errBox) { errBox.textContent = 'Serial number "' + serialVal + '" already exists in the equipment database. Please verify the serial number.'; errBox.classList.remove('d-none'); }
-                            return;
-                        }
-                    }
-
                     const params = new URLSearchParams();
                     params.append('site_id', SITE_ID);
                     params.append('asset_tag', assetTag);
                     params.append('model', document.getElementById('addModel')?.value || '');
                     params.append('make', document.getElementById('addManufacturer')?.value || '');
-                    params.append('serial_number', serialVal);
+                    params.append('serial_number', document.getElementById('addSerial')?.value || '');
                     params.append('device_type', document.getElementById('addType')?.value || '');
                     params.append('department', document.getElementById('addDept')?.value || '');
                     params.append('location', document.getElementById('addRoom')?.value || '');
@@ -2984,12 +2973,8 @@
                         .then(r => r.json())
                         .then(res => {
                             if (!res || !res.success) {
-                                const errMsg = (res && res.message) || 'Failed to save device.';
-                                if (typeof Swal !== 'undefined') {
-                                    Swal.fire({ icon: 'error', title: 'Cannot Save Device',
-                                        text: errMsg, confirmButtonColor: '#7c3aed' });
-                                } else if (errBox) {
-                                    errBox.textContent = errMsg;
+                                if (errBox) {
+                                    errBox.textContent = (res && res.message) || 'Failed to save device.';
                                     errBox.classList.remove('d-none');
                                 }
                                 return;
@@ -4089,6 +4074,28 @@
             e.preventDefault();
             var formData = $(this).serialize();
             var actionUrl = $(this).attr('action');
+            var currentId = $('#equipment-id').val() || '0';
+
+            // Client-side serial number duplicate check
+            var serialVal = ($('#equipment-serial-number').val() || '').trim();
+            if (serialVal) {
+                var dupSerial = null;
+                <?php foreach ($equipment as $eq): ?>
+                if (!dupSerial && '<?= addslashes($eq['serial_number'] ?? '') ?>' === serialVal && String(<?= (int)$eq['id'] ?>) !== currentId) {
+                    dupSerial = 'Asset Tag: <?= addslashes($eq['asset_tag'] ?? '') ?>';
+                }
+                <?php endforeach; ?>
+                if (dupSerial) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Duplicate Serial Number',
+                        text: 'Serial number "' + serialVal + '" already exists in this site (' + dupSerial + ').',
+                        confirmButtonColor: '#7c3aed',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+            }
 
             $('#equipmentSubmitBtn').prop('disabled', true).html(
                 '<i class="fa fa-spinner fa-spin me-1"></i>Saving...');
@@ -4819,12 +4826,10 @@
                         style="font-size:11px;color:#E9EDFF;background:rgba(0,0,0,.3);padding:6px 10px;border-radius:6px;display:block;line-height:1.8;">
                         Make, Model, Device Type, Asset Tag, Serial Number, Department, Location Or Room
                     </code>
-                    <p class="small mb-1 mt-2" style="color:rgba(233,237,255,.5);">
-                        Headers are case-insensitive &amp; trim spaces. Asset Tag auto-generated if blank. "N/A" serial treated as empty.
+                    <p class="small mb-0 mt-2" style="color:rgba(233,237,255,.5);">
+                        Headers are case-insensitive &amp; trim spaces. Asset Tag auto-generated if blank. "N/A" serial
+                        treated as empty.
                     </p>
-                    <a href="<?= site_url('admin/equipment/sample-csv') ?>" class="small fw-semibold" style="color:rgba(34,211,238,.9);">
-                        <i class="fa-solid fa-download me-1"></i>Download Sample CSV Template
-                    </a>
                 </div>
 
                 <!-- Alert box -->
@@ -4862,6 +4867,9 @@
             </div>
             <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08);">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-success" id="adminDownloadSampleCsv">
+                    <i class="fa-solid fa-file-csv me-1"></i> Download Sample CSV
+                </button>
                 <button type="button" class="btn btn-primary" id="adminImportBtn" disabled
                     style="background:linear-gradient(90deg,rgba(34,211,238,.9),rgba(124,58,237,.8));border:none;">
                     <i class="fa-solid fa-upload me-1"></i> Import Equipment
@@ -4872,6 +4880,18 @@
 </div>
 
 <script>
+    // ── Download Sample CSV ─────────────────────────────────────────────────────
+    document.getElementById('adminDownloadSampleCsv').addEventListener('click', function() {
+        var headers = ['Make','Model','Device Type','Asset Tag','Serial Number','Department','Location Or Room'];
+        var sample  = ['Philips','IntelliVue MX800','Patient Monitor','A-10001','SN123456','ICU','Room 4B'];
+        var csv = headers.join(',') + '\r\n' + sample.join(',') + '\r\n';
+        var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        var url  = URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href = url; a.download = 'equipment_import_sample.csv'; a.click();
+        URL.revokeObjectURL(url);
+    });
+
     // ── Admin Equipment CSV Import ──────────────────────────────────────────────
     (function() {
         var fileInput = document.getElementById('adminImportFile');

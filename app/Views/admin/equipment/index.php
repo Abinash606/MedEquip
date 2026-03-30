@@ -410,8 +410,26 @@
         e.preventDefault();
 
         const saveBtn = document.getElementById('saveBtn');
-        const loader = document.getElementById('saveLoader');
-        const text = saveBtn.querySelector('.btn-text');
+        const loader  = document.getElementById('saveLoader');
+        const text    = saveBtn.querySelector('.btn-text');
+        const currentId = document.getElementById('equipment_id').value;
+
+        // Duplicate serial number check (client-side against loaded data)
+        const serialVal = (document.getElementById('serial_number').value || '').trim();
+        if (serialVal) {
+            const dup = equipmentData.find(r =>
+                String(r.serial_number || '').trim() === serialVal &&
+                String(r.id) !== String(currentId)
+            );
+            if (dup) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Duplicate Serial Number',
+                    text: 'Serial number "' + serialVal + '" already exists in the equipment database (Brand: ' + (dup.make||'') + ', Model: ' + (dup.model||'') + ').'
+                });
+                return;
+            }
+        }
 
         // 🔒 Disable button & show loader
         saveBtn.disabled = true;
@@ -544,16 +562,19 @@
         loadDescs(brand, null, null);
     });
 
-    // Model change → auto-fill desc
+    // Model change → auto-fill desc but keep ALL descriptions available (read-only master DB)
     $('#model').on('change', function() {
         const brand = $('#make').val();
         const model = $(this).val();
-        loadDescs(brand, model, null);
+        // Always load ALL descriptions so new brand/model still sees existing descriptions
+        loadDescs(null, null, null);
         const match = equipmentData.find(r => r.make === brand && r.model === model);
         if (match && match.device_type) {
-            const $opt = new Option(match.device_type, match.device_type, true, true);
-            $('#device_type').empty().append('<option></option>').append($opt).trigger('change');
+            // Pre-select matching description but don't restrict the list
+            $('#device_type').val(match.device_type).trigger('change');
         }
+        // Serial # intentionally NOT auto-populated — must remain blank for manual entry
+        $('#serial_number').val('');
     });
 
     // Load initial data

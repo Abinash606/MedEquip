@@ -4,74 +4,80 @@ namespace App\Controllers\Customer;
 
 use App\Controllers\BaseController;
 use App\Models\InspectionModel;
+use App\Models\SiteModel;
+use App\Models\EquipmentModel;
 
 class InspectionsController extends BaseController
 {
     public function index()
     {
-        $inspModel   = new InspectionModel();
-        $companyId   = $this->session->get('company_id');
+        $companyId  = $this->session->get('company_id');
+        $customerId = $this->session->get('customer_id');
+        $db         = \Config\Database::connect();
 
-        // Get upcoming inspections (NOT completed, regardless of scheduled date)
-        $upcomingInspections = $inspModel
-            ->where('company_id', $companyId)
-            ->groupStart()
-            ->where('completed_at IS NULL')
-            ->orWhere('completed_at', '0000-00-00')
-            ->orWhere('completed_at', '')
-            ->groupEnd()
-            ->orderBy('scheduled_at', 'ASC')
-            ->findAll();
+        // Resolve the site IDs for this specific customer
+        $siteSql    = "SELECT id FROM sites WHERE company_id = ? AND deleted_at IS NULL";
+        $siteParams = [$companyId];
+        if ($customerId) {
+            $siteSql    .= " AND customer_id = ?";
+            $siteParams[] = $customerId;
+        }
+        $siteRows = $db->query($siteSql, $siteParams)->getResultArray();
+        $siteIds  = array_column($siteRows, 'id');
 
-
-        // Join equipment and site data manually
-        $equipmentModel = new \App\Models\EquipmentModel();
-        $siteModel = new \App\Models\SiteModel();
-
-        $data['upcomingInspections'] = [];
-        foreach ($upcomingInspections as $inspection) {
-            $equipment = $equipmentModel->find($inspection['equipment_id']);
-            $site = $siteModel->find($inspection['site_id']);
-
-            $inspection['make'] = $equipment['make'] ?? '';
-            $inspection['model'] = $equipment['model'] ?? '';
-            $inspection['device_type'] = $equipment['device_type'] ?? '';
-            $inspection['site_name'] = $site['name'] ?? '';
-
-            // Set a default status for display purposes
-            if (empty($inspection['status'])) {
-                $inspection['status'] = 'Scheduled';
-            }
-
-            $data['upcomingInspections'][] = $inspection;
+        if (empty($siteIds)) {
+            return view('customer/inspections/index', [
+                'upcomingInspections' => [],
+                'inspectionHistory'   => [],
+                'sites'               => [],
+            ]);
         }
 
+        $inList = implode(',', array_map('intval', $siteIds));
 
-        $historyInspections = $inspModel
-            ->where('company_id', $companyId)
-            ->where('completed_at IS NOT NULL')
-            ->where('completed_at !=', '0000-00-00')
-            ->where('completed_at !=', '')
-            ->orderBy('completed_at', 'DESC')
-            ->limit(10)
-            ->findAll();
-        $data['inspectionHistory'] = [];
-        foreach ($historyInspections as $inspection) {
-            $equipment = $equipmentModel->find($inspection['equipment_id']);
-            $site = $siteModel->find($inspection['site_id']);
+        // Upcoming = open/in-progress inspections for this customer's sites
+        $upcoming = $db->query("
+            SELECT i.id, i.group_id, i.status, i.scheduled_at, i.completed_at,
+                   i.next_due_date, i.inspection_type,
+                   e.make, e.model, e.device_type, e.asset_tag,
+                   s.name AS site_name
+            FROM inspections i
+            LEFT JOIN equipment e ON e.id = i.equipment_id
+            LEFT JOIN sites s     ON s.id = i.site_id
+            WHERE i.site_id IN ($inList)
+              AND i.status NOT IN ('Pass','Fail','Repair','pass','fail','repair','completed','Closed/Complete')
+            GROUP BY i.group_id
+            ORDER BY i.scheduled_at ASC
+        ")->getResultArray();
 
-            $inspection['make'] = $equipment['make'] ?? '';
-            $inspection['model'] = $equipment['model'] ?? '';
-            $inspection['device_type'] = $equipment['device_type'] ?? '';
-            $inspection['site_name'] = $site['name'] ?? '';
+        // History = completed inspections
+        $history = $db->query("
+            SELECT i.id, i.group_id, i.status, i.scheduled_at, i.completed_at,
+                   i.next_due_date, i.inspection_type,
+                   e.make, e.model, e.device_type, e.asset_tag,
+                   s.name AS site_name,
+                   u.full_name AS technician_name
+            FROM inspections i
+            LEFT JOIN equipment e   ON e.id = i.equipment_id
+            LEFT JOIN sites s       ON s.id = i.site_id
+            LEFT JOIN technicians t ON t.id = i.technician_id
+            LEFT JOIN users u       ON u.id = t.user_id
+            WHERE i.site_id IN ($inList)
+              AND i.status IN ('Pass','Fail','Repair','pass','fail','repair','completed','Closed/Complete')
+            GROUP BY i.group_id
+            ORDER BY i.completed_at DESC
+            LIMIT 50
+        ")->getResultArray();
 
-            if (empty($inspection['status'])) {
-                $inspection['status'] = 'Pass';
-            }
+        // Site list for filtering dropdown
+        $sites = $db->query(
+            "SELECT id, name FROM sites WHERE id IN ($inList) ORDER BY name"
+        )->getResultArray();
 
-            $data['inspectionHistory'][] = $inspection;
-        }
-
-        return view('customer/inspections/index', $data);
+        return view('customer/inspections/index', [
+            'upcomingInspections' => $upcoming,
+            'inspectionHistory'   => $history,
+            'sites'               => $sites,
+        ]);
     }
 }

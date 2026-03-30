@@ -1016,6 +1016,7 @@
 
         var BASE = '<?= site_url('technician') ?>';
         var SITE_ID = <?= (int)($site['id'] ?? 0) ?>;
+        var LOGGED_IN_TECH_ID = <?= (int)($loggedInTechId ?? 0) ?>;
 
         var URL_GET_EQ = BASE + '/site-inspection/get-equipment';
         var URL_RECORD = BASE + '/site-inspection/record';
@@ -1154,7 +1155,7 @@
             if (mfr) mfr.value = btn.getAttribute('data-make') || '';
             if (typ) typ.value = btn.getAttribute('data-device_type') || '';
             if (dsc) dsc.value = btn.getAttribute('data-device_type') || '';
-            if (ser && !ser.value.trim()) ser.value = btn.getAttribute('data-serial') || '';
+            // Serial # intentionally NOT auto-populated — technician must enter manually
             if (dpt && !dpt.value.trim()) dpt.value = btn.getAttribute('data-department') || '';
             if (rm && !rm.value.trim()) rm.value = btn.getAttribute('data-location') || '';
             if (est) est.value = toYesNo(btn.getAttribute('data-est'));
@@ -1328,7 +1329,9 @@
             var errBox = document.getElementById('addDeviceError');
             if (errBox) errBox.classList.add('d-none');
 
-            var assetTag = (document.getElementById('addAsset').value || '').trim();
+            var assetTag  = (document.getElementById('addAsset').value || '').trim();
+            var serialVal = (document.getElementById('addSerial').value || '').trim();
+
             if (!assetTag) {
                 _showAddDeviceError('Asset # is required.');
                 document.getElementById('addAsset').focus();
@@ -1336,6 +1339,15 @@
             }
             if (!SITE_ID) {
                 _showAddDeviceError('Site ID is missing. Please reload the page.');
+                return;
+            }
+
+            // Client-side duplicate check: asset tag
+            var existingAssetRow = document.querySelector('#notInspectedTableBody tr[data-asset="' + assetTag.replace(/"/g,'') + '"]')
+                || document.querySelector('#allInventoryTableBody tr[data-asset="' + assetTag.replace(/"/g,'') + '"]');
+            if (existingAssetRow) {
+                Swal.fire({ icon: 'error', title: 'Duplicate Asset #', text: 'Asset # "' + assetTag + '" already exists in this site\'s inventory.' });
+                document.getElementById('addAsset').focus();
                 return;
             }
 
@@ -1381,7 +1393,13 @@
                 .then(function(res) {
                     if (res && res.csrf_hash) csrfHash = res.csrf_hash;
                     if (!res || !res.success) {
-                        _showAddDeviceError((res && res.message) || 'Failed to save device. Please try again.');
+                        var errMsg = (res && res.message) || 'Failed to save device. Please try again.';
+                        // Show SweetAlert for duplicate errors
+                        if (errMsg.indexOf('already exists') !== -1) {
+                            Swal.fire({ icon: 'error', title: 'Duplicate Found', text: errMsg });
+                        } else {
+                            _showAddDeviceError(errMsg);
+                        }
                         return;
                     }
                     // Save last used dept/room for this site to localStorage
@@ -1597,7 +1615,8 @@
             document.getElementById('insp-site-label').textContent = 'Site: <?= esc($site['name'] ?? '—') ?>';
             document.getElementById('insp-title').textContent = 'New Inspection';
             document.getElementById('insp-id-label').textContent = '—';
-            document.getElementById('insp-technician').textContent = '—';
+            // Auto-assign the logged-in technician immediately
+            document.getElementById('insp-technician').textContent = '<?= esc(session('full_name') ?? '—') ?>';
 
             var statusBtn = document.getElementById('statusDropdown');
             if (statusBtn) {
@@ -2277,7 +2296,12 @@
             });
             $('#woPriority').val('Medium');
             $('#woStatus').val('Open');
-            $('#woTech').val('');
+            // Pre-select the logged-in technician
+            if (LOGGED_IN_TECH_ID) {
+                $('#woTech').val(LOGGED_IN_TECH_ID);
+            } else {
+                $('#woTech').val('');
+            }
             var e = document.getElementById('workOrderError');
             if (e) {
                 e.classList.add('d-none');
