@@ -572,7 +572,6 @@ except Exception as e:
             'message'  => "$imported imported, $skipped skipped.",
         ]);
     }
-
     public function getDropdownOptions()
     {
         $companyId = (int) session('company_id');

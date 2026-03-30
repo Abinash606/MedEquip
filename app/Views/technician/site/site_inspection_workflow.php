@@ -234,8 +234,7 @@
                                     </div>
                                 </div>
                                 <!-- ── Add Device button (NEW) ── -->
-                                <button class="btn btn-primary btn-sm" type="button"
-                                    onclick="openAddDeviceModal()">
+                                <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
                                     <i class="fa-solid fa-circle-plus me-1"></i> Add Device
                                 </button>
                             </div>
@@ -257,13 +256,14 @@
                                                 <tr data-asset="<?= esc($eq['asset_tag']) ?>"
                                                     data-eq-id="<?= esc($eq['id']) ?>">
                                                     <td>
-                                                       
-                                                        <button class="btn btn-sm btn-primary d-flex gap-2 align-items-center" type="button"
+
+                                                        <button class="btn btn-sm btn-primary d-flex gap-2 align-items-center"
+                                                            type="button"
                                                             onclick="inspectFromNotInspected('<?= esc($eq['asset_tag']) ?>')">
                                                             <i class="fa-solid fa-arrow-right me-1"></i> Inspect
                                                         </button>
-                                                       
-                                                       
+
+
                                                     </td>
                                                     <td><?= esc($eq['asset_tag']) ?></td>
                                                     <td><?= esc($eq['model'] ?? $eq['make'] ?? 'N/A') ?></td>
@@ -562,8 +562,7 @@
                                     <div class="text-muted small">Full list of equipment in the site inventory.</div>
                                 </div>
                                 <!-- Add Device shortcut in Inventory tab too -->
-                                <button class="btn btn-primary btn-sm" type="button"
-                                    onclick="openAddDeviceModal()">
+                                <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
                                     <i class="fa-solid fa-circle-plus me-1"></i> Add Device
                                 </button>
                             </div>
@@ -1265,15 +1264,21 @@
                 var deptEl = document.getElementById('addDept');
                 var roomEl = document.getElementById('addRoom');
                 if (!deptEl || !roomEl) return;
-                fetch('<?= site_url("technician/site-inspection/last-device") ?>?site_id=' + encodeURIComponent(SITE_ID), {
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.department && !deptEl.value) deptEl.value = data.department;
-                    if (data.location   && !roomEl.value) roomEl.value = data.location;
-                })
-                .catch(function() {});
+                fetch('<?= site_url("technician/site-inspection/last-device") ?>?site_id=' + encodeURIComponent(
+                        SITE_ID), {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        if (data.department && !deptEl.value) deptEl.value = data.department;
+                        if (data.location && !roomEl.value) roomEl.value = data.location;
+                    })
+                    .catch(function() {});
             })();
 
             bootstrap.Modal.getOrCreateInstance(document.getElementById('addDeviceModal')).show();
@@ -1691,10 +1696,17 @@
                     $('#inspectDept').val(resp.department || '');
                     $('#inspectRoom').val(resp.location || '');
                     $('#inspectSerial').val(resp.serial_number || '');
-                    $('#inspectNotes').val('');
                     $('#inspectPMFrequency').val('12 Month');
-                    $('#inspectActionPerformed').val($('#inspectActionPerformed option:first').val() ||
-                        'Annual Performance Inspection');
+                    var apSel = document.getElementById('inspectActionPerformed');
+                    if (apSel && apSel.options.length > 1) {
+                        apSel.selectedIndex = 1;
+                    }
+                    $('#inspectNotes').val('');
+                    setTimeout(function() {
+                        if (typeof window._techIqNoteHandler === 'function') {
+                            window._techIqNoteHandler();
+                        }
+                    }, 50);
                 },
                 error: function(xhr) {
                     if (goBtn) {
@@ -2081,6 +2093,16 @@
                             o.textContent = n.title || n.note;
                             sel.appendChild(o);
                         });
+                        // ADD THIS RIGHT AFTER THE forEach:
+                        if (sel.options.length > 1) {
+                            sel.selectedIndex = 1;
+                        }
+                        // Small defer to ensure DOM is settled before reading selected option
+                        setTimeout(function() {
+                            if (typeof window._techIqNoteHandler === 'function') {
+                                window._techIqNoteHandler();
+                            }
+                        }, 50);
                         // Auto-populate notes textarea when IQ note selected
                         sel.removeEventListener('change', window._techIqNoteHandler);
                         window._techIqNoteHandler = function() {
@@ -2090,8 +2112,12 @@
                             var notesArea = document.getElementById('inspectNotes');
                             if (notesArea && noteText) notesArea.value = noteText;
                         };
-                        sel.addEventListener('change', window._techIqNoteHandler);
-                    }).catch(function() {});
+                        sel.addEventListener('change', window._techIqNoteHandler); // ← correct name
+                        window._techIqNoteHandler(); // ← correct name, fires immediately
+                    })
+                    .catch(function() {
+                        /* keep static defaults on error */
+                    });
             })();
 
             /* Init model search after DOM ready */

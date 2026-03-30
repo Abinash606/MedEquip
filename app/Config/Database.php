@@ -28,9 +28,9 @@ class Database extends Config
     public array $default = [
         'DSN'          => '',
         'hostname'     => 'localhost',
-        'username'     => 'tscameri_medquip',
-		'password'     => 'T01g?^9usyS+',
-		'database'     => 'tscameri_medquip',
+        'username'     => 'ubkhmv2lfbslh',
+		'password'     => 'anz9unn0fzhq',
+		'database'     => 'dblxrcd9heb5yg',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,

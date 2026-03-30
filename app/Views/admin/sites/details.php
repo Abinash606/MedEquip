@@ -1059,7 +1059,7 @@
                             <div class="col-md-6">
                                 <label for="equipment-serial-number" class="form-label">Serial Number</label>
                                 <input type="text" class="form-control" id="equipment-serial-number"
-                                    name="serial_number" placeholder="" required>
+                                    name="serial_number" placeholder="Optional">
                             </div>
                             <!-- Make -->
                             <div class="col-md-6">
@@ -2928,7 +2928,7 @@
             // Not Inspected tab without a page reload.
             const addDeviceFormEl = document.getElementById('addDeviceForm');
             if (addDeviceFormEl) {
-                addDeviceFormEl.addEventListener('submit', function(e) {
+                addDeviceFormEl.addEventListener('submit', async function(e) {
                     e.preventDefault();
                     const errBox = document.getElementById('addDeviceError');
                     if (errBox) errBox.classList.add('d-none');
@@ -2942,12 +2942,23 @@
                         return;
                     }
 
+                    // Validate serial number is unique (if provided)
+                    const serialVal = (document.getElementById('addSerial')?.value || '').trim();
+                    if (serialVal && serialVal.toUpperCase() !== 'N/A') {
+                        // Check for duplicate serial via quick fetch before proceeding
+                        const checkSerial = await fetch('<?= site_url('admin/equipment/check-duplicate') ?>?serial=' + encodeURIComponent(serialVal) + '&asset=' + encodeURIComponent(assetTag) + '&site_id=' + SITE_ID).then(r=>r.json()).catch(()=>null);
+                        if (checkSerial && checkSerial.serial_exists) {
+                            if (errBox) { errBox.textContent = 'Serial number "' + serialVal + '" already exists in the equipment database. Please verify the serial number.'; errBox.classList.remove('d-none'); }
+                            return;
+                        }
+                    }
+
                     const params = new URLSearchParams();
                     params.append('site_id', SITE_ID);
                     params.append('asset_tag', assetTag);
                     params.append('model', document.getElementById('addModel')?.value || '');
                     params.append('make', document.getElementById('addManufacturer')?.value || '');
-                    params.append('serial_number', document.getElementById('addSerial')?.value || '');
+                    params.append('serial_number', serialVal);
                     params.append('device_type', document.getElementById('addType')?.value || '');
                     params.append('department', document.getElementById('addDept')?.value || '');
                     params.append('location', document.getElementById('addRoom')?.value || '');
@@ -2973,8 +2984,12 @@
                         .then(r => r.json())
                         .then(res => {
                             if (!res || !res.success) {
-                                if (errBox) {
-                                    errBox.textContent = (res && res.message) || 'Failed to save device.';
+                                const errMsg = (res && res.message) || 'Failed to save device.';
+                                if (typeof Swal !== 'undefined') {
+                                    Swal.fire({ icon: 'error', title: 'Cannot Save Device',
+                                        text: errMsg, confirmButtonColor: '#7c3aed' });
+                                } else if (errBox) {
+                                    errBox.textContent = errMsg;
                                     errBox.classList.remove('d-none');
                                 }
                                 return;
@@ -3743,7 +3758,9 @@
                     }
                     if (emptyView) emptyView.classList.add('d-none');
                     if (formWrapper) formWrapper.classList.remove('d-none');
-
+                    // Re-trigger action performed handler so notes auto-fill on form open
+                    var actionSel = document.getElementById('inspectActionPerformed');
+                    if (actionSel) actionSel.dispatchEvent(new Event('change'));
                     // Populate the form fields with the equipment details
                     $('#inspectAsset').val(resp.asset_tag || '');
                     // For display we prioritise model; fallback to make
@@ -3758,8 +3775,11 @@
                     $('#inspectNotes').val('');
                     // EST/CAL are managed in Add Device / Equipment Settings, not on pass/fail screen
                     // Reset action performed and frequency to defaults
-                    $('#inspectActionPerformed').val($('#inspectActionPerformed option:first').val() ||
-                        'Annual Performance Inspection');
+                    var actionSel = document.getElementById('inspectActionPerformed');
+                    if (actionSel) {
+                        if (actionSel.options.length > 1) actionSel.selectedIndex = 1;
+                        actionSel.dispatchEvent(new Event('change'));
+                    }
                     $('#inspectPMFrequency').val('12 Month');
                 }, 'json')
                 .fail(function() {
@@ -4799,10 +4819,12 @@
                         style="font-size:11px;color:#E9EDFF;background:rgba(0,0,0,.3);padding:6px 10px;border-radius:6px;display:block;line-height:1.8;">
                         Make, Model, Device Type, Asset Tag, Serial Number, Department, Location Or Room
                     </code>
-                    <p class="small mb-0 mt-2" style="color:rgba(233,237,255,.5);">
-                        Headers are case-insensitive &amp; trim spaces. Asset Tag auto-generated if blank. "N/A" serial
-                        treated as empty.
+                    <p class="small mb-1 mt-2" style="color:rgba(233,237,255,.5);">
+                        Headers are case-insensitive &amp; trim spaces. Asset Tag auto-generated if blank. "N/A" serial treated as empty.
                     </p>
+                    <a href="<?= site_url('admin/equipment/sample-csv') ?>" class="small fw-semibold" style="color:rgba(34,211,238,.9);">
+                        <i class="fa-solid fa-download me-1"></i>Download Sample CSV Template
+                    </a>
                 </div>
 
                 <!-- Alert box -->
