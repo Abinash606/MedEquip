@@ -61,12 +61,29 @@ class SchedulingController extends BaseController
             $techSchedule[$key]['work_orders'][] = $wo;
         }
 
+        // Scheduled inspections for tab (grouped by group_id)
+        $scheduledInspections = $db->query("
+            SELECT i.id, i.group_id, i.status, i.scheduled_at, i.next_due_date, i.inspection_type,
+                   s.name AS site_name, c.name AS customer_name,
+                   u.full_name AS tech_name
+            FROM inspections i
+            LEFT JOIN sites s       ON s.id = i.site_id
+            LEFT JOIN customers c   ON c.id = s.customer_id
+            LEFT JOIN technicians t ON t.id = i.technician_id
+            LEFT JOIN users u       ON u.id = t.user_id
+            WHERE i.company_id = ?
+            GROUP BY i.group_id
+            ORDER BY i.scheduled_at DESC
+            LIMIT 100
+        ", [$companyId])->getResultArray();
+
         return view('admin/scheduling/index', [
-            'sites'        => $sites,
-            'equipment'    => $equipment,
-            'technicians'  => $technicians,
-            'upcomingWO'   => $upcomingWO,
-            'techSchedule' => array_values($techSchedule),
+            'sites'                 => $sites,
+            'equipment'             => $equipment,
+            'technicians'           => $technicians,
+            'upcomingWO'            => $upcomingWO,
+            'techSchedule'          => array_values($techSchedule),
+            'scheduledInspections'  => $scheduledInspections,
         ]);
     }
 

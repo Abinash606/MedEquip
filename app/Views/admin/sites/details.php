@@ -2253,7 +2253,7 @@
             const REPORT_DATA_URL = "<?= site_url('admin/inspections/reportData') ?>";
             const REPORT_PDF_URL = "<?= site_url('admin/inspections/reportPdf') ?>";
             const GET_EQUIPMENT_URL = "<?= site_url('admin/site-inspection/get-equipment') ?>";
-            const EQUIPMENT_CREATE_URL = "<?= site_url('admin/equipment/create') ?>";
+            const EQUIPMENT_CREATE_URL = "<?= site_url('admin/site-inspection/add-device') ?>";
             const WORK_ORDER_CREATE_URL = "<?= site_url('admin/work-orders/create') ?>";
             const WORK_ORDER_UPDATE_URL = "<?= site_url('admin/work-orders/update') ?>";
             const WORK_ORDER_DELETE_URL = "<?= site_url('admin/work-orders/delete') ?>";
@@ -2933,7 +2933,9 @@
                     const errBox = document.getElementById('addDeviceError');
                     if (errBox) errBox.classList.add('d-none');
 
-                    const assetTag = (document.getElementById('addAsset')?.value || '').trim();
+                    const assetTag  = (document.getElementById('addAsset')?.value || '').trim();
+                    const serialVal = (document.getElementById('addSerial')?.value || '').trim();
+
                     if (!assetTag) {
                         if (errBox) {
                             errBox.textContent = 'Asset # is required.';
@@ -2942,12 +2944,29 @@
                         return;
                     }
 
+                    // ── Client-side duplicate check: asset tag ────────────────
+                    const existingAssetRow = document.querySelector(
+                        '#notInspectedTableBody tr[data-asset="' + assetTag.replace(/"/g,'') + '"]'
+                    );
+                    if (existingAssetRow) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Duplicate Asset #',
+                            text: 'Asset # "' + assetTag + '" already exists in this site\'s inventory.',
+                            confirmButtonColor: '#7c3aed'
+                        });
+                        return;
+                    }
+
                     const params = new URLSearchParams();
+                    // Include CSRF token
+                    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                    if (csrfMeta) params.append('<?= csrf_token() ?>', csrfMeta.getAttribute('content'));
                     params.append('site_id', SITE_ID);
                     params.append('asset_tag', assetTag);
                     params.append('model', document.getElementById('addModel')?.value || '');
                     params.append('make', document.getElementById('addManufacturer')?.value || '');
-                    params.append('serial_number', document.getElementById('addSerial')?.value || '');
+                    params.append('serial_number', serialVal);
                     params.append('device_type', document.getElementById('addType')?.value || '');
                     params.append('department', document.getElementById('addDept')?.value || '');
                     params.append('location', document.getElementById('addRoom')?.value || '');
@@ -2973,9 +2992,20 @@
                         .then(r => r.json())
                         .then(res => {
                             if (!res || !res.success) {
-                                if (errBox) {
-                                    errBox.textContent = (res && res.message) || 'Failed to save device.';
-                                    errBox.classList.remove('d-none');
+                                const msg = (res && res.message) || 'Failed to save device.';
+                                // Show SweetAlert for duplicate errors, inline error for others
+                                if (msg.includes('already exists') || msg.includes('Duplicate')) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Duplicate Found',
+                                        text: msg,
+                                        confirmButtonColor: '#7c3aed'
+                                    });
+                                } else {
+                                    if (errBox) {
+                                        errBox.textContent = msg;
+                                        errBox.classList.remove('d-none');
+                                    }
                                 }
                                 return;
                             }

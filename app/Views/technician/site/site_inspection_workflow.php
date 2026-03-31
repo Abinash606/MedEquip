@@ -1119,7 +1119,6 @@
                     ' data-make="' + escH(r.make || '') + '"' +
                     ' data-model="' + escH(r.model || '') + '"' +
                     ' data-device_type="' + escH(r.device_type || '') + '"' +
-                    ' data-serial="' + escH(r.serial_number || '') + '"' +
                     ' data-department="' + escH(r.department || '') + '"' +
                     ' data-location="' + escH(r.location || '') + '"' +
                     ' data-est="' + escH(r.est || 'No') + '"' +

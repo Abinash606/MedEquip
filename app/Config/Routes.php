@@ -161,6 +161,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('inspection-reports/list', 'Admin\\InspectionReportsController::listData');
     $routes->post('settings/equipment/toggle', 'Admin\SystemSettings::equipmentToggle');
     $routes->post('site-inspection/record', 'Admin\SiteInspectionWorkflowController::recordInspection');
+    $routes->post('site-inspection/add-device', 'Admin\\SiteInspectionWorkflowController::addDevice');
     $routes->delete('settings/equipment/delete/(:num)', 'Admin\SystemSettings::equipmentDelete/$1');
 });
 
@@ -174,6 +175,7 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
     $routes->post('assets/report-issue', 'Customer\\AssetsController::reportIssue');
     $routes->post('assets/bulk-import', 'Customer\\AssetsController::bulkImport');
     $routes->get('inspections', 'Customer\\InspectionsController::index');
+    $routes->get('inspections/reportPdf/(:any)', 'Customer\\InspectionsController::reportPdf/$1');
     $routes->get('documents', 'Customer\\DocumentsController::index');
 });
 

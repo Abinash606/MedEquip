@@ -84,6 +84,7 @@
                     <th>Asset</th>
                     <th>Date</th>
                     <th>Result</th>
+                    <th>Report</th>
                 </tr>
             </thead>
             <tbody>
@@ -92,18 +93,27 @@
                     <?php
                         $st = strtolower($insp['status'] ?? '');
                         $badge = $st === 'pass' ? 'bg-success' : ($st === 'fail' ? 'bg-danger' : 'bg-warning');
+                        $inspDisplayId = $insp['group_id'] ? substr($insp['group_id'], 0, 18) : '#INS-' . $insp['id'];
                     ?>
                     <tr>
-                        <td class="fw-medium small"><?= esc($insp['group_id'] ? substr($insp['group_id'], 0, 18) : '#INS-' . $insp['id']) ?></td>
+                        <td class="fw-medium small"><?= esc($inspDisplayId) ?></td>
                         <td><?= esc($insp['site_name'] ?? '—') ?></td>
                         <td><?= esc($insp['customer_name'] ?? '—') ?></td>
                         <td><?= esc($insp['asset_tag'] ?? ($insp['make'] ?? '') . ' ' . ($insp['model'] ?? '')) ?></td>
                         <td class="text-muted small"><?= esc($insp['completed_at'] ? substr($insp['completed_at'], 0, 10) : '—') ?></td>
                         <td><span class="badge <?= $badge ?>"><?= esc(ucfirst($insp['status'])) ?></span></td>
+                        <td>
+                            <?php if (!empty($insp['group_id'])): ?>
+                            <button class="btn btn-sm btn-outline-primary" title="Preview Report"
+                                onclick="previewTechReport('<?= esc($insp['group_id']) ?>')">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </button>
+                            <?php else: ?>—<?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
-                    <tr><td colspan="6" class="text-center text-muted py-4">No recent inspections found.</td></tr>
+                    <tr><td colspan="7" class="text-center text-muted py-4">No recent inspections found.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -111,4 +121,48 @@
 </div>
 
 </div>
+
+<!-- Technician Report Preview Modal -->
+<div class="modal fade" id="techReportPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="techReportPreviewBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="techReportDownloadBtn">
+                    <i class="fa-solid fa-download me-1"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function previewTechReport(groupId) {
+    var modal = new bootstrap.Modal(document.getElementById('techReportPreviewModal'));
+    document.getElementById('techReportPreviewBody').innerHTML =
+        '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report...</p></div>';
+    modal.show();
+    fetch('<?= site_url('technician/inspections/reportPdf') ?>/' + groupId)
+        .then(function(r){ return r.text(); })
+        .then(function(html) {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'width:100%;height:70vh;border:none;';
+            document.getElementById('techReportPreviewBody').innerHTML = '';
+            document.getElementById('techReportPreviewBody').appendChild(iframe);
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(html);
+            iframe.contentDocument.close();
+        }).catch(function() {
+            document.getElementById('techReportPreviewBody').innerHTML = '<div class="alert alert-danger m-3">Failed to load report.</div>';
+        });
+    document.getElementById('techReportDownloadBtn').onclick = function() {
+        window.open('<?= site_url('technician/inspections/reportPdf') ?>/' + groupId, '_blank');
+    };
+}
+</script>
 <?= $this->endSection() ?>

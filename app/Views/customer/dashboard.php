@@ -141,12 +141,16 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
             </div>
             <div class="row g-2 text-center mt-2">
                 <div class="col-4">
-                    <div class="fw-bold fs-5"><?= $stat['asset_count'] ?></div>
-                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;">Assets</div>
+                    <a href="<?= site_url('customer/assets') ?>" class="text-decoration-none text-white">
+                        <div class="fw-bold fs-5 hover-highlight"><?= $stat['asset_count'] ?></div>
+                        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;">Assets</div>
+                    </a>
                 </div>
                 <div class="col-4">
-                    <div class="fw-bold fs-5"><?= $stat['inspection_count'] ?></div>
-                    <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;">Inspections</div>
+                    <a href="<?= site_url('customer/inspections') ?>" class="text-decoration-none text-white">
+                        <div class="fw-bold fs-5 hover-highlight"><?= $stat['inspection_count'] ?></div>
+                        <div class="text-muted" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;">Inspections</div>
+                    </a>
                 </div>
                 <div class="col-4">
                     <div class="fw-bold fs-5 <?= $stat['open_wo'] > 0 ? 'text-warning' : '' ?>"><?= $stat['open_wo'] ?></div>
@@ -189,33 +193,43 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
         <table class="table custom-table align-middle" id="dashInspTable" style="width:100%">
             <thead>
                 <tr>
+                    <th>Inspection ID</th>
                     <th>Result</th>
                     <th>Site</th>
                     <th>Asset</th>
                     <th>Model</th>
                     <th>Date</th>
                     <th>Tech</th>
+                    <th>Report</th>
                 </tr>
             </thead>
             <tbody>
-              
                 <?php foreach ($recentInspections as $row):
                     $badgeClass = strtolower($row['status']) === 'pass' ? 'bg-success'
                         : (strtolower($row['status']) === 'fail' ? 'bg-danger' : 'bg-warning');
+                    $inspDisplayId = !empty($row['group_id']) ? substr($row['group_id'], 0, 18) : '#INS-' . $row['id'];
                 ?>
                     <tr class="insp-row" data-site-id="<?= (int)($row['site_id'] ?? 0) ?>">
+                        <td class="fw-medium small"><?= esc($inspDisplayId) ?></td>
                         <td><span class="badge <?= $badgeClass ?>"><?= esc(ucfirst($row['status'])) ?></span></td>
                         <td><?= esc($row['site_name'] ?? '—') ?></td>
                         <td class="fw-medium"><?= esc($row['asset_tag'] ?? '—') ?></td>
                         <td><?= esc(($row['make'] ? $row['make'] . ' ' : '') . ($row['model'] ?? '')) ?></td>
                         <td><?= esc($row['completed_at'] ? substr($row['completed_at'], 0, 10) : '—') ?></td>
                         <td><?= esc($row['tech_name'] ?? '—') ?></td>
+                        <td>
+                            <?php if (!empty($row['group_id'])): ?>
+                            <button class="btn btn-sm btn-outline-primary" title="Preview Report"
+                                onclick="previewCustDashReport('<?= esc($row['group_id']) ?>')">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </button>
+                            <?php else: ?>—<?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
                 <?php if (empty($recentInspections)): ?>
-                <tr><td colspan="6" class="text-center text-muted py-4">No inspection records found.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">No inspection records found.</td></tr>
                 <?php endif; ?>
-
             </tbody>
         </table>
     </div>
@@ -299,11 +313,9 @@ function applySiteFilter(siteId) {
         row.style.display = show ? '' : 'none';
         if (show) visibleCount++;
     });
-    // Show empty message if nothing visible
     var emptyRow = document.getElementById('inspEmptyRow');
     if (emptyRow) emptyRow.style.display = visibleCount === 0 ? '' : 'none';
 
-    // Update summary stats
     if (!siteId) {
         document.getElementById('statTotalAssets').textContent = <?= $totalAssets ?>;
         document.getElementById('statOpenWO').textContent      = <?= $totalOpenWO ?>;
@@ -317,5 +329,52 @@ function applySiteFilter(siteId) {
         }
     }
 }
+
+// ── Customer Dashboard Report Preview ────────────────────────────────
+function previewCustDashReport(groupId) {
+    var modal = new bootstrap.Modal(document.getElementById('custDashReportModal'));
+    document.getElementById('custDashReportBody').innerHTML =
+        '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report...</p></div>';
+    modal.show();
+    fetch('<?= site_url('customer/inspections/reportPdf') ?>/' + groupId)
+        .then(function(r){ return r.text(); })
+        .then(function(html) {
+            var iframe = document.createElement('iframe');
+            iframe.style.cssText = 'width:100%;height:72vh;border:none;';
+            document.getElementById('custDashReportBody').innerHTML = '';
+            document.getElementById('custDashReportBody').appendChild(iframe);
+            iframe.contentDocument.open();
+            iframe.contentDocument.write(html);
+            iframe.contentDocument.close();
+        }).catch(function() {
+            document.getElementById('custDashReportBody').innerHTML =
+                '<div class="alert alert-danger m-3">Failed to load report.</div>';
+        });
+    document.getElementById('custDashReportDownloadBtn').onclick = function() {
+        window.open('<?= site_url('customer/inspections/reportPdf') ?>/' + groupId, '_blank');
+    };
+}
 </script>
+
+<!-- Customer Dashboard Report Preview Modal -->
+<div class="modal fade" id="custDashReportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-white">
+                    <i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="custDashReportBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="custDashReportDownloadBtn">
+                    <i class="fa-solid fa-download me-1"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>

@@ -74,7 +74,7 @@ class DashboardController extends BaseController
         // Recent inspections (all sites, no filter — JS handles per-site filtering)
         $recentInspections = $db->query("
             SELECT
-                i.id, i.status, i.completed_at, i.site_id,
+                i.id, i.group_id, i.status, i.completed_at, i.site_id,
                 e.asset_tag, e.model, e.make,
                 s.name  AS site_name,
                 u.full_name AS tech_name
@@ -85,6 +85,7 @@ class DashboardController extends BaseController
             LEFT JOIN users u     ON u.id = t.user_id
             WHERE i.site_id IN ($inList)
               AND i.status IN ('Pass','Fail','Repair','pass','fail','repair')
+            GROUP BY i.group_id
             ORDER BY i.id DESC
             LIMIT 50
         ")->getResultArray();

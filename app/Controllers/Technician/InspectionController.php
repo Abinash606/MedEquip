@@ -27,23 +27,39 @@ class InspectionController extends BaseController
     {
         $companyId    = (int) session('company_id');
         $technicianId = $this->resolveTechnicianId();
-        $siteModel    = new SiteModel();
-        $sites        = $siteModel->where('company_id', $companyId)->findAll();
         $db           = \Config\Database::connect();
-        $builder      = $db->table('inspections i');
-        $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type,
-                          e.asset_tag, e.department, e.location,
-                          s.name as site_name, u.full_name as technician_name');
-        $builder->join('equipment e',   'e.id = i.equipment_id',  'left');
-        $builder->join('sites s',       's.id = i.site_id',       'left');
-        $builder->join('technicians t', 't.id = i.technician_id', 'left');
-        $builder->join('users u',       'u.id = t.user_id',       'left');
-        $builder->where('i.company_id', $companyId);
-        if ($technicianId) $builder->where('i.technician_id', $technicianId);
-        $builder->groupBy('i.group_id');
-        $builder->orderBy('i.created_at', 'DESC');
-        $inspections = $builder->get()->getResultArray();
-        return view('technician/inspection/index', ['sites' => $sites, 'inspections' => $inspections]);
+
+        // Summary stats (scoped to this technician)
+        $techFilter = $technicianId ? " AND i.technician_id = $technicianId" : '';
+
+        $totalInspections = (int)($db->query(
+            "SELECT COUNT(DISTINCT i.group_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
+            [$companyId]
+        )->getRow()->cnt ?? 0);
+
+        $sitesCount = (int)($db->query(
+            "SELECT COUNT(DISTINCT i.site_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
+            [$companyId]
+        )->getRow()->cnt ?? 0);
+
+        $customersCount = (int)($db->query(
+            "SELECT COUNT(DISTINCT s.customer_id) AS cnt FROM inspections i
+             LEFT JOIN sites s ON s.id = i.site_id
+             WHERE i.company_id = ?" . $techFilter,
+            [$companyId]
+        )->getRow()->cnt ?? 0);
+
+        $equipmentCount = (int)($db->query(
+            "SELECT COUNT(DISTINCT i.equipment_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
+            [$companyId]
+        )->getRow()->cnt ?? 0);
+
+        return view('technician/inspection/index', [
+            'inspectionsCount' => $totalInspections,
+            'sitesCount'       => $sitesCount,
+            'customersCount'   => $customersCount,
+            'equipmentCount'   => $equipmentCount,
+        ]);
     }
 
     public function getEquipment()
@@ -556,7 +572,6 @@ class InspectionController extends BaseController
             LEFT JOIN technicians t ON t.id = i.technician_id
             LEFT JOIN users u      ON u.id = t.user_id
             WHERE i.company_id = ?
-              AND i.status IN ('Pass','Fail','Repair','completed','pass','fail','repair')
         ";
         $params = [$companyId];
 
@@ -565,7 +580,7 @@ class InspectionController extends BaseController
             $params[] = $technicianId;
         }
 
-        $sql .= " ORDER BY i.id DESC LIMIT 500";
+        $sql .= " GROUP BY i.group_id ORDER BY i.id DESC LIMIT 500";
 
         $rows = $db->query($sql, $params)->getResultArray();
 

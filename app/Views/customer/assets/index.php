@@ -72,6 +72,9 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
         <h4 class="fw-bold mb-0">Assets</h4>
         <div class="text-muted small">View your equipment inventory by site.</div>
     </div>
+    <div>
+        <input type="text" id="assetSearch" class="form-control form-control-sm" placeholder="Search asset, model, serial..." style="min-width:220px;">
+    </div>
 </div>
 
 <div class="content">
@@ -90,52 +93,48 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
         </div>
     <?php endif; ?>
 
-    <!-- Site Filter -->
-    <div class="glass-card mb-3 p-3">
-        <div class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold small">Filter by Site</label>
-                <select id="siteFilter" class="form-select form-select-sm">
-                    <option value="">All Sites</option>
-                    <?php foreach ($sites as $site): ?>
-                        <option value="<?= esc($site['id']) ?>"><?= esc($site['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold small">Search</label>
-                <input type="text" id="assetSearch" class="form-control form-control-sm" placeholder="Asset tag, model, serial...">
-            </div>
-            <div class="col-md-4 text-end">
-                <span class="text-muted small" id="assetCountLabel"></span>
-            </div>
-        </div>
-    </div>
+    <?php
+    // Build site name lookup and group equipment by site
+    $siteMap    = [];
+    $equipBySite = [];
+    foreach ($sites as $s) { $siteMap[$s['id']] = $s['name']; }
+    foreach ($equipment as $eq) {
+        $sid = $eq['site_id'] ?? 0;
+        $equipBySite[$sid][] = $eq;
+    }
+    $firstSiteId = !empty($sites) ? $sites[0]['id'] : 0;
+    ?>
 
-    <!-- Site Stats Cards -->
-    <div class="row g-3 mb-3" id="siteStatsRow">
-        <?php
-        // Count equipment per site
-        $equipBySite = [];
-        foreach ($equipment as $eq) {
-            $sid = $eq['site_id'] ?? 0;
-            $equipBySite[$sid] = ($equipBySite[$sid] ?? 0) + 1;
-        }
-        foreach ($sites as $site):
-            $cnt = $equipBySite[$site['id']] ?? 0;
-        ?>
-        <div class="col-md-3">
-            <div class="glass-card p-3 site-stat-card h-100" data-site-id="<?= $site['id'] ?>" style="cursor:pointer;">
-                <div class="text-muted small text-uppercase fw-bold mb-1"><?= esc($site['name']) ?></div>
-                <h3 class="fw-bold mb-0"><?= $cnt ?></h3>
-                <div class="small text-muted mt-1">Assets</div>
-            </div>
-        </div>
-        <?php endforeach; ?>
+    <!-- Site Tabs -->
+    <?php if (count($sites) > 1): ?>
+    <div class="glass-card mb-3 p-2">
+        <ul class="nav nav-tabs border-0 gap-1" id="siteAssetTabs">
+            <li class="nav-item">
+                <button class="nav-link active fw-semibold" data-site-id="" onclick="switchSiteTab(this,'')">
+                    All Sites
+                    <span class="badge bg-secondary ms-1"><?= count($equipment) ?></span>
+                </button>
+            </li>
+            <?php foreach ($sites as $site):
+                $cnt = count($equipBySite[$site['id']] ?? []);
+            ?>
+            <li class="nav-item">
+                <button class="nav-link fw-semibold" data-site-id="<?= esc($site['id']) ?>"
+                    onclick="switchSiteTab(this,'<?= esc($site['id']) ?>')">
+                    <?= esc($site['name']) ?>
+                    <span class="badge bg-secondary ms-1"><?= $cnt ?></span>
+                </button>
+            </li>
+            <?php endforeach; ?>
+        </ul>
     </div>
+    <?php endif; ?>
 
     <!-- Assets Table -->
     <div class="glass-card p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small text-muted" id="assetCountLabel"></span>
+        </div>
         <div class="table-responsive">
             <table id="assetsTable" class="table custom-table table-hover align-middle mb-0" style="width:100%">
                 <thead>
@@ -146,18 +145,15 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                         <th>Model</th>
                         <th>Device Type</th>
                         <th>Department</th>
+                        <th>Location</th>
                         <th>Site</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (!empty($equipment)): ?>
-                        <?php
-                        // Build site name lookup
-                        $siteMap = [];
-                        foreach ($sites as $s) { $siteMap[$s['id']] = $s['name']; }
-                        foreach ($equipment as $eq):
-                        ?>
+                        <?php foreach ($equipment as $eq): ?>
                         <tr data-site-id="<?= esc($eq['site_id'] ?? '') ?>">
                             <td class="fw-medium"><?= esc($eq['asset_tag']) ?></td>
                             <td><?= esc($eq['serial_number'] ?? '—') ?></td>
@@ -165,9 +161,23 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                             <td><?= esc($eq['model'] ?? '—') ?></td>
                             <td><?= esc($eq['device_type'] ?? '—') ?></td>
                             <td><?= esc($eq['department'] ?? '—') ?></td>
+                            <td><?= esc($eq['location'] ?? '—') ?></td>
                             <td><?= esc($siteMap[$eq['site_id'] ?? 0] ?? '—') ?></td>
                             <td>
-                                <button class="btn btn-sm btn-danger report-issue-btn d-flex gap-2 align-items-center"
+                                <?php
+                                $stLow = strtolower($eq['status'] ?? 'ready');
+                                $stCls = match($stLow) {
+                                    'ready'          => 'bg-success',
+                                    'need_attention' => 'bg-warning text-dark',
+                                    'repair'         => 'bg-danger',
+                                    'out_of_service' => 'bg-secondary',
+                                    default          => 'bg-secondary',
+                                };
+                                ?>
+                                <span class="badge <?= $stCls ?>"><?= esc(ucwords(str_replace('_',' ',$eq['status'] ?? 'Ready'))) ?></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-danger report-issue-btn"
                                     data-asset-tag="<?= esc($eq['asset_tag'], 'attr') ?>"
                                     data-make="<?= esc($eq['make'] ?? '', 'attr') ?>"
                                     data-model="<?= esc($eq['model'] ?? '', 'attr') ?>"
@@ -180,7 +190,7 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
                         </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="8" class="text-center text-muted py-4">No assets found</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted py-4">No assets found for your assigned sites.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
@@ -235,5 +245,66 @@ table.dataTable.stripe tbody tr.even { background: transparent !important; }
         </div>
     </div>
 </div>
+
+<script>
+var _assetTable = null;
+var _activeSiteId = '';
+
+$(function() {
+    _assetTable = $('#assetsTable').DataTable({
+        pageLength: 25,
+        order: [[0, 'asc']],
+        columnDefs: [{ orderable: false, targets: 9 }],
+        initComplete: function() {
+            updateCount();
+        }
+    });
+
+    // Search box
+    $('#assetSearch').on('input', function() {
+        _assetTable.search(this.value).draw();
+        updateCount();
+    });
+
+    // Report Issue button handler
+    $(document).on('click', '.report-issue-btn', function() {
+        var btn = $(this);
+        $('#issue-equipment-id').val(btn.data('equipment-id'));
+        $('#issue-asset-tag').val(btn.data('asset-tag'));
+        $('#issue-make').val(btn.data('make'));
+        $('#issue-model').val(btn.data('model'));
+        $('#issue-serial').val(btn.data('serial'));
+        $('#issue-type').val(btn.data('type'));
+        $('#reportIssueModal').modal('show');
+    });
+});
+
+// Site tab switching
+function switchSiteTab(btn, siteId) {
+    // Update active button styles
+    document.querySelectorAll('#siteAssetTabs .nav-link').forEach(function(b) {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    _activeSiteId = siteId ? String(siteId) : '';
+
+    // Apply DataTable filter
+    $.fn.dataTable.ext.search = [];
+    if (_activeSiteId) {
+        $.fn.dataTable.ext.search.push(function(settings, data, idx) {
+            var row = _assetTable.row(idx).node();
+            return String($(row).data('site-id')) === _activeSiteId;
+        });
+    }
+    _assetTable.draw();
+    updateCount();
+}
+
+function updateCount() {
+    var count = _assetTable ? _assetTable.rows({search:'applied'}).count() : 0;
+    var el = document.getElementById('assetCountLabel');
+    if (el) el.textContent = count + ' asset(s)';
+}
+</script>
 
 <?= $this->endSection() ?>

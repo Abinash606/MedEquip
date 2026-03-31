@@ -263,4 +263,129 @@ class SiteInspectionWorkflowController extends BaseController
             'inspection_type'  => $action,
         ]);
     }
+
+    /**
+     * POST admin/site-inspection/add-device
+     *
+     * Adds a new device to SITE INVENTORY ONLY.
+     * The master equipment DB (site_id = 1) is treated as READ-ONLY.
+     * Serial number and asset tag are validated for uniqueness within the site.
+     */
+    public function addDevice()
+    {
+        if (!$this->request->is('post')) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
+        }
+
+        $companyId = (int) session('company_id');
+        $siteId    = (int) $this->request->getPost('site_id');
+
+        if ($siteId === 0 || $companyId === 0) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Site ID or Company ID missing.']);
+        }
+
+        $assetTag   = trim((string) $this->request->getPost('asset_tag'));
+        $model      = trim((string) $this->request->getPost('model'));
+        $serial     = trim((string) $this->request->getPost('serial_number'));
+        $make       = trim((string) $this->request->getPost('make'));
+        $deviceType = trim((string) $this->request->getPost('device_type'));
+        $dept       = trim((string) $this->request->getPost('department'));
+        $location   = trim((string) $this->request->getPost('location'));
+        $est        = trim((string) $this->request->getPost('est')) ?: 'No';
+        $cal        = trim((string) $this->request->getPost('cal')) ?: 'No';
+
+        if ($assetTag === '') {
+            return $this->response->setJSON(['success' => false, 'message' => 'Asset # is required.']);
+        }
+
+        $em = new EquipmentModel();
+        $db = \Config\Database::connect();
+
+        // ── Duplicate: asset tag already in this site ─────────────────
+        $existingAsset = $em->where('company_id', $companyId)
+            ->where('site_id', $siteId)
+            ->where('asset_tag', $assetTag)
+            ->where('deleted_at', null)
+            ->first();
+        if ($existingAsset) {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Asset # "' . $assetTag . '" already exists in this site\'s inventory.',
+            ]);
+        }
+
+        // ── Duplicate: serial number already in this site (if provided) ─
+        if ($serial !== '') {
+            $existingSerial = $em->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('serial_number', $serial)
+                ->where('deleted_at', null)
+                ->first();
+            if ($existingSerial) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Serial # "' . $serial . '" already exists in this site\'s inventory (Asset #' . $existingSerial['asset_tag'] . ').',
+                ]);
+            }
+        }
+
+        // ── Master equipment DB is READ-ONLY — look up metadata only ──
+        // If the user picked a model, pull make/device_type from master DB
+        // but do NOT write back to it.
+        if ((empty($make) || empty($deviceType)) && !empty($model)) {
+            $masterRef = $db->query(
+                "SELECT make, device_type FROM equipment
+                 WHERE company_id = ? AND model = ? AND site_id = 1 LIMIT 1",
+                [$companyId, $model]
+            )->getRow();
+            if ($masterRef) {
+                if (empty($make))       $make       = $masterRef->make;
+                if (empty($deviceType)) $deviceType = $masterRef->device_type;
+            }
+        }
+
+        // ── Insert into site inventory ONLY ───────────────────────────
+        $payload = [
+            'company_id'    => $companyId,
+            'site_id'       => $siteId,
+            'asset_tag'     => $assetTag,
+            'model'         => $model,
+            'make'          => $make,
+            'serial_number' => $serial,
+            'device_type'   => $deviceType,
+            'department'    => $dept,
+            'location'      => $location,
+            'est'           => ($est === 'Yes' || $est === '1') ? '1' : '0',
+            'cal'           => ($cal === 'Yes' || $cal === '1') ? '1' : '0',
+            'status'        => 'ready',
+            'created_at'    => date('Y-m-d H:i:s'),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ];
+
+        // Strip any keys not present in the equipment table
+        $columns = $db->query("SHOW COLUMNS FROM equipment")->getResultArray();
+        $colNames = array_column($columns, 'Field');
+        $insertData = array_intersect_key($payload, array_flip($colNames));
+
+        $em->insert($insertData);
+        $newId = $em->getInsertID();
+
+        if (!$newId) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Failed to save device to site inventory.']);
+        }
+
+        return $this->response->setJSON([
+            'success'      => true,
+            'message'      => 'Device added to site inventory.',
+            'id'           => $newId,
+            'asset_tag'    => $assetTag,
+            'model'        => $model,
+            'make'         => $make,
+            'device_type'  => $deviceType,
+            'department'   => $dept,
+            'location'     => $location,
+            'serial_number'=> $serial,
+            'csrf_hash'    => csrf_hash(),
+        ]);
+    }
 }

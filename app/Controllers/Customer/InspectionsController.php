@@ -37,9 +37,9 @@ class InspectionsController extends BaseController
 
         // Upcoming = open/in-progress inspections for this customer's sites
         $upcoming = $db->query("
-            SELECT i.id, i.group_id, i.status, i.scheduled_at, i.completed_at,
+            SELECT i.id, i.group_id, i.status, i.site_id, i.scheduled_at, i.completed_at,
                    i.next_due_date, i.inspection_type,
-                   e.make, e.model, e.device_type, e.asset_tag,
+                   e.make, e.model, e.device_type, e.asset_tag, e.serial_number,
                    s.name AS site_name
             FROM inspections i
             LEFT JOIN equipment e ON e.id = i.equipment_id
@@ -52,9 +52,9 @@ class InspectionsController extends BaseController
 
         // History = completed inspections
         $history = $db->query("
-            SELECT i.id, i.group_id, i.status, i.scheduled_at, i.completed_at,
+            SELECT i.id, i.group_id, i.status, i.site_id, i.scheduled_at, i.completed_at,
                    i.next_due_date, i.inspection_type,
-                   e.make, e.model, e.device_type, e.asset_tag,
+                   e.make, e.model, e.device_type, e.asset_tag, e.serial_number,
                    s.name AS site_name,
                    u.full_name AS technician_name
             FROM inspections i
@@ -66,7 +66,7 @@ class InspectionsController extends BaseController
               AND i.status IN ('Pass','Fail','Repair','pass','fail','repair','completed','Closed/Complete')
             GROUP BY i.group_id
             ORDER BY i.completed_at DESC
-            LIMIT 50
+            LIMIT 200
         ")->getResultArray();
 
         // Site list for filtering dropdown
@@ -74,10 +74,50 @@ class InspectionsController extends BaseController
             "SELECT id, name FROM sites WHERE id IN ($inList) ORDER BY name"
         )->getResultArray();
 
+        // Summary counts
+        $totalInspections = count($upcoming) + count($history);
+        $completedCount   = count($history);
+        $openCount        = count($upcoming);
+        $equipmentCount   = (int)($db->query(
+            "SELECT COUNT(DISTINCT equipment_id) AS cnt FROM inspections WHERE site_id IN ($inList)"
+        )->getRow()->cnt ?? 0);
+
         return view('customer/inspections/index', [
             'upcomingInspections' => $upcoming,
             'inspectionHistory'   => $history,
             'sites'               => $sites,
+            'inspectionsCount'    => $totalInspections,
+            'openCount'           => $openCount,
+            'completedCount'      => $completedCount,
+            'sitesCount'          => count($sites),
+            'equipmentCount'      => $equipmentCount,
         ]);
+    }
+
+    /**
+     * Proxy to the admin inspection PDF/preview — customers can view reports for their sites.
+     */
+    public function reportPdf($groupId)
+    {
+        $companyId  = $this->session->get('company_id');
+        $customerId = $this->session->get('customer_id');
+        $db         = \Config\Database::connect();
+
+        // Security: verify this group_id belongs to this customer's sites
+        $check = $db->query("
+            SELECT i.id FROM inspections i
+            INNER JOIN sites s ON s.id = i.site_id
+            WHERE i.group_id = ? AND s.company_id = ?
+            " . ($customerId ? " AND s.customer_id = $customerId" : "") . "
+            LIMIT 1
+        ", [$groupId, $companyId])->getRow();
+
+        if (!$check) {
+            return $this->response->setStatusCode(403)->setBody('Access denied.');
+        }
+
+        // Delegate to admin report renderer
+        $adminController = new \App\Controllers\Admin\InspectionsController();
+        return $adminController->reportPdf($groupId);
     }
 }

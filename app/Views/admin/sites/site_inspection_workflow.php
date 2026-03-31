@@ -1424,8 +1424,6 @@
                             ' data-make="' + escapeHtml(r.make || '') + '"' +
                             ' data-model="' + escapeHtml(r.model || '') + '"' +
                             ' data-device_type="' + escapeHtml(r.device_type || '') + '"' +
-                            ' data-asset_tag="' + escapeHtml(r.asset_tag || '') + '"' +
-                            ' data-serial="' + escapeHtml(r.serial_number || '') + '"' +
                             ' data-department="' + escapeHtml(r.department || '') + '"' +
                             ' data-location="' + escapeHtml(r.location || '') + '"' +
                             ' data-est="' + escapeHtml(r.est || 'No') + '"' +
@@ -1451,7 +1449,7 @@
                     document.getElementById('addManufacturer').value = btn.getAttribute('data-make') || '';
                     document.getElementById('addType').value = btn.getAttribute('data-device_type') || '';
                     document.getElementById('addDescription').value = btn.getAttribute('data-device_type') || '';
-                    document.getElementById('addSerial').value = btn.getAttribute('data-serial') || '';
+                    // Serial # intentionally NOT auto-populated — technician must fill manually
                     // Only fill department/room if empty (don't overwrite user entries)
                     var deptEl = document.getElementById('addDept');
                     var roomEl = document.getElementById('addRoom');

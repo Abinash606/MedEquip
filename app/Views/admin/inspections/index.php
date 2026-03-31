@@ -81,6 +81,7 @@
             <table id="reportsTable" class="table table-hover service-table align-middle" style="width:100%">
                 <thead>
                     <tr>
+                        <th>Inspection ID</th>
                         <th>Pass/Fail</th>
                         <th>Customer / Site</th>
                         <th>Model</th>
@@ -114,8 +115,15 @@ $(function () {
             dataSrc: 'data'
         },
         pageLength: 25,
-        order: [[12, 'desc']],
+        order: [[13, 'desc']],
         columns: [
+            {
+                data: null,
+                render: function(row) {
+                    if (!row.group_id) return '—';
+                    return '<span class="t-pill" style="font-size:11px;">' + row.group_id.substring(0, 22) + '</span>';
+                }
+            },
             {
                 data: 'result',
                 render: function(d) {
@@ -139,7 +147,8 @@ $(function () {
             {
                 data: null, orderable: false,
                 render: function(row) {
-                    return '<a href="<?= site_url('admin/inspections/reportPdf') ?>/' + row.group_id + '" target="_blank" class="btn btn-sm btn-outline-primary" title="Download PDF"><i class="fa-solid fa-file-pdf"></i></a>';
+                    if (!row.group_id) return '—';
+                    return '<button class="btn btn-sm btn-outline-primary" onclick="previewAdminReport(\''+row.group_id+'\')" title="Preview Report"><i class="fa-solid fa-file-pdf"></i></button>';
                 }
             }
         ]
@@ -185,14 +194,87 @@ $(function () {
     }
 
     $('#filterSite, #filterCustomer, #filterResult, #filterDateFrom, #filterDateTo').on('input change', applyFilters);
-
-    // Apply open filter by default on page load after data loads
     reportsTable.on('init', function() { filterInspStatus('open'); });
 
-    // Export CSV
+    // Export CSV — build from DataTable rows
     $('#btnExportCsv').on('click', function () {
-        reportsTable.button('.buttons-csv').trigger();
+        var rows = reportsTable.rows({search:'applied'}).data().toArray();
+        if (!rows.length) { alert('No data to export.'); return; }
+        var h = ['Pass/Fail','Customer','Site','Model','Type','SN','Action','Asset','Dept','Room','EST','CAL','Tech','Date','Notes'];
+        var csv = h.join(',') + '\n';
+        rows.forEach(function(r) {
+            var line = [r.result,r.customer_name,r.site_name,r.model,r.device_type,r.serial_number,
+                r.action_performed,r.asset_tag,r.department,r.room,r.est,r.cal,
+                r.technician_name,(r.inspection_date||'').substring(0,10),(r.notes||'').replace(/,/g,' ')]
+                .map(function(v){ return '"'+(v||'').toString().replace(/"/g,'""')+'"'; }).join(',');
+            csv += line + '\n';
+        });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+        a.download = 'inspection_report_' + new Date().toISOString().substring(0,10) + '.csv';
+        a.click();
+    });
+
+    // Export PDF — open print window
+    $('#btnExportPdf').on('click', function () {
+        var rows = reportsTable.rows({search:'applied'}).data().toArray();
+        if (!rows.length) { alert('No data to export.'); return; }
+        var html = '<html><head><title>Inspection Report</title><style>body{font-family:Arial,sans-serif;font-size:10px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:3px 5px;}th{background:#eee;}</style></head><body>';
+        html += '<h3>Inspection Report</h3><table><thead><tr><th>Pass/Fail</th><th>Customer/Site</th><th>Model</th><th>S/N</th><th>Asset#</th><th>Action</th><th>Dept</th><th>Room</th><th>EST</th><th>CAL</th><th>Tech</th><th>Date</th><th>Notes</th></tr></thead><tbody>';
+        rows.forEach(function(r) {
+            html += '<tr><td><b>'+(r.result||'')+'</b></td><td>'+(r.customer_name||'')+' / '+(r.site_name||'')+'</td><td>'+(r.model||'')+'</td><td>'+(r.serial_number||'')+'</td><td>'+(r.asset_tag||'')+'</td><td>'+(r.action_performed||'')+'</td><td>'+(r.department||'')+'</td><td>'+(r.room||'')+'</td><td>'+(r.est||'')+'</td><td>'+(r.cal||'')+'</td><td>'+(r.technician_name||'')+'</td><td>'+((r.inspection_date||'').substring(0,10))+'</td><td>'+(r.notes||'')+'</td></tr>';
+        });
+        html += '</tbody></table></body></html>';
+        var w = window.open('','_blank'); w.document.write(html); w.document.close(); w.print();
     });
 });
+
+// ── Report Preview Modal ────────────────────────────────────────────────
+function previewAdminReport(groupId) {
+    var modal = new bootstrap.Modal(document.getElementById('adminReportPreviewModal'));
+    document.getElementById('adminReportPreviewBody').innerHTML =
+        '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report...</p></div>';
+    modal.show();
+    fetch('<?= site_url('admin/inspections/reportPdf') ?>/' + groupId, {
+        headers: { 'Accept': 'text/html,application/xhtml+xml' }
+    }).then(function(r) { return r.text(); })
+    .then(function(html) {
+        // Show in iframe inside modal
+        var iframe = document.createElement('iframe');
+        iframe.style.width = '100%';
+        iframe.style.height = '70vh';
+        iframe.style.border = 'none';
+        document.getElementById('adminReportPreviewBody').innerHTML = '';
+        document.getElementById('adminReportPreviewBody').appendChild(iframe);
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(html);
+        iframe.contentDocument.close();
+    }).catch(function() {
+        document.getElementById('adminReportPreviewBody').innerHTML = '<div class="alert alert-danger">Failed to load report.</div>';
+    });
+    document.getElementById('adminReportDownloadBtn').onclick = function() {
+        window.open('<?= site_url('admin/inspections/reportPdf') ?>/' + groupId, '_blank');
+    };
+}
 </script>
+
+<!-- Admin Report Preview Modal -->
+<div class="modal fade" id="adminReportPreviewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" id="adminReportPreviewBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="adminReportDownloadBtn">
+                    <i class="fa-solid fa-download me-1"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?= $this->endSection() ?>
