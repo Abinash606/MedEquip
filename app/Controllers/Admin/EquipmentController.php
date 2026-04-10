@@ -47,8 +47,13 @@ class EquipmentController extends BaseController
     {
         $companyId = (int) session('company_id');
 
-        $row = $this->equipmentModel
+        // Must query site_equipment (not the master equipment catalogue).
+        // The edit button on the site details page uses site_equipment.id,
+        // so looking up in the equipment table returns nothing for most records.
+        $seModel = new \App\Models\SiteEquipmentModel();
+        $row = $seModel
             ->where('company_id', $companyId)
+            ->where('deleted_at', null)
             ->find((int)$id);
 
         if (!$row) {
@@ -61,55 +66,72 @@ class EquipmentController extends BaseController
     public function create()
     {
         if ($this->request->getMethod() === 'POST') {
-            $equipmentModel = new EquipmentModel();
+            $seModel   = new \App\Models\SiteEquipmentModel();
             $companyId = (int) session('company_id');
+            $siteId    = (int) $this->request->getPost('site_id');
 
             $assetTag = $this->request->getPost('asset_tag');
 
-            // ── Duplicate check ──────────────────────────────────────
-            $existing = $equipmentModel
+            $wantsJson = $this->request->isAJAX()
+                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
+
+            // ── Duplicate check against site_equipment ───────────────
+            $existing = $seModel
                 ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
                 ->where('asset_tag', $assetTag)
                 ->where('deleted_at', null)
                 ->first();
-
-            $wantsJson = $this->request->isAJAX()
-                || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
 
             if ($existing) {
                 if ($wantsJson) {
                     return $this->response->setJSON([
                         'success' => false,
-                        'message' => 'Asset Tag "' . $assetTag . '" already exists for this company. Please use a unique Asset Tag.',
+                        'message' => 'Asset Tag "' . $assetTag . '" already exists for this site. Please use a unique Asset Tag.',
                     ]);
                 }
                 return redirect()->back()->withInput()->with('error', 'Duplicate Asset Tag.');
             }
+
+            // ── Link to master catalogue if asset_tag exists there ───
+            $masterEquip = (new EquipmentModel())
+                ->where('company_id', $companyId)
+                ->where('asset_tag', $assetTag)
+                ->where('deleted_at', null)
+                ->first();
+
             $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
-            $statusInput = trim($this->request->getPost('status') ?? 'ready');
+            $statusInput   = trim($this->request->getPost('status') ?? 'ready');
+
             $data = [
-                'company_id'    => $companyId,
-                'asset_tag'     => $assetTag,
-                'make'          => $this->request->getPost('make'),
-                'model'         => $this->request->getPost('model'),
-                'serial_number' => $this->request->getPost('serial_number'),
-                'device_type'   => $this->request->getPost('device_type'),
-                'location'      => $this->request->getPost('location'),
-                'department'    => $this->request->getPost('department'),
-                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
-                'site_id'       => $this->request->getPost('site_id'),
-                'est'           => ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1') ? '1' : '0',
-                'cal'           => ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1') ? '1' : '0',
+                'company_id'          => $companyId,
+                'site_id'             => $siteId,
+                'master_equipment_id' => $masterEquip ? (int) $masterEquip['id'] : null,
+                'asset_tag'           => $assetTag,
+                'make'                => $this->request->getPost('make'),
+                'model'               => $this->request->getPost('model'),
+                'serial_number'       => $this->request->getPost('serial_number'),
+                'device_type'         => $this->request->getPost('device_type'),
+                'location'            => $this->request->getPost('location'),
+                'department'          => $this->request->getPost('department'),
+                'status'              => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
+                'pm_kit'              => $this->request->getPost('pm_kit'),
+                'fast_notes'          => $this->request->getPost('fast_notes'),
+                'installation_date'   => $this->request->getPost('installation_date') ?: null,
+                'warranty_expires'    => $this->request->getPost('warranty_expires') ?: null,
+                'est'                 => ($this->request->getPost('est') === 'Yes' || $this->request->getPost('est') === '1') ? '1' : '0',
+                'cal'                 => ($this->request->getPost('cal') === 'Yes' || $this->request->getPost('cal') === '1') ? '1' : '0',
             ];
 
-            $inserted = $equipmentModel->insert($data);
+            $newId    = $seModel->safeInsert($data);
+            $inserted = $newId > 0;
 
             if ($wantsJson) {
                 if ($inserted) {
                     return $this->response->setJSON([
                         'success'       => true,
                         'message'       => 'Equipment added successfully',
-                        'id'            => $equipmentModel->getInsertID(),
+                        'id'            => $newId,
                         'asset_tag'     => $data['asset_tag'],
                         'make'          => $data['make'],
                         'model'         => $data['model'],
@@ -122,11 +144,11 @@ class EquipmentController extends BaseController
                 }
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => implode(', ', $equipmentModel->errors() ?: ['Failed to add equipment']),
+                    'message' => implode(', ', $seModel->errors() ?: ['Failed to add equipment']),
                 ]);
             }
 
-            return redirect()->to('/admin/sites/' . $this->request->getPost('site_id'));
+            return redirect()->to('/admin/sites/' . $siteId);
         }
     }
 
@@ -140,11 +162,11 @@ class EquipmentController extends BaseController
     public function update($id)
     {
         if ($this->request->getMethod() === 'POST') {
-            $equipmentModel = new EquipmentModel();
+            $seModel   = new \App\Models\SiteEquipmentModel();
             $companyId = (int) session('company_id');
 
             $validStatuses = ['ready', 'need_attention', 'repair', 'out_of_service'];
-            $statusInput = trim($this->request->getPost('status') ?? 'ready');
+            $statusInput   = trim($this->request->getPost('status') ?? 'ready');
 
             $data = [
                 'company_id'         => $companyId,
@@ -155,7 +177,7 @@ class EquipmentController extends BaseController
                 'device_type'        => $this->request->getPost('device_type'),
                 'location'           => $this->request->getPost('location'),
                 'department'         => $this->request->getPost('department'),
-                'status' => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
+                'status'             => in_array($statusInput, $validStatuses) ? $statusInput : 'ready',
                 'site_id'            => $this->request->getPost('site_id'),
                 'pm_kit'             => $this->request->getPost('pm_kit'),
                 'fast_notes'         => $this->request->getPost('fast_notes'),
@@ -166,7 +188,7 @@ class EquipmentController extends BaseController
             $wantsJson = $this->request->isAJAX()
                 || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
 
-            $updated = $equipmentModel->update((int)$id, $data);
+            $updated = $seModel->update((int)$id, $data);
 
             if ($wantsJson) {
                 if ($updated !== false) {
@@ -177,7 +199,7 @@ class EquipmentController extends BaseController
                 }
                 return $this->response->setJSON([
                     'success' => false,
-                    'message' => implode(', ', $equipmentModel->errors() ?: ['Failed to update equipment']),
+                    'message' => implode(', ', $seModel->errors() ?: ['Failed to update equipment']),
                 ]);
             }
 
@@ -187,8 +209,8 @@ class EquipmentController extends BaseController
 
     public function delete($id)
     {
-        $equipmentModel = new EquipmentModel();
-        $equipmentModel->delete($id);
+        $seModel = new \App\Models\SiteEquipmentModel();
+        $seModel->delete($id);
         return redirect()->back();
     }
 
@@ -478,8 +500,8 @@ except Exception as e:
             return $this->response->setJSON(['success' => false, 'message' => 'No data rows found in file. Check the file has a header row.']);
         }
 
-        $equipmentModel = new \App\Models\EquipmentModel();
-        $db       = \Config\Database::connect(); // needed for INSERT IGNORE and duplicate checks
+        $seModel  = new \App\Models\SiteEquipmentModel();
+        $db       = \Config\Database::connect();
         $imported = 0;
         $skipped  = 0;
 
@@ -491,7 +513,6 @@ except Exception as e:
             }
 
             // Map Excel column headers to DB fields
-            // Handles: 'Make ', 'Asset Tag ', 'Device Type ', 'Serial Number ', 'Location Or Room '
             $assetTag   = $norm['asset tag']         ?? $norm['asset_tag']      ?? $norm['asset #']   ?? '';
             $make       = $norm['make']               ?? $norm['manufacturer']   ?? '';
             $model      = $norm['model']              ?? $norm['model number']   ?? '';
@@ -500,34 +521,30 @@ except Exception as e:
             $department = $norm['department']         ?? $norm['dept']           ?? '';
             $location   = $norm['location or room']   ?? $norm['room']           ?? $norm['location']  ?? '';
 
-            // Convert numeric Excel values to strings
             if (is_numeric($assetTag) && $assetTag !== '') $assetTag = (string)(int)$assetTag;
             if (is_numeric($serial)   && $serial   !== '') $serial   = (string)(int)$serial;
-
-            // Clean N/A serial numbers
             if (strtoupper(trim($serial)) === 'N/A') $serial = '';
 
-            // Skip completely empty rows
             if (empty($make) && empty($model)) {
                 $skipped++;
                 continue;
             }
 
-            // Check for duplicate asset tag using direct DB query (avoids model state issues)
+            // Duplicate check against site_equipment for this site
             if (!empty($assetTag)) {
                 $dup = $db->query(
-                    "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
-                    [$companyId, $assetTag]
+                    "SELECT id FROM site_equipment WHERE company_id = ? AND site_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                    [$companyId, $siteId, $assetTag]
                 )->getRow();
                 if ($dup) {
                     $skipped++;
                     continue;
                 }
             } else {
-                // Keep incrementing until we find an unused tag (handles bulk rows)
+                // Auto-generate asset tag from site_equipment
                 do {
                     $lastTag = $db->query(
-                        "SELECT asset_tag FROM equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
+                        "SELECT asset_tag FROM site_equipment WHERE company_id = ? AND asset_tag LIKE 'ASSET-%' ORDER BY id DESC LIMIT 1",
                         [$companyId]
                     )->getRow();
                     $num = 1000;
@@ -535,31 +552,32 @@ except Exception as e:
                         $num = (int)$m[1] + 1;
                     }
                     $assetTag = 'ASSET-' . $num;
-                    // Check the tag isn't already used (in DB or already planned this batch)
                     $tagExists = $db->query(
-                        "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                        "SELECT id FROM site_equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
                         [$companyId, $assetTag]
                     )->getRow();
                 } while ($tagExists);
             }
 
-            // Use INSERT IGNORE so the DB unique constraint never throws a fatal error
-            // (handles any race condition where a duplicate slips past the check above)
+            // Link to master catalogue if asset_tag matches
+            $master = $db->query(
+                "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                [$companyId, $assetTag]
+            )->getRow();
+
             try {
                 $db->query(
-                    "INSERT IGNORE INTO equipment
-                     (company_id, site_id, asset_tag, make, model, serial_number, device_type, department, location, status, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
-                    [$companyId, $siteId, $assetTag, $make, $model, $serial, $deviceType, $department, $location]
+                    "INSERT IGNORE INTO site_equipment
+                     (company_id, site_id, master_equipment_id, asset_tag, make, model, serial_number, device_type, department, location, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready', NOW(), NOW())",
+                    [$companyId, $siteId, $master ? $master->id : null, $assetTag, $make, $model, $serial, $deviceType, $department, $location]
                 );
-                // INSERT IGNORE returns 0 affected rows for duplicates
                 if ($db->affectedRows() > 0) {
                     $imported++;
                 } else {
-                    $skipped++; // Was a duplicate the check above missed
+                    $skipped++;
                 }
             } catch (\Throwable $e) {
-                // Catch any remaining DB errors (shouldn't happen with INSERT IGNORE, but be safe)
                 log_message('warning', '[bulkImport] Skipping row due to DB error: ' . $e->getMessage());
                 $skipped++;
             }
@@ -577,31 +595,34 @@ except Exception as e:
         $companyId = (int) session('company_id');
         $db = \Config\Database::connect();
 
+        // Union master equipment catalogue with site_equipment so that
+        // devices added directly to a site (without a master record) also
+        // appear in the autocomplete suggestions.
         $makes = $db->query(
-            "SELECT DISTINCT make FROM equipment 
-         WHERE make IS NOT NULL AND make != '' 
-         AND company_id = ? 
-         AND deleted_at IS NULL 
-         ORDER BY make",
-            [$companyId]
+            "SELECT DISTINCT make FROM (
+                SELECT make FROM equipment WHERE make IS NOT NULL AND make != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT make FROM site_equipment WHERE make IS NOT NULL AND make != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY make",
+            [$companyId, $companyId]
         )->getResultArray();
 
         $models = $db->query(
-            "SELECT DISTINCT model FROM equipment 
-         WHERE model IS NOT NULL AND model != '' 
-         AND company_id = ? 
-         AND deleted_at IS NULL 
-         ORDER BY model",
-            [$companyId]
+            "SELECT DISTINCT model FROM (
+                SELECT model FROM equipment WHERE model IS NOT NULL AND model != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT model FROM site_equipment WHERE model IS NOT NULL AND model != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY model",
+            [$companyId, $companyId]
         )->getResultArray();
 
         $deviceTypes = $db->query(
-            "SELECT DISTINCT device_type FROM equipment 
-         WHERE device_type IS NOT NULL AND device_type != '' 
-         AND company_id = ? 
-         AND deleted_at IS NULL 
-         ORDER BY device_type",
-            [$companyId]
+            "SELECT DISTINCT device_type FROM (
+                SELECT device_type FROM equipment WHERE device_type IS NOT NULL AND device_type != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT device_type FROM site_equipment WHERE device_type IS NOT NULL AND device_type != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY device_type",
+            [$companyId, $companyId]
         )->getResultArray();
 
         return $this->response->setJSON([

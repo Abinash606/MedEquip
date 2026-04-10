@@ -58,8 +58,9 @@
                                     <tr>
                                         <td>
                                             <?php
-                                            // Generate a human-friendly inspection ID using the scheduled date and group ID.
-                                            $inspId = 'INSP-' . date('Ymd', strtotime($insp['scheduled_at'])) . '-' . substr(strtoupper(md5($insp['group_id'])), 0, 8);
+                                            // Use the actual group_id stored in the database — this is what
+                                            // appears in the report header (e.g. INSP-20260309151712).
+                                            $inspId = $insp['group_id'];
                                             ?>
                                             <span class="fw-medium"><?= esc($inspId) ?></span>
                                         </td>
@@ -91,13 +92,13 @@
                                                 <i class="fa-solid fa-file-export"></i>
                                             </button>
 
-                                            <button class="btn btn-sm btn-primary" onclick="viewInspection(
-                                            '<?= esc($insp['group_id']) ?>',
-                                            '<?= esc($site['name']) ?>',
-                                            '<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>',
-                                            '<?= esc($inspId) ?>',
-                                            '<?= esc($insp['technician_name'] ?? 'N/A') ?>'
-                                        )">
+                                            <button class="btn btn-sm btn-primary btn-view-insp"
+                                                data-group="<?= esc($insp['group_id']) ?>"
+                                                data-site="<?= esc($site['name']) ?>"
+                                                data-type="<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>"
+                                                data-title="<?= esc($insp['title'] ?? '') ?>"
+                                                data-inspid="<?= esc($inspId) ?>"
+                                                data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>">
                                                 <i class="fa-solid fa-eye me-1"></i> View
                                             </button>
                                             <!--
@@ -209,10 +210,21 @@
                         <!-- Dynamic header: populated by viewInspection() JS function -->
                         <div class="badge  text-light border mb-2" id="insp-site-label">Site:
                             <?= esc($site['name'] ?? '—') ?></div>
-                        <h2 class="fw-bold" id="insp-title">—</h2>
+                        <h2 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                            <span id="insp-title" contenteditable="true"
+                                style="outline:none;min-width:120px;border-bottom:2px dashed transparent;cursor:text;transition:border-color .2s;"
+                                title="Click to edit inspection title"
+                                onmouseenter="this.style.borderBottomColor='#6c757d'"
+                                onmouseleave="this.style.borderBottomColor='transparent'"
+                                onfocus="this.style.borderBottomColor='#0d6efd'"
+                                onblur="saveInspTitle(this)">—</span>
+                            <i class="fa-solid fa-pencil text-muted" style="font-size:14px;opacity:.5;cursor:text;" onclick="document.getElementById('insp-title').focus()"></i>
+                            <span id="insp-title-saved" style="font-size:11px;color:#22c55e;opacity:0;transition:opacity .4s;font-weight:400;">✓ saved</span>
+                        </h2>
                         <p class="text-muted">
                             <span id="insp-id-label">—</span> •
-                            <span class="text-primary" id="insp-technician">—</span>
+                            <span class="text-primary" id="insp-technician">—</span> •
+                            <span id="insp-date-display" class="small"></span>
                         </p>
                     </div>
                     <div class="text-end">
@@ -396,9 +408,6 @@
                                 <div class="card border-0 shadow-sm mb-4 glass-card">
                                     <div class="card-body">
                                         <div class="row g-3 align-items-center">
-                                            <div class="col-md-3  text-white fw-semibold">Customer:</div>
-                                            <div class="col-md-9 text-white fw-semibold" id="inspectCustomerName">—
-                                            </div>
                                             <div class="col-md-3 text-white  fw-semibold">Model:</div>
                                             <div class="col-md-9 text-white" id="inspectModelDisplay">—</div>
                                             <div class="col-md-3 text-white  fw-semibold">Department:</div>
@@ -412,7 +421,7 @@
                                                     id="inspectSerial" placeholder="Serial #" type="text"></div>
                                             <div class="col-md-3 text-white  fw-semibold">Asset ID:</div>
                                             <div class="col-md-9 text-white"><input class="form-control"
-                                                    id="inspectAsset" placeholder="Asset ID" readonly="" type="text">
+                                                    id="inspectAsset" placeholder="Asset ID" type="text" title="You may edit the Asset ID if needed">
                                             </div>
                                             <div class="col-md-3 text-white fw-semibold">Manufacturer PM Frequency
                                                 (Days):</div>
@@ -596,6 +605,8 @@
                                             <?php foreach ($inspectedItems as $item): ?>
                                                 <tr class="fade-in" data-row-id="<?= esc($item['id']) ?>"
                                                     data-asset="<?= esc($item['asset_tag']) ?>"
+                                                    data-notes="<?= esc($item['notes'] ?? '') ?>"
+                                                    data-action="<?= esc($item['inspection_type'] ?? $item['action_performed'] ?? '') ?>"
                                                     data-group-id="<?= esc($item['group_id'] ?? '') ?>"
                                                     data-device-type="<?= esc($item['device_type'] ?? '') ?>"
                                                     data-est="<?= esc($item['est'] ?? 'No') ?>"
@@ -902,12 +913,10 @@
                                     <p class="text-muted small mb-0">Preview and export inspection summaries.</p>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <!-- Preview button opens a new window with the report for review -->
-                                    <button class="btn btn-outline-primary" onclick="previewReportPDF()">
-                                        <i class="fa-solid fa-file-lines me-2"></i>Preview
+                                    <button class="btn btn-outline-primary" onclick="adminTabPreviewReport()">
+                                        <i class="fa-solid fa-file-pdf me-2"></i>Preview
                                     </button>
-                                    <!-- Download button triggers PDF generation and print -->
-                                    <button class="btn btn-custom-primary" onclick="exportReportPDF()">
+                                    <button class="btn btn-primary" onclick="adminTabDownloadReport()">
                                         <i class="fa-solid fa-download me-2"></i>Download PDF
                                     </button>
                                 </div>
@@ -969,17 +978,20 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Priority</label>
                                     <select class="form-select" id="woPriority">
-                                        <option value="Low">Low</option>
-                                        <option selected="" value="Medium">Medium</option>
-                                        <option value="High">High</option>
+                                        <option value="low">Low</option>
+                                        <option selected value="normal">Normal</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Status</label>
                                     <select class="form-select" id="woStatus">
-                                        <option value="Open">Open</option>
-                                        <option value="In Progress">In Progress</option>
-                                        <option value="Completed">Completed</option>
+                                        <option value="open">Open</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
@@ -988,12 +1000,13 @@
                                         <option value="">-- Select Technician --</option>
                                         <?php if (!empty($technicians ?? [])): ?>
                                             <?php foreach ($technicians as $tech): ?>
-                                                <option value="<?= esc($tech['full_name'] ?? $tech['id']) ?>">
-                                                    <?= esc($tech['full_name'] ?? 'Technician #' . $tech['id']) ?></option>
+                                                <option value="<?= (int) $tech['id'] ?>">
+                                                    <?= esc($tech['full_name'] ?? 'Technician #' . $tech['id']) ?>
+                                                </option>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </select>
-                                </div>
+                                                                    </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Start Date</label>
                                     <input class="form-control" id="woStartDate" type="date">
@@ -1020,21 +1033,19 @@
         <!-- Inspection Report Modal-->
         <div class="modal fade" id="inspectionReportModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Inspection Report</h5>
-                        <button aria-label="Close" class="btn-close" data-bs-dismiss="modal" type="button"></button>
+                <div class="modal-content" style="background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:16px;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-bottom:none;border-radius:16px 16px 0 0;">
+                        <h5 class="modal-title fw-bold text-white">
+                            <i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview
+                        </h5>
+                        <button aria-label="Close" class="btn-close btn-close-white" data-bs-dismiss="modal" type="button"></button>
                     </div>
-                    <div class="modal-body">
-                        <!-- Report content will be injected dynamically by generateInspectionReportHTML() -->
-                        <div id="reportContent"></div>
-                    </div>
-                    <div class="modal-footer">
+                    <div class="modal-body p-0" id="reportContent"></div>
+                    <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08);background:rgba(7,10,18,.4);border-radius:0 0 16px 16px;">
                         <button class="btn btn-outline-secondary" data-bs-dismiss="modal" type="button">Close</button>
-                        <button class="btn btn-outline-primary" onclick="previewReportPDF()" type="button"><i
-                                class="fa-solid fa-file-lines me-2"></i>Preview</button>
-                        <button class="btn btn-primary" id="downloadReportBtn" onclick="exportReportPDF()"
-                            type="button"><i class="fa-solid fa-download me-2"></i>Download PDF</button>
+                        <button class="btn btn-primary" id="adminReportDownloadBtn" type="button">
+                            <i class="fa-solid fa-download me-1"></i> Download PDF
+                        </button>
                     </div>
                 </div>
             </div>
@@ -1212,6 +1223,19 @@
              * @param {string} inspDisplayId The formatted display ID (INSP-YYYYMMDD-XXXXX)
              * @param {string} techName      Name of the technician assigned
              */
+            // ── Event delegation for View buttons (handles special chars safely) ──
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.btn-view-insp');
+                if (!btn) return;
+                var groupId  = btn.dataset.group  || '';
+                var siteName = btn.dataset.site   || '';
+                // Use saved DB title if available, else fall back to inspection_type
+                var inspType = btn.dataset.title  || btn.dataset.type || 'Equipment Inspection';
+                var inspId   = btn.dataset.inspid || groupId;
+                var techName = btn.dataset.tech   || '—';
+                viewInspection(groupId, siteName, inspType, inspId, techName);
+            });
+
             function viewInspection(groupId, siteName, inspType, inspDisplayId, techName) {
                 // Populate the dynamic red-boxed header
                 var siteLabel = document.getElementById('insp-site-label');
@@ -1220,9 +1244,12 @@
                 var techEl = document.getElementById('insp-technician');
 
                 if (siteLabel) siteLabel.textContent = 'Site: ' + (siteName || '—');
+                // inspType already has DB title (from data-title attr), use it directly
                 if (titleEl) titleEl.textContent = inspType || 'Equipment Inspection';
                 if (idLabel) idLabel.textContent = 'Inspection #' + (inspDisplayId || groupId);
                 if (techEl) techEl.textContent = techName || '—';
+                // Save for backgroundRefreshTabs
+                window._savedInspTitle = inspType || 'Equipment Inspection';
 
                 // Store current group for status update AJAX calls
                 window.CURRENT_INSPECTION_GROUP_ID = groupId;
@@ -1384,8 +1411,6 @@
                 if (badge) badge.textContent = visibleCount > 0 ? visibleCount : '0';
 
                 // ── Work Orders: filter strictly by group_id ──────────────────────────
-                // Only show work orders that belong to THIS inspection group.
-                // Never fall back to showing unrelated or unlinked work orders.
                 var woRows = document.querySelectorAll('#workOrdersTableBody tr[data-group-id]');
                 var woVisible = 0;
                 woRows.forEach(function(row) {
@@ -1394,10 +1419,37 @@
                     row.style.display = show ? '' : 'none';
                     if (show) woVisible++;
                 });
-                // Show placeholder row if no WO for this group
                 var woEmpty = document.querySelector('#workOrdersTableBody tr:not([data-group-id])');
                 if (woEmpty) woEmpty.style.display = (woVisible === 0) ? '' : 'none';
+
+                // ── Not Inspected: hide rows whose asset_tag appears in inspected list ─
+                filterNotInspectedByGroup(groupId);
             }
+
+            // Filter not-inspected rows by removing already-inspected assets for this group
+            function filterNotInspectedByGroup(groupId) {
+                // Build a set of asset_tags that ARE inspected in this group
+                var inspectedAssets = {};
+                document.querySelectorAll('#inspectionTableBody tr[data-group-id]').forEach(function(r) {
+                    if (r.getAttribute('data-group-id') === groupId) {
+                        var a = r.getAttribute('data-asset');
+                        if (a) inspectedAssets[a.toLowerCase()] = true;
+                    }
+                });
+                var rows = document.querySelectorAll('#notInspectedTableBody tr[data-asset]');
+                var rem = 0;
+                rows.forEach(function(r) {
+                    var asset = (r.getAttribute('data-asset') || '').toLowerCase();
+                    var done = inspectedAssets[asset];
+                    r.style.display = done ? 'none' : '';
+                    if (!done) rem++;
+                });
+                var badge = document.getElementById('not-inspected-count');
+                if (badge) badge.textContent = rem;
+                var msg = document.getElementById('not-inspected-message');
+                if (msg) msg.textContent = rem + ' item(s) remaining in site inventory pending inspection.';
+            }
+            window.filterNotInspectedByGroup = filterNotInspectedByGroup;
 
             // Configuration constants for report endpoints
             const REPORT_DATA_URL = "<?= site_url('admin/inspections/reportData') ?>";
@@ -1564,61 +1616,49 @@
              */
             function openInspectionReport(groupId) {
                 CURRENT_REPORT_GROUP_ID = groupId;
+                window.CURRENT_REPORT_GROUP_ID = groupId;
 
-                // Show spinner in modal immediately, then open it
                 var reportContent = document.getElementById('reportContent');
                 var modalEl = document.getElementById('inspectionReportModal');
-                if (!reportContent || !modalEl) {
-                    console.error('[Report] Modal elements missing');
-                    return;
-                }
+                if (!reportContent || !modalEl) return;
 
+                // Show spinner then open modal — same flow as technician portal
                 reportContent.innerHTML =
                     '<div class="text-center py-5">' +
                     '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
-                    '<p class="mt-3 text-muted">Loading report data…</p>' +
+                    '<p class="mt-3 text-muted">Loading report...</p>' +
                     '</div>';
-
                 bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
-                var url = REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId);
-                console.log('[Report] GET', url);
-
-                $.ajax({
-                    url: url,
-                    type: 'GET',
-                    dataType: 'json',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(res) {
-                        console.log('[Report] response', res);
-                        if (!res || !res.success) {
-                            reportContent.innerHTML =
-                                '<div class="alert alert-warning"><strong>No data:</strong> ' +
-                                escapeHtml((res && res.message) ? res.message : 'No records found.') +
-                                '</div>';
-                            return;
-                        }
-                        reportContent.innerHTML = generateInspectionReportHTML(res.latest, res.rows, res
-                            .group_id || groupId);
-                        // Also mirror into the tab pane so Preview/Download work from there too
-                        var tabContainer = document.getElementById('reportsTabContent');
-                        if (tabContainer) {
-                            tabContainer.innerHTML = reportContent.innerHTML;
-                        }
-                    },
-                    error: function(xhr, status, err) {
-                        console.error('[Report] AJAX error', xhr.status, err, xhr.responseText);
-                        reportContent.innerHTML =
-                            '<div class="alert alert-danger">' +
-                            '<strong>Error loading report:</strong> HTTP ' + xhr.status +
-                            ' — ' + escapeHtml(err || status) +
-                            '<br><small class="text-muted">Open F12 → Console for details.</small>' +
-                            '</div>';
-                    }
+                // Fetch reportPdf (same endpoint technician uses) and render in iframe
+                fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), {
+                    headers: { 'Accept': 'text/html' }
+                })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    var iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#fff;';
+                    reportContent.innerHTML = '';
+                    reportContent.appendChild(iframe);
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(html);
+                    iframe.contentDocument.close();
+                })
+                .catch(function() {
+                    reportContent.innerHTML =
+                        '<div class="alert alert-danger m-3">' +
+                        '<i class="fa-solid fa-triangle-exclamation me-2"></i>Failed to load report.</div>';
                 });
+
+                // Wire download button
+                var dlBtn = document.getElementById('adminReportDownloadBtn');
+                if (dlBtn) {
+                    dlBtn.onclick = function() {
+                        window.open('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), '_blank');
+                    };
+                }
             }
+
 
             /**
              * Generate a site/inspection header for PDF output.
@@ -1643,161 +1683,123 @@
             }
 
             // NOTE: previewReportPDF() and exportReportPDF() are defined in details.php
+
+            // Tab Preview: open current group in the styled modal (iframe)
+            window.adminTabPreviewReport = function() {
+                var groupId = window.CURRENT_REPORT_GROUP_ID;
+                if (!groupId) { alert('Click the report icon on an inspection row first.'); return; }
+                openInspectionReport(groupId);
+            };
+
+            window.adminTabDownloadReport = function() {
+                var groupId = window.CURRENT_REPORT_GROUP_ID;
+                if (!groupId) { alert('Click the report icon on an inspection row first.'); return; }
+                window.open(REPORT_PDF_URL + '/' + encodeURIComponent(groupId), '_blank');
+            };
+
+            window.previewReportPDF = window.adminTabPreviewReport;
+            window.exportReportPDF  = window.adminTabDownloadReport;
+
+            /* ══════════════════════════════════════════════════════════════
+               INSPECTION TITLE — database persistence
+               Saves the user-edited title to all inspections in the group.
+               ══════════════════════════════════════════════════════════════ */
+            window.saveInspTitle = function(el) {
+                el.style.borderBottomColor = 'transparent';
+                var title = (el.textContent || '').trim();
+                if (!title || title === '—') return;
+                window._savedInspTitle = title;
+                var gid = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID;
+                if (!gid) return;
+                // Save to database via AJAX
+                var fd = new FormData();
+                fd.append('group_id', gid);
+                fd.append('title', title);
+                fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+                fetch('<?= site_url("admin/inspections/updateGroupTitle") ?>', {
+                    method: 'POST', body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    var badge = document.getElementById('insp-title-saved');
+                    if (badge) {
+                        badge.style.opacity = '1';
+                        badge.textContent = res.success ? '✓ saved' : '✗ error';
+                        badge.style.color = res.success ? '#22c55e' : '#ef4444';
+                        setTimeout(function(){ badge.style.opacity = '0'; }, 2000);
+                    }
+                })
+                .catch(function() {
+                    var badge = document.getElementById('insp-title-saved');
+                    if (badge) { badge.textContent = '✗ error'; badge.style.color = '#ef4444'; badge.style.opacity = '1'; setTimeout(function(){ badge.style.opacity='0'; }, 2000); }
+                });
+            };
+
+            window.restoreInspTitle = function(groupId) {
+                if (!window._savedInspTitle) return;
+                var titleEl = document.getElementById('insp-title');
+                if (titleEl && window._savedInspTitle) titleEl.textContent = window._savedInspTitle;
+            };
             // and support customer logos. Do NOT redefine them here as that would
             // override the implementations that include logo support.
 
             /**
              * Build the inner HTML for the inspection report (Latest Device + Overview table).
              */
+            /**
+             * Renders the inspection report inside a given container element
+             * using an iframe that loads the clean reportPreview HTML — same
+             * design as the technician portal.
+             *
+             * @param {string} groupId
+             * @param {HTMLElement} container  — the div to render into
+             */
+            function loadReportIntoContainer(groupId, container) {
+                if (!groupId || !container) return;
+                container.innerHTML =
+                    '<div class="text-center py-5">' +
+                    '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
+                    '<p class="mt-3 text-muted">Loading report…</p>' +
+                    '</div>';
+
+                var previewUrl = '<?= site_url("admin/inspections/reportPreview") ?>/' + encodeURIComponent(groupId);
+                fetch(previewUrl, {
+                    headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(function(html) {
+                    container.innerHTML = '';
+                    var iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                    iframe.setAttribute('scrolling', 'yes');
+                    var wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                    wrapper.appendChild(iframe);
+                    container.appendChild(wrapper);
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(html);
+                    iframe.contentDocument.close();
+                })
+                .catch(function(err) {
+                    container.innerHTML =
+                        '<div class="alert alert-danger m-3"><i class="fa-solid fa-triangle-exclamation me-2"></i>' +
+                        'Failed to load report: ' + escapeHtml(String(err)) + '</div>';
+                });
+            }
+
+            // Keep generateInspectionReportHTML as a no-op shim so any legacy
+            // callers don't throw — they now go through loadReportIntoContainer.
             function generateInspectionReportHTML(latest, rows, groupId) {
-                // Header with logo
-                var logoHtml = '';
-                if (latest && latest.logo_path) {
-                    var logoUrl = (typeof LOGO_BASE_URL !== 'undefined' ? LOGO_BASE_URL : '') + '/' + escapeHtml(latest
-                        .logo_path);
-                    logoHtml = '<img src="' + logoUrl + '" style="height:60px;" alt="Logo">';
+                // Trigger the clean iframe-based render if we have a groupId
+                if (groupId) {
+                    var tabContainer = document.getElementById('reportsTabContent');
+                    if (tabContainer) loadReportIntoContainer(groupId, tabContainer);
                 }
-                var siteName = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name || latest
-                    .customer_name) : '';
-                var action = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest
-                    .action_performed || latest.inspection_type) : '';
-                var technician = latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
-                var groupLabel = escapeHtml(groupId || '');
-                // var headerHtml = '<section class="mb-4">'
-                //     + '<div class="d-flex justify-content-between align-items-center">'
-                //     + '<div><strong>Site:</strong> ' + siteName + '<br><em>' + action + '</em></div>'
-                //     + '<div>' + logoHtml + '</div>'
-                //     + '<div class="text-end"><strong>Inspection #:</strong> ' + groupLabel + '<br><em>Technician: ' + technician + '</em></div>'
-                //     + '</div></section>';
-                var headerHtml = '';
-                // Latest Added Device
-                var latestHtml = '<p class="text-muted fst-italic">No device data available.</p>';
-                if (latest) {
-                    latestHtml =
-                        '<div class="table-responsive mb-4">' +
-                        '<table class="table table-custom table-striped">' +
-                        '<thead><tr>' +
-                        '<th>Model</th><th>Type</th><th>S/N</th><th>Action Performed</th>' +
-                        '<th>Asset #</th><th>Department</th><th>Room</th><th>Tech</th>' +
-                        '<th>Notes</th>' +
-                        '</tr></thead><tbody><tr>' +
-                        '<td>' + escapeHtml(latest.model || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.device_type || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.serial_number || 'N/A') + '</td>' +
-                        '<td>' + escapeHtml(latest.action_performed || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.asset_tag || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.dept || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.room || '—') + '</td>' +
-                        '<td>' + escapeHtml(latest.technician_name || 'Admin') + '</td>' +
-                        '<td>' + escapeHtml(latest.notes || '') + '</td>' +
-                        '</tr></tbody></table></div>';
-                }
-
-                // Inspection Report Overview
-                var rowsArr = rows || [];
-
-                // Sort: Fail=0, Repair=1, Pass=2, Other=3
-                var statusOrder = {
-                    'Fail': 0,
-                    'Repair': 1,
-                    'Pass': 2
-                };
-                rowsArr = rowsArr.slice().sort(function(a, b) {
-                    var ra = String(a.result || a.status || '');
-                    var rb = String(b.result || b.status || '');
-                    var oa = statusOrder.hasOwnProperty(ra) ? statusOrder[ra] : 3;
-                    var ob = statusOrder.hasOwnProperty(rb) ? statusOrder[rb] : 3;
-                    return oa - ob;
-                });
-
-                // Group rows by status
-                var groups = {};
-                var groupOrder = [];
-                rowsArr.forEach(function(r) {
-                    var st = String(r.result || r.status || 'Unknown');
-                    if (!groups[st]) {
-                        groups[st] = [];
-                        groupOrder.push(st);
-                    }
-                    groups[st].push(r);
-                });
-
-                // Group label config
-                var groupMeta = {
-                    'Fail': {
-                        label: 'Failed',
-                        badgeClass: 'bg-danger',
-                        icon: 'fa-xmark'
-                    },
-                    'Repair': {
-                        label: 'Repair',
-                        badgeClass: 'bg-warning text-dark',
-                        icon: 'fa-wrench'
-                    },
-                    'Pass': {
-                        label: 'Passed',
-                        badgeClass: 'bg-success',
-                        icon: 'fa-check'
-                    },
-                };
-
-                var rowsHtml = '';
-                if (rowsArr.length === 0) {
-                    rowsHtml = '<tr><td colspan="12" class="text-center text-muted py-3">No inspections found.</td></tr>';
-                } else {
-                    groupOrder.forEach(function(st) {
-                        var meta = groupMeta[st] || {
-                            label: st,
-                            badgeClass: 'bg-secondary',
-                            icon: 'fa-circle'
-                        };
-                        var count = groups[st].length;
-                        // Group header row
-                        rowsHtml += '<tr style="background:#f8fafc;">' +
-                            '<td colspan="12" class="py-2 px-3">' +
-                            '<span class="badge ' + meta.badgeClass + ' me-2"><i class="fa-solid ' + meta.icon +
-                            ' me-1"></i>' + meta.label + '</span>' +
-                            '<span class="text-muted small">' + count + ' device' + (count !== 1 ? 's' : '') +
-                            '</span>' +
-                            '</td></tr>';
-                        // Data rows for this group
-                        groups[st].forEach(function(r) {
-                            rowsHtml += '<tr>' +
-                                '<td>' + resultBadge(r.result || r.status) + '</td>' +
-                                '<td>' + escapeHtml(r.customer_name || r.site_name || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.model || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.device_type || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.serial_number || 'N/A') + '</td>' +
-                                '<td>' + escapeHtml(r.action_performed || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.asset_tag || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.dept || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.room || '—') + '</td>' +
-                                '<td>' + escapeHtml(r.technician_name || 'Admin') + '</td>' +
-                                '<td>' + (r.inspection_date ? formatInspectionDateHTML(r.inspection_date) :
-                                    '<span class="text-muted">—</span>') + '</td>' +
-                                '<td>' + escapeHtml(r.notes || '') + '</td>' +
-                                '</tr>';
-                        });
-                    });
-                }
-
-                return headerHtml +
-                    '<section class="mb-4">' +
-                    '<h5 class="fw-semibold">Latest Added Device</h5>' +
-                    latestHtml +
-                    '</section>' +
-                    '<section>' +
-                    '<h5 class="fw-semibold">Inspection Report Overview</h5>' +
-                    '<div class="table-responsive">' +
-                    '<table class="table table-custom table-striped">' +
-                    '<thead><tr>' +
-                    '<th>Result</th><th>Customer</th><th>Model</th><th>Type</th><th>S/N</th>' +
-                    '<th>Action Performed</th><th>Asset #</th><th>Dept</th><th>Room</th>' +
-                    '<th>Tech</th><th>Inspection Date</th><th>Notes</th>' +
-                    '</tr></thead>' +
-                    '<tbody>' + rowsHtml + '</tbody>' +
-                    '</table></div>' +
-                    '</section>';
+                return ''; // tab already populated above
             }
 
 
@@ -1824,26 +1826,54 @@
                         notes.forEach(function(n) {
                             var opt = document.createElement('option');
                             opt.value = n.note || n.title;
+                            opt.setAttribute('data-id', n.id || '');
                             opt.setAttribute('data-title', n.title || '');
                             opt.setAttribute('data-note', n.note || '');
                             opt.textContent = n.title || n.note;
                             sel.appendChild(opt);
                         });
                         if (sel.options.length > 1) {
-                            sel.selectedIndex = 1;
+                            sel.selectedIndex = 0; // Fix 1: default to -- Select --
                         }
                         // When an IQ Note is selected, auto-populate the Notes textarea
                         sel.removeEventListener('change', window._iqNoteChangeHandler);
                         window._iqNoteChangeHandler = function() {
                             var selected = sel.options[sel.selectedIndex];
-                            if (!selected) return;
+                            if (!selected || selected.value === '') return;
                             var noteText = selected.getAttribute('data-note') || '';
                             var notesArea = document.getElementById('inspectNotes');
+                            // Always fill notes when user actively changes the dropdown
                             if (notesArea && noteText) notesArea.value = noteText;
                         };
                         sel.addEventListener('change', window._iqNoteChangeHandler);
-                        // Fire immediately so textarea pre-fills with default selected option
-                        window._iqNoteChangeHandler();
+                        // Do NOT fire immediately — notes stay blank until user selects action
+
+                        // Fix 3: When user edits notes, save back to IQ notes table
+                        var notesArea = document.getElementById('inspectNotes');
+                        if (notesArea) {
+                            notesArea.removeEventListener('blur', window._adminNotesBlurHandler);
+                            window._adminNotesBlurHandler = function() {
+                                var selected = sel.options[sel.selectedIndex];
+                                if (!selected || selected.value === '') return;
+                                var noteId = selected.getAttribute('data-id') || '';
+                                var noteTitle = selected.getAttribute('data-title') || selected.textContent;
+                                var newNote = notesArea.value.trim();
+                                if (!newNote || !noteTitle) return;
+                                // Update the option's data-note so future selects use new text
+                                selected.setAttribute('data-note', newNote);
+                                // Persist to server
+                                var fd = new FormData();
+                                if (noteId) fd.append('id', noteId);
+                                fd.append('title', noteTitle);
+                                fd.append('note', newNote);
+                                fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+                                fetch('<?= site_url("admin/settings/iq-notes/save") ?>', {
+                                    method: 'POST', body: fd,
+                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                                }).catch(function() {});
+                            };
+                            notesArea.addEventListener('blur', window._adminNotesBlurHandler);
+                        }
                     })
                     .catch(function() {
                         /* keep static defaults on error */
@@ -1956,7 +1986,7 @@
              * without a visible page reload. Accepts an optional callback
              * fired after the DOM has been patched.
              */
-            function backgroundRefreshTabs(callback) {
+            window.backgroundRefreshTabs = function backgroundRefreshTabs(callback) {
                 $.get(window.location.href, function(html) {
                     var doc = new DOMParser().parseFromString(html, 'text/html');
 
@@ -1976,14 +2006,24 @@
                         if (fresh && live) live.innerHTML = fresh.innerHTML;
                     });
 
+                    // Fix 4: Restore user-edited title after DOM refresh
+                    if (window._savedInspTitle) {
+                        var titleEl = document.getElementById('insp-title');
+                        if (titleEl) titleEl.textContent = window._savedInspTitle;
+                    }
+                    if (typeof window.restoreInspTitle === 'function') {
+                        window.restoreInspTitle(window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID);
+                    }
+
                     // Re-apply group filter so only current inspection rows stay visible
                     if (window.CURRENT_INSPECTION_GROUP_ID) {
                         filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
+                        filterNotInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
                     }
 
                     if (typeof callback === 'function') callback();
                 }); // silent fail — DOM stays as-is if fetch fails
-            }
+            };
 
             (function() {
                 'use strict';
@@ -2055,8 +2095,17 @@
 
                         var id = delBtn.dataset.id;
                         var asset = delBtn.dataset.asset || id;
-                        if (!confirm('Remove inspection record for asset #' + asset +
-                                '?\nThis cannot be undone.')) return;
+
+                        Swal.fire({
+                            title: 'Remove Inspection Record?',
+                            text: 'Inspection record for asset #' + asset + ' will be permanently removed.',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#6c757d',
+                            confirmButtonText: 'Yes, remove'
+                        }).then(function(result) {
+                            if (!result.isConfirmed) return;
 
                         var body = CSRF_NAME + '=' + encodeURIComponent(csrfHash);
                         fetch(URL_DELETE + encodeURIComponent(id), {
@@ -2069,21 +2118,19 @@
                             })
                             .then(function(r) {
                                 if (r.ok || r.status === 302 || r.redirected) {
-                                    // Remove the row immediately for instant feedback
                                     var row = delBtn.closest('tr');
                                     if (row) row.remove();
-                                    // Then refresh all tab counts and tables in the background
                                     backgroundRefreshTabs(function() {
-                                        toast('Inspection record deleted.', 'warning');
+                                        Swal.fire({ icon: 'success', title: 'Removed', text: 'Inspection record deleted.', timer: 1500, showConfirmButton: false });
                                     });
                                 } else {
                                     toast('Delete failed (HTTP ' + r.status + ').', 'danger');
                                 }
                             })
                             .catch(function(err) {
-                                console.error(err);
                                 toast('Delete failed – ' + err.message, 'danger');
                             });
+                        }); // end Swal.fire
                     });
                 }
 
@@ -2222,57 +2269,44 @@
                 reportsTabBtn.addEventListener('shown.bs.tab', function() {
                     var container = document.getElementById('reportsTabContent');
 
-                    // Skip if already loaded (not the placeholder)
-                    if (container && container.querySelector('p.fst-italic') === null &&
-                        container.innerHTML.trim() !== '') return;
+                    // Skip if already loaded (iframe present)
+                    if (container && container.querySelector('iframe')) return;
 
                     // Use current inspection group or previously opened report group
                     var groupId = window.CURRENT_INSPECTION_GROUP_ID || CURRENT_REPORT_GROUP_ID;
                     if (!groupId) {
                         if (container) container.innerHTML =
-                            '<div class="alert alert-info">No inspection loaded yet. Please open an inspection from the list.</div>';
+                            '<div class="alert alert-info m-3">No inspection loaded yet. Open an inspection from the list first.</div>';
                         return;
                     }
 
                     CURRENT_REPORT_GROUP_ID = groupId;
-                    if (container) {
-                        container.innerHTML =
-                            '<div class="text-center py-5">' +
-                            '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
-                            '<p class="mt-3 text-muted">Loading report data\u2026</p>' +
-                            '</div>';
-                    }
+                    if (container) container.innerHTML =
+                        '<div class="text-center py-5">' +
+                        '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
+                        '<p class="mt-3 text-muted">Loading report...</p></div>';
 
-                    $.ajax({
-                        url: REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId),
-                        type: 'GET',
-                        dataType: 'json',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(res) {
-                            if (!res || !res.success) {
-                                if (container) container.innerHTML =
-                                    '<div class="alert alert-warning"><strong>No data:</strong> ' +
-                                    escapeHtml((res && res.message) ? res.message :
-                                        'No records found.') +
-                                    '</div>';
-                                return;
-                            }
-                            var html = generateInspectionReportHTML(res.latest, res.rows);
-                            if (container) container.innerHTML = html;
-                            // Mirror to modal so Preview/Download PDF work
-                            var rc = document.getElementById('reportContent');
-                            if (rc) rc.innerHTML = html;
-                        },
-                        error: function(xhr, status, err) {
-                            if (container) container.innerHTML =
-                                '<div class="alert alert-danger">' +
-                                '<strong>Error:</strong> HTTP ' + xhr.status +
-                                ' \u2014 ' + escapeHtml(err || status) +
-                                '<br><small class=\"text-muted\">Check F12 console for details.</small>' +
-                                '</div>';
-                        }
+                    fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId) + '?inline=1', {
+                        headers: { 'Accept': 'text/html' }
+                    })
+                    .then(function(r) { return r.text(); })
+                    .then(function(html) {
+                        if (!container) return;
+                        container.innerHTML = '';
+                        var iframe = document.createElement('iframe');
+                        iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                        var wrapper = document.createElement('div');
+                        wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                        wrapper.appendChild(iframe);
+                        container.innerHTML = '';
+                        container.appendChild(wrapper);
+                        iframe.contentDocument.open();
+                        iframe.contentDocument.write(html);
+                        iframe.contentDocument.close();
+                    })
+                    .catch(function() {
+                        if (container) container.innerHTML =
+                            '<div class="alert alert-danger m-3">Failed to load report.</div>';
                     });
                 });
             });

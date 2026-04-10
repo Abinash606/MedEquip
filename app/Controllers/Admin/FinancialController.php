@@ -23,14 +23,13 @@ class FinancialController extends BaseController
             "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ?", [$companyId]
         )->getRow()->cnt ?? 0;
 
-        // Revenue per inspection: $150 (configurable assumption)
-        // Cost per work order: $80
-        $revenuePerInspection = 150;
-        $costPerWorkOrder     = 80;
-        $totalRevenue = $totalInspections * $revenuePerInspection;
-        $totalCosts   = $totalWorkOrders  * $costPerWorkOrder;
-        $totalProfit  = $totalRevenue - $totalCosts;
-        $margin       = $totalRevenue > 0 ? round(($totalProfit / $totalRevenue) * 100) : 0;
+        // Operational estimate assumptions only — not invoice or accounting data
+        $serviceValuePerInspection = 150;
+        $serviceLoadPerWorkOrder   = 80;
+        $estimatedServiceValue = $totalInspections * $serviceValuePerInspection;
+        $estimatedServiceLoad  = $totalWorkOrders  * $serviceLoadPerWorkOrder;
+        $estimatedNetCapacity  = $estimatedServiceValue - $estimatedServiceLoad;
+        $operationalMargin     = $estimatedServiceValue > 0 ? round(($estimatedNetCapacity / $estimatedServiceValue) * 100) : 0;
 
         // Per-customer breakdown
         $customerStats = $db->query("
@@ -78,18 +77,18 @@ class FinancialController extends BaseController
             ? round(($passCount / $totalInspections) * 100) : 0;
 
         return view('admin/financials/index', [
-            'totalRevenue'    => $totalRevenue,
-            'totalCosts'      => $totalCosts,
-            'totalProfit'     => $totalProfit,
-            'margin'          => $margin,
+            'estimatedServiceValue' => $estimatedServiceValue,
+            'estimatedServiceLoad'  => $estimatedServiceLoad,
+            'estimatedNetCapacity'  => $estimatedNetCapacity,
+            'operationalMargin'     => $operationalMargin,
             'totalInspections'=> $totalInspections,
             'totalWorkOrders' => $totalWorkOrders,
             'equipCount'      => $equipCount,
             'complianceRate'  => $complianceRate,
             'customerStats'   => $customerStats,
             'monthlyTrend'    => $monthlyTrend,
-            'revenuePerInspection' => $revenuePerInspection,
-            'costPerWorkOrder'     => $costPerWorkOrder,
+            'serviceValuePerInspection' => $serviceValuePerInspection,
+            'serviceLoadPerWorkOrder' => $serviceLoadPerWorkOrder,
         ]);
     }
 }

@@ -50,9 +50,7 @@
         }
 
         html,
-        body {
-      
-        }
+        body {}
 
         body {
             font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -672,10 +670,12 @@
             white-space: nowrap;
         }
 
-        .btn-primary, .btn-outline-primary, #btnExportCsv{
+        .btn-primary,
+        .btn-outline-primary,
+        #btnExportCsv {
             background: linear-gradient(90deg, rgba(34, 211, 238, .92), rgba(124, 58, 237, .70)) !important;
             border: none !important;
-            color:#fff!important;
+            color: #fff !important;
         }
 
         .btn-info {
@@ -688,6 +688,25 @@
         .modal-body .form-check-label,
         .modal-body {
             color: #000 !important;
+        }
+
+        /* Fix schedule detail modals */
+        #schedItemModal .modal-body,
+        #calEventModal .modal-body {
+            color: #212529 !important;
+        }
+
+        #schedItemModal .modal-body table th,
+        #schedItemModal .modal-body table td,
+        #calEventModal .modal-body table th,
+        #calEventModal .modal-body table td {
+            color: #212529 !important;
+            user-select: none;
+        }
+
+        #schedItemModal .modal-content,
+        #calEventModal .modal-content {
+            background: #fff !important;
         }
 
         .glass-card .input-group .input-group-text,
@@ -755,6 +774,36 @@
             letter-spacing: .2px;
             color: rgba(233, 237, 255, .90) !important;
             white-space: nowrap;
+        }
+
+        /* Fix badges inside schedule detail modals */
+        #schedItemModal .modal-body .badge,
+        #calEventModal .modal-body .badge {
+            color: #fff !important;
+        }
+
+        #schedItemModal .modal-body .badge.bg-danger,
+        #calEventModal .modal-body .badge.bg-danger {
+            background: rgba(239, 68, 68, .85) !important;
+            border-color: rgba(239, 68, 68, .5) !important;
+        }
+
+        #schedItemModal .modal-body .badge.bg-success,
+        #calEventModal .modal-body .badge.bg-success {
+            background: rgba(34, 197, 94, .85) !important;
+            border-color: rgba(34, 197, 94, .5) !important;
+        }
+
+        #schedItemModal .modal-body .badge.bg-primary,
+        #calEventModal .modal-body .badge.bg-primary {
+            background: rgba(13, 110, 253, .85) !important;
+            border-color: rgba(13, 110, 253, .5) !important;
+        }
+
+        #schedItemModal .modal-body .badge.bg-secondary,
+        #calEventModal .modal-body .badge.bg-secondary {
+            background: rgba(108, 117, 125, .85) !important;
+            border-color: rgba(108, 117, 125, .5) !important;
         }
 
         .badge.bg-warning {
@@ -1009,26 +1058,34 @@
         .select2-container--default .select2-selection--single .select2-selection__arrow {
             top: 5px !important;
         }
-        .glass-card select option{
-            color:#000!important;
+
+        .glass-card select option {
+            color: #000 !important;
         }
-         .glass-card input::placeholder, .topbar .search input::placeholder{
-            color:#fff;
-         }
-         .input-group .input-group-text{
-            border-right:0px!important;
-         }
-         .glass-card input[type="date"]::-webkit-calendar-picker-indicator,
- .glass-card input[type="time"]::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  cursor: pointer;
-}
-.fc-theme-bootstrap5-shaded, .fc .fc-list-sticky .fc-list-day>*{
-    background-color:transparent!important;
-}
- .fc .fc-list-event:hover td{
-    background-color:#000!important;
- }
+
+        .glass-card input::placeholder,
+        .topbar .search input::placeholder {
+            color: #fff;
+        }
+
+        .input-group .input-group-text {
+            border-right: 0px !important;
+        }
+
+        .glass-card input[type="date"]::-webkit-calendar-picker-indicator,
+        .glass-card input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        .fc-theme-bootstrap5-shaded,
+        .fc .fc-list-sticky .fc-list-day>* {
+            background-color: transparent !important;
+        }
+
+        .fc .fc-list-event:hover td {
+            background-color: #000 !important;
+        }
     </style>
 </head>
 
@@ -1102,7 +1159,7 @@
                     <a class="nav-link<?= url_is('admin/financials*') ? ' active' : '' ?>"
                         href="<?= site_url('admin/financials') ?>">
                         <i class="fa-solid fa-chart-line"></i>
-                        <span>Financials</span>
+                        <span>Operational Summary</span>
                     </a>
                     <a class="nav-link<?= url_is('admin/data-ops*') ? ' active' : '' ?>"
                         href="<?= site_url('admin/data-ops') ?>">

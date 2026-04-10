@@ -67,31 +67,61 @@ class ServiceHistoryController extends BaseController
         // Open work orders only
         if (!empty($siteIds)) {
             $data['open_work_orders'] = $workOrderModel
-                ->select('work_orders.*, sites.name as site_name, equipment.asset_tag, equipment.make, equipment.model')
-                ->join('sites', 'sites.id = work_orders.site_id', 'left')
-                ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
-                ->where('work_orders.company_id', $companyId)
-                ->whereIn('work_orders.site_id', $siteIds)
-                ->where('work_orders.status', 'open')
-                ->orderBy('work_orders.created_at', 'DESC')
-                ->findAll();
+            ->select('
+                work_orders.*,
+                sites.name as site_name,
+                COALESCE(se.asset_tag, equipment.asset_tag) as asset_tag,
+                COALESCE(se.make, equipment.make) as make,
+                COALESCE(se.model, equipment.model) as model
+            ')
+            ->join('sites', 'sites.id = work_orders.site_id', 'left')
+            ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
+            ->join(
+                'site_equipment se',
+                'se.master_equipment_id = work_orders.equipment_id
+                AND se.site_id = work_orders.site_id
+                AND se.company_id = work_orders.company_id
+                AND se.deleted_at IS NULL',
+                'left'
+            )
+            ->where('work_orders.company_id', $companyId)
+            ->whereIn('work_orders.site_id', $siteIds)
+            ->where('work_orders.status', 'open')
+            ->orderBy('work_orders.created_at', 'DESC')
+            ->findAll();
+
         } else {
             $data['open_work_orders'] = [];
         }
 
         // Completed service history only
         if (!empty($siteIds)) {
-            $data['recent_history'] = $workOrderModel
-                ->select('work_orders.*, sites.name as site_name, equipment.make, equipment.model')
-                ->join('sites', 'sites.id = work_orders.site_id', 'left')
-                ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
-                ->where('work_orders.company_id', $companyId)
-                ->whereIn('work_orders.site_id', $siteIds)
-                ->where('work_orders.status', 'completed')
-                ->orderBy('work_orders.completed_at', 'DESC')
-                ->orderBy('work_orders.updated_at', 'DESC')
-                ->limit(10)
-                ->findAll();
+           $data['recent_history'] = $workOrderModel
+            ->select('
+                work_orders.*,
+                sites.name as site_name,
+                COALESCE(se.make, equipment.make) as make,
+                COALESCE(se.model, equipment.model) as model,
+                COALESCE(se.asset_tag, equipment.asset_tag) as asset_tag
+            ')
+            ->join('sites', 'sites.id = work_orders.site_id', 'left')
+            ->join('equipment', 'equipment.id = work_orders.equipment_id', 'left')
+            ->join(
+                'site_equipment se',
+                'se.master_equipment_id = work_orders.equipment_id
+                AND se.site_id = work_orders.site_id
+                AND se.company_id = work_orders.company_id
+                AND se.deleted_at IS NULL',
+                'left'
+            )
+            ->where('work_orders.company_id', $companyId)
+            ->whereIn('work_orders.site_id', $siteIds)
+            ->where('work_orders.status', 'completed')
+            ->orderBy('work_orders.completed_at', 'DESC')
+            ->orderBy('work_orders.updated_at', 'DESC')
+            ->limit(10)
+            ->findAll();
+
         } else {
             $data['recent_history'] = [];
         }

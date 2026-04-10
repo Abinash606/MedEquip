@@ -45,26 +45,34 @@ class InspectionReportsController extends BaseController
             SELECT
                 i.id,
                 i.group_id,
-                i.status           AS result,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1 FROM inspections sub
+                        WHERE sub.group_id = i.group_id
+                          AND sub.company_id = i.company_id
+                          AND (sub.status IS NULL OR sub.status = '' OR sub.status NOT IN ('Pass','Fail','Repair','pass','fail','repair','completed'))
+                    ) THEN 'In Progress'
+                    ELSE i.status
+                END                AS result,
                 i.notes,
-                i.inspection_type  AS action_performed,
+                i.inspection_type  AS action_performed,                
                 i.completed_at     AS inspection_date,
                 i.next_due_date,
                 i.est,
                 i.cal,
                 i.pm_frequency,
-                e.asset_tag,
-                e.make,
-                e.model,
-                e.device_type,
-                e.serial_number,
-                e.department,
-                e.location         AS room,
+                COALESCE(e.asset_tag, i.asset_tag_snapshot) AS asset_tag,
+                COALESCE(e.make, i.make_snapshot) AS make,
+                COALESCE(e.model, i.model_snapshot) AS model,
+                COALESCE(e.device_type, i.device_type_snapshot) AS device_type,
+                COALESCE(e.serial_number, i.serial_number_snapshot) AS serial_number,
+                COALESCE(e.department, i.department_snapshot) AS department,
+                COALESCE(e.location, i.location_snapshot) AS location,
                 s.name             AS site_name,
                 c.name             AS customer_name,
                 u.full_name        AS technician_name
             FROM inspections i
-            LEFT JOIN equipment e  ON e.id = i.equipment_id
+            LEFT JOIN site_equipment e ON e.id = i.equipment_id
             LEFT JOIN sites s      ON s.id = i.site_id
             LEFT JOIN customers c  ON c.id = s.customer_id
             LEFT JOIN users u      ON u.id = i.technician_id

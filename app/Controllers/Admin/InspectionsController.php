@@ -7,6 +7,7 @@ use App\Models\InspectionModel;
 use App\Models\EquipmentModel;
 use App\Models\SiteModel;
 use App\Models\UserModel;
+use App\Libraries\OperationalWorkOrderService;
 use Dompdf\Dompdf;
 
 
@@ -21,7 +22,7 @@ class InspectionsController extends BaseController
         $db = \Config\Database::connect();
         $builder = $db->table('inspections i');
         $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type, e.asset_tag, e.department, e.location');
-        $builder->join('equipment e', 'e.id = i.equipment_id', 'left');
+        $builder->join('site_equipment e', 'e.id = i.equipment_id', 'left');
         $builder->where('i.company_id', $companyId);
         $builder->groupBy('i.group_id'); // Add GROUP BY clause for group_id
         $builder->orderBy('i.created_at', 'DESC');
@@ -186,6 +187,20 @@ class InspectionsController extends BaseController
         ];
 
         $inspectionModel->insert($data);
+
+                (new OperationalWorkOrderService())->syncFollowUpFromInspection([
+                    'company_id'      => $companyId,
+                    'site_id'         => (int) $item['site_id'],
+                    'equipment_id'    => (int) $equipmentId,
+                    'group_id'        => $groupId,
+                    'status'          => (string) ($item['status'] ?? 'Pass'),
+                    'inspection_type' => (string) ($item['inspection_type'] ?? 'PM'),
+                    'notes'           => (string) ($item['notes'] ?? ''),
+                    'asset_tag'       => (string) ($item['asset_tag'] ?? ''),
+                    'technician_id'   => !empty($item['technician_id']) ? (int) $item['technician_id'] : null,
+                    'created_by'      => (int) session('user_id'),
+                    'start_date'      => !empty($item['scheduled_at']) ? $item['scheduled_at'] : date('Y-m-d'),
+                ]);
             }
 
             // Return success response
@@ -332,7 +347,7 @@ class InspectionsController extends BaseController
         
         $builder = $db->table('inspections i');
         $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type, e.asset_tag, e.department, e.location');
-        $builder->join('equipment e', 'e.id = i.equipment_id', 'left');
+        $builder->join('site_equipment e', 'e.id = i.equipment_id', 'left');
         $builder->where('i.company_id', $companyId);
         $builder->where('i.group_id', $groupId);
         $builder->orderBy('i.created_at', 'ASC');
@@ -357,7 +372,7 @@ class InspectionsController extends BaseController
             $inspections = $inspectionModel
                 ->select('inspections.*, inspections.status as inspection_status, inspections.id as inspections_id, sites.name as customer_site, equipment.*, users.full_name as technician_name')
                 ->join('sites', 'sites.id = inspections.site_id', 'left')
-                ->join('equipment', 'equipment.id = inspections.equipment_id', 'left')
+                ->join('site_equipment', 'site_equipment.id = inspections.equipment_id', 'left')
                 ->join('users', 'users.id = inspections.technician_id', 'left')
                 ->where('inspections.group_id', $groupId)
                 ->findAll();
@@ -391,7 +406,7 @@ class InspectionsController extends BaseController
         $db = \Config\Database::connect();
         $builder = $db->table('inspections i');
         $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type, e.asset_tag, e.department, e.location');
-        $builder->join('equipment e', 'e.id = i.equipment_id', 'left');
+        $builder->join('site_equipment e', 'e.id = i.equipment_id', 'left');
         $builder->where('i.company_id', $companyId);
         $builder->where('i.id', $id);
         
@@ -465,104 +480,65 @@ class InspectionsController extends BaseController
         }
 
         $inspectionModel = new InspectionModel();
-        $equipmentModel  = new EquipmentModel();
+        $existing = $inspectionModel->where('company_id', $companyId)->find($inspectionId);
+        if (!$existing) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Inspection not found']);
+        }
 
-        // ── Resolve equipment_id ──────────────────────────────────────────────
-        $equipmentId = (int) $this->request->getPost('equipment_id');
-
-        // Handle "asset not found" new equipment creation
-            if ($this->request->getPost('asset_not_found') === '1') {
-            $siteId = (int) $this->request->getPost('site_id');
-                $newEquip = [
-                    'company_id'    => $companyId,
-                'site_id'       => $siteId,
-                'asset_tag'     => $this->request->getPost('asset_tag') ?: ('NEW-' . strtoupper(uniqid())),
-                'make'          => (string)($this->request->getPost('manufacturer') ?? ''),
-                'model'         => (string)($this->request->getPost('model_name')   ?? ''),
-                'serial_number' => (string)($this->request->getPost('serial_number') ?? ''),
-                'device_type'   => (string)($this->request->getPost('description')  ?? ''),
-                'department'    => (string)($this->request->getPost('department')    ?? ''),
-                'location'      => (string)($this->request->getPost('location')      ?? ''),
-                'status'        => 'Pending',
-                ];
-                $equipmentModel->insert($newEquip);
-            $equipmentId = (int) $equipmentModel->getInsertID();
-            }
-            
-        // ── Update equipment table fields if they were sent ───────────────────
-        $dept   = trim((string)($this->request->getPost('department')    ?? ''));
-        $room   = trim((string)($this->request->getPost('location')      ?? ''));
-        $serial = trim((string)($this->request->getPost('serial_number') ?? ''));
-
-        if ($equipmentId > 0 && ($dept !== '' || $room !== '' || $serial !== '')) {
-                $eqUpdate = [];
-                if ($dept   !== '') $eqUpdate['department']    = $dept;
-                if ($room   !== '') $eqUpdate['location']      = $room;
-                if ($serial !== '') $eqUpdate['serial_number'] = $serial;
-            $equipmentModel->where('company_id', $companyId)->where('id', $equipmentId)->set($eqUpdate)->update();
-            }
-
-        // ── Build inspection $data ONLY from fields actually posted ───────────
-        // This prevents overwriting DB values with nulls when the edit form
-        // only submits a subset of fields (e.g. the Edit Device modal).
         $data = [];
-
-        $postMap = [
-            'site_id'         => 'site_id',
-            'equipment_id'    => null,          // handled separately below
-            'scheduled_at'    => 'scheduled_at',
-            'status'          => 'status',
-            'technician_id'   => 'technician_id',
-            'next_due_date'   => 'next_due_date',
-            'notes'           => 'notes',
-            'inspection_type' => 'inspection_type',
-            'pm_frequency'    => 'pm_frequency',
-            'device_complete' => 'device_complete',
-            'est'             => 'est',
-            'cal'             => 'cal',
+        $fieldMap = [
+            'site_id'          => 'site_id',
+            'equipment_id'     => 'equipment_id',
+            'scheduled_at'     => 'scheduled_at',
+            'status'           => 'status',
+            'result'           => 'status',
+            'technician_id'    => 'technician_id',
+            'next_due_date'    => 'next_due_date',
+            'notes'            => 'notes',
+            'inspection_type'  => 'inspection_type',
+            'action_performed' => 'inspection_type',
+            'pm_frequency'     => 'pm_frequency',
+            'device_complete'  => 'device_complete',
+            'est'              => 'est',
+            'cal'              => 'cal',
+            'asset_tag'        => 'asset_tag',
+            'make'             => 'make',
+            'model'            => 'model',
+            'device_type'      => 'device_type',
+            'serial_number'    => 'serial_number',
+            'department'       => 'department',
+            'location'         => 'location',
         ];
-
-        foreach ($postMap as $field => $postKey) {
-            if ($postKey === null) continue;
+        foreach ($fieldMap as $field => $postKey) {
             $val = $this->request->getPost($postKey);
-            if ($val !== null) {   // only include if actually sent in POST
+            if ($val !== null) {
                 $data[$field] = $val;
             }
         }
 
-        // Always include equipment_id if we resolved one
-        if ($equipmentId > 0) {
-            $data['equipment_id'] = $equipmentId;
+        if (empty($data['make']) && $this->request->getPost('manufacturer') !== null) {
+            $data['make'] = $this->request->getPost('manufacturer');
+        }
+        if (empty($data['model']) && $this->request->getPost('model_name') !== null) {
+            $data['model'] = $this->request->getPost('model_name');
+        }
+        if (empty($data['device_type']) && $this->request->getPost('description') !== null) {
+            $data['device_type'] = $this->request->getPost('description');
         }
 
-        // ── Auto-calculate next_due_date from pm_frequency if not provided ────
         if (empty($data['next_due_date']) && !empty($data['pm_frequency'])) {
             preg_match('/^(\d+)/', $data['pm_frequency'], $m);
-            $months = isset($m[1]) ? (int)$m[1] : 0;
+            $months = isset($m[1]) ? (int) $m[1] : 0;
             if ($months > 0) {
                 $data['next_due_date'] = date('Y-m-d', strtotime("+{$months} months"));
             }
         }
 
-        // ── Add findings for new-equipment case ───────────────────────────────
-        if ($this->request->getPost('asset_not_found') === '1') {
-            $data['findings'] = 'Asset updated/created. '
-                . 'Manufacturer: ' . ($this->request->getPost('manufacturer')  ?? '') . '; '
-                . 'Model: '        . ($this->request->getPost('model_name')    ?? '') . '; '
-                . 'Description: '  . ($this->request->getPost('description')   ?? '') . '; '
-                . 'Serial #: '     . ($this->request->getPost('serial_number') ?? '');
-            }
-
         if (empty($data)) {
             return $this->response->setJSON(['success' => false, 'message' => 'No fields to update']);
         }
 
-        // ── Perform update using CI4's update($id, $data) ──────────────────────
-        // First verify this inspection belongs to this company
-        $existing = $inspectionModel->where('company_id', $companyId)->find($inspectionId);
-        if (!$existing) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Inspection not found']);
-        }
+        $data['updated_at'] = date('Y-m-d H:i:s');
 
         try {
             $updated = $inspectionModel->update($inspectionId, $data);
@@ -581,22 +557,12 @@ class InspectionsController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => $msg]);
         }
 
-        // ── Respond ───────────────────────────────────────────────────────────
-        $wantsJson = $this->request->isAJAX()
-            || stripos($this->request->getHeaderLine('Accept'),       'application/json') !== false
-            || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
-
-            if ($wantsJson) {
-                return $this->response->setJSON([
-                    'success'       => true,
-                    'message'       => 'Inspection updated successfully',
-                    'inspection_id' => $inspectionId,
-                    'csrf_hash'     => csrf_hash(),
-                ]);
-            }
-
-        $siteId = (int)($this->request->getPost('site_id') ?? 0);
-        return redirect()->to('/admin/sites/' . $siteId);
+        return $this->response->setJSON([
+            'success'       => true,
+            'message'       => 'Inspection updated successfully',
+            'inspection_id' => $inspectionId,
+            'csrf_hash'     => csrf_hash(),
+        ]);
     }
 
 
@@ -690,6 +656,73 @@ class InspectionsController extends BaseController
             ->setHeader('Content-Disposition', 'attachment; filename="inspection-report-' . $groupId . '.html"')
             ->setBody($html);
     }
-    
+
+    /**
+     * GET admin/inspections/reportPreview/{groupId}
+     * Returns the full standalone HTML for inline preview in a modal iframe.
+     * Same design as the technician report - uses the same report_pdf view.
+     */
+    public function reportPreview($groupId)
+    {
+        $companyId       = (int) session('company_id');
+        $inspectionModel = new InspectionModel();
+        $rows   = $inspectionModel->getReportRowsByGroup($companyId, $groupId);
+        $latest = !empty($rows) ? $rows[0] : null;
+
+        $html = view('admin/inspections/report_pdf', [
+            'latest'  => $latest,
+            'rows'    => $rows,
+            'groupId' => $groupId,
+        ]);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/html; charset=utf-8')
+            ->setBody($html);
+    }
+
+    /**
+     * POST admin/inspections/updateGroupTitle
+     * Saves a user-edited inspection title against all rows in a group.
+     * Auto-creates the `title` column if it doesn't exist yet.
+     */
+    public function updateGroupTitle()
+    {
+        $companyId = (int) session('company_id');
+        $groupId   = trim((string) $this->request->getPost('group_id'));
+        $title     = trim((string) $this->request->getPost('title'));
+
+        if (!$groupId || !$title) {
+            return $this->response->setJSON(['success' => false, 'message' => 'group_id and title required']);
+        }
+
+        $db = \Config\Database::connect();
+
+        // Auto-add `title` column if it doesn't exist
+        try {
+            $cols = $db->query("SHOW COLUMNS FROM inspections LIKE 'title'")->getResultArray();
+            if (empty($cols)) {
+                $db->query("ALTER TABLE inspections ADD COLUMN `title` VARCHAR(255) NOT NULL DEFAULT '' AFTER `group_id`");
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[updateGroupTitle] Schema check failed: ' . $e->getMessage());
+        }
+
+        // Update all rows in the group for this company
+        try {
+            $db->table('inspections')
+                ->where('group_id', $groupId)
+                ->where('company_id', $companyId)
+                ->set(['title' => $title])
+                ->update();
+        } catch (\Throwable $e) {
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
+
+        return $this->response->setJSON([
+            'success'  => true,
+            'group_id' => $groupId,
+            'title'    => $title,
+        ]);
+    }
 
 }

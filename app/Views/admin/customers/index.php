@@ -183,6 +183,7 @@
 
                 </div>
 
+                <div id="custSiteFormError" class="alert alert-danger mx-3 mb-2 d-none" role="alert"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" id="submitBtn" onclick="validateForm()">Save changes</button>
@@ -205,7 +206,6 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="site-id" name="id">
-                    <input type="hidden" id="site-customer-id" name="customer_id"> <!-- Hidden field for customer ID -->
 
                     <!-- Site Details Fields -->
                     <div class="row g-3 mb-3">
@@ -214,9 +214,13 @@
                             <input type="text" class="form-control" id="site-name" name="name" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label" for="site-customer-id">Customer<span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="site-customer-name" name="customer_name" readonly> <!-- Readonly customer name field -->
-
+                            <label class="form-label" for="site-customer-id-select">Customer<span class="text-danger">*</span></label>
+                            <select class="form-select" id="site-customer-id-select" name="customer_id" required>
+                                <option value="">-- Select Customer --</option>
+                                <?php foreach ($customers as $c): ?>
+                                    <option value="<?= esc($c['id']) ?>"><?= esc($c['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
 
@@ -273,102 +277,72 @@
 </div>
 <script>
     $(document).ready(function() {
-        // When the "Add Site" button is clicked
+        // When the "Add Site" button is clicked — pre-select the customer in the dropdown
         $(".btn-add-site").click(function() {
-            var customerId = $(this).data('id'); // Get the customer ID
-            var customerName = $(this).data('name'); // Get the customer name from the table
-
-            // Set the customer ID in the hidden field
-            $("#site-customer-id").val(customerId);
-
-            // Set the customer name in the readonly input field
-            $("#site-customer-name").val(customerName);
+            var customerId = $(this).data('id');
+            // Pre-select the customer in the dropdown
+            $("#site-customer-id-select").val(customerId);
+            // Reset form fields except customer
+            $("#site-name, #site-address, #site-city, #site-zip, #site-contact, #site-email, #site-phone").val('');
+            $("#site-state").val('');
+            $("#site-id").val('');
         });
 
-        // jQuery Validation for Add/Edit Site
+        // jQuery Validation for Add Site form
         $('#siteForm').validate({
             rules: {
-                'name': {
-                    required: true,
-                    maxlength: 255
-                },
-                'customer_id': {
-                    required: true
-                },
-                'address': {
-                    maxlength: 255
-                },
-                'city': {
-                    maxlength: 255
-                },
-                'state': {
-                    maxlength: 255
-                },
-                'zip': {
-                    maxlength: 20
-                },
-                'contact_name': {
-                    maxlength: 255
-                },
-                'email': {
-                    email: true,
-                    maxlength: 255
-                },
-                'phone': {
-                    maxlength: 50
-                }
+                'name':         { required: true, maxlength: 255 },
+                'customer_id':  { required: true },
+                'address':      { maxlength: 255 },
+                'city':         { maxlength: 255 },
+                'zip':          { maxlength: 20 },
+                'contact_name': { maxlength: 255 },
+                'email':        { email: true, maxlength: 255 },
+                'phone':        { maxlength: 50 }
             },
             messages: {
-                'name': {
-                    required: "Site name is required.",
-                    maxlength: "Site name cannot exceed 255 characters."
-                },
-                'customer_id': {
-                    required: "Please select a customer."
-                },
-                'email': {
-                    email: "Please enter a valid email address.",
-                    maxlength: "Email cannot exceed 255 characters."
-                },
-                'phone': {
-                    maxlength: "Phone number cannot exceed 50 characters."
-                }
+                'name':        { required: 'Site name is required.', maxlength: 'Site name cannot exceed 255 characters.' },
+                'customer_id': { required: 'Please select a customer.' },
+                'email':       { email: 'Please enter a valid email address.' }
+            },
+            errorPlacement: function(error, element) {
+                error.addClass('text-danger small d-block mt-1');
+                error.insertAfter(element);
             },
             submitHandler: function(form) {
-                var actionUrl = $(form).attr('action');
+                var btn = $('#submitBtn');
+                btn.prop('disabled', true).text('Saving...');
                 var formData = new FormData(form);
 
-                // AJAX request to submit the form
                 $.ajax({
                     type: 'POST',
-                    url: actionUrl,
+                    url: '<?= site_url('admin/sites/add') ?>',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Site saved successfully!',
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then((result) => {
-                            // Close modal and reset form
-                            $('#siteModal').modal('hide');
-                            $('#siteForm')[0].reset(); // Clear form data
-                            $('#siteModalLabel').text('Add Site');
-                            $('#submitBtn').text('Save');
-
-                            // Force page reload after success
-                            location.reload(); // This reloads the page and shows the latest data
-                        });
+                        btn.prop('disabled', false).text('Save');
+                        // Parse JSON if returned as string
+                        if (typeof response === 'string') {
+                            try { response = JSON.parse(response); } catch(e) {}
+                        }
+                        if (response && response.success) {
+                            Swal.fire({ title: 'Success!', text: 'Site added successfully!', icon: 'success', confirmButtonText: 'OK' })
+                                .then(function() {
+                                    $('#siteModal').modal('hide');
+                                    $('#siteForm')[0].reset();
+                                    location.reload();
+                                });
+                        } else {
+                            var msg = (response && response.message) ? response.message : 'Failed to save site. Please try again.';
+                            Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' });
+                        }
                     },
-                    error: function() {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
+                    error: function(xhr) {
+                        btn.prop('disabled', false).text('Save');
+                        var msg = 'An error occurred. Please try again.';
+                        try { var r = JSON.parse(xhr.responseText); if (r && r.message) msg = r.message; } catch(e) {}
+                        Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' });
                     }
                 });
             }

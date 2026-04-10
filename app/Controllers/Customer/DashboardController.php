@@ -40,7 +40,7 @@ class DashboardController extends BaseController
             $sid = (int)$site['id'];
             $r   = $db->query("SELECT
                 COUNT(*) AS asset_count
-                FROM equipment WHERE site_id = ? AND deleted_at IS NULL", [$sid])->getRow();
+                FROM site_equipment WHERE site_id = ? AND deleted_at IS NULL", [$sid])->getRow();
 
             $ti  = $db->query("SELECT COUNT(*) AS cnt FROM inspections WHERE site_id = ?", [$sid])->getRow()->cnt ?? 0;
             $pi  = $db->query("SELECT COUNT(*) AS cnt FROM inspections WHERE site_id = ? AND status IN ('Pass','pass')", [$sid])->getRow()->cnt ?? 0;
@@ -79,7 +79,7 @@ class DashboardController extends BaseController
                 s.name  AS site_name,
                 u.full_name AS tech_name
             FROM inspections i
-            LEFT JOIN equipment e ON e.id = i.equipment_id
+            LEFT JOIN site_equipment e ON e.id = i.equipment_id
             LEFT JOIN sites s     ON s.id = i.site_id
             LEFT JOIN technicians t ON t.id = i.technician_id
             LEFT JOIN users u     ON u.id = t.user_id

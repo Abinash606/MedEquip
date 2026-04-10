@@ -6,6 +6,15 @@
         <h3 class="fw-bold mb-0">Dashboard</h3>
         <p class="text-muted small mb-0">Welcome back, <?= esc(session('username') ?? 'Technician') ?></p>
     </div>
+    <div class="position-relative" style="width:40%;min-width:240px;">
+        <i class="fa-solid fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:rgba(233,237,255,.4);pointer-events:none;z-index:1;"></i>
+        <input type="search" id="techDashSearchInput" class="form-control ps-4"
+               placeholder="Search sites, equipment, inspections..."
+               autocomplete="off"
+               style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#E9EDFF;border-radius:10px;">
+        <div id="techDashSearchResults" class="position-absolute w-100 mt-1 shadow-lg"
+             style="z-index:9999;display:none;background:#0E1630;border:1px solid rgba(255,255,255,.15);border-radius:12px;max-height:360px;overflow-y:auto;"></div>
+    </div>
 </div>
 
 <div class="content">
@@ -164,5 +173,89 @@ function previewTechReport(groupId) {
         window.open('<?= site_url('technician/inspections/reportPdf') ?>/' + groupId, '_blank');
     };
 }
+
+// ── Global Search ─────────────────────────────────────────────────────
+(function() {
+    var inp   = document.getElementById('techDashSearchInput');
+    var box   = document.getElementById('techDashSearchResults');
+    var timer = null;
+    var SEARCH_URL = '<?= site_url('technician/search') ?>';
+
+    var iconMap = {
+        'Site'      : 'fa-sitemap',
+        'Equipment' : 'fa-boxes-stacked',
+        'Inspection': 'fa-clipboard-list',
+    };
+
+    function renderResults(results) {
+        if (!results.length) {
+            box.innerHTML = '<div class="p-3 text-center" style="color:rgba(233,237,255,.5);font-size:.9rem;">No results found.</div>';
+            box.style.display = 'block';
+            return;
+        }
+        var html = '';
+        results.forEach(function(r, idx) {
+            html += '<a href="' + r.url + '" data-result-idx="' + idx + '" class="d-flex align-items-center gap-3 px-3 py-2 text-decoration-none" ' +
+                'style="color:#E9EDFF;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s;" ' +
+                'onmouseover="this.style.background=\'rgba(124,58,237,.2)\'" ' +
+                'onmouseout="this.style.background=\'transparent\'">' +
+                '<span style="width:28px;text-align:center;opacity:.6;flex-shrink:0;">' +
+                    '<i class="fa-solid ' + (iconMap[r.type] || 'fa-file') + '"></i>' +
+                '</span>' +
+                '<span class="flex-grow-1" style="overflow:hidden;">' +
+                    '<span class="d-block fw-semibold" style="font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escH(r.label) + '</span>' +
+                    (r.subtitle ? '<span class="d-block" style="font-size:.78rem;color:rgba(233,237,255,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escH(r.subtitle) + '</span>' : '') +
+                '</span>' +
+                '<span class="badge ms-2 flex-shrink-0" style="background:rgba(124,58,237,.35);font-size:.7rem;">' + escH(r.type) + '</span>' +
+            '</a>';
+        });
+        box.innerHTML = html;
+        box.style.display = 'block';
+
+        // Intercept clicks: store nav intent in sessionStorage so the site details
+        // page can open the right tab + inspection without polluting the URL.
+        box._resultData = results;
+        box.querySelectorAll('a[data-result-idx]').forEach(function(a) {
+            a.addEventListener('click', function(e) {
+                var idx = parseInt(a.getAttribute('data-result-idx'), 10);
+                var r = box._resultData[idx];
+                if (r && r.nav) {
+                    e.preventDefault();
+                    sessionStorage.setItem('siteNavIntent', JSON.stringify(r.nav));
+                    window.location.href = r.url;
+                }
+            });
+        });
+    }
+
+    function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function doSearch(q) {
+        if (q.length < 2) { box.style.display = 'none'; return; }
+        fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) { renderResults(data.results || []); })
+        .catch(function() { box.style.display = 'none'; });
+    }
+
+    if (inp) {
+        inp.addEventListener('input', function() {
+            clearTimeout(timer);
+            var q = inp.value.trim();
+            if (q.length < 2) { box.style.display = 'none'; return; }
+            timer = setTimeout(function() { doSearch(q); }, 280);
+        });
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { box.style.display = 'none'; inp.value = ''; }
+        });
+        document.addEventListener('click', function(e) {
+            if (!inp.contains(e.target) && !box.contains(e.target)) {
+                box.style.display = 'none';
+            }
+        });
+    }
+})();
 </script>
 <?= $this->endSection() ?>

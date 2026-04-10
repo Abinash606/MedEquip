@@ -111,7 +111,7 @@ foreach ($customers as $cust) {
 
                             <!-- Delete button -->
                             <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-danger" title="Delete"
-                                onclick="return confirm('Are you sure you want to delete this site?')">
+                                onclick="techDeleteSiteConfirm(this)">
                                 <i class="fa fa-trash"></i> Delete
                             </a>
                             </div>
@@ -189,6 +189,7 @@ foreach ($customers as $cust) {
                         </div>
                     </div>
                 </div>
+                <div id="siteFormError" class="alert alert-danger mx-3 d-none" role="alert"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="submitBtn">Save</button>
@@ -405,30 +406,30 @@ foreach ($customers as $cust) {
                     data: formData,
                     processData: false,
                     contentType: false,
+                    dataType: 'json',
                     success: function(response) {
-                        Swal.fire({
-                            title: 'Success!',
-                            text: 'Site saved successfully!',
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then((result) => {
-                            // Close modal and reset form
-                            $('#siteModal').modal('hide');
-                            $('#siteForm')[0].reset(); // Clear form data
-                            $('#siteModalLabel').text('Add Site');
-                            $('#submitBtn').text('Save');
-
-                            // Force page reload after success
-                            location.reload(); // This reloads the page and shows the latest data
-                        });
+                        if (typeof response === 'string') { try { response = JSON.parse(response); } catch(e) {} }
+                        if (response && response.success) {
+                            Swal.fire({ title: 'Success!', text: 'Site saved successfully!', icon: 'success', confirmButtonText: 'OK' })
+                                .then(function() {
+                                    $('#siteModal').modal('hide');
+                                    $('#siteForm')[0].reset();
+                                    $('#siteModalLabel').text('Add Site');
+                                    $('#submitBtn').text('Save');
+                                    location.reload();
+                                });
+                        } else {
+                            var msg = (response && response.message) ? response.message : 'Failed to save site. Please try again.';
+                            // Show inline error in the modal
+                            var errBox = document.getElementById('siteFormError');
+                            if (errBox) { errBox.textContent = msg; errBox.classList.remove('d-none'); }
+                            else { Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' }); }
+                        }
                     },
-                    error: function() {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'An error occurred. Please try again.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
+                    error: function(xhr) {
+                        var msg = 'An error occurred. Please try again.';
+                        try { var r = JSON.parse(xhr.responseText); if (r && r.message) msg = r.message; } catch(e) {}
+                        Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' });
                     }
                 });
             }
@@ -467,8 +468,20 @@ foreach ($customers as $cust) {
             $('#siteModalLabel').text('Add Site');
             $('#submitBtn').text('Save');
             $('#siteForm').attr('action', '/admin/sites/add');
+            var eb = document.getElementById('siteFormError');
+            if (eb) { eb.textContent = ''; eb.classList.add('d-none'); }
         });
     });
+
+        function techDeleteSiteConfirm(btn) {
+            var href = btn.closest('a') ? btn.closest('a').getAttribute('href') : btn.getAttribute('href');
+            href = href || btn.getAttribute('href') || '';
+            Swal.fire({
+                title: 'Delete Site?', text: 'This will permanently remove the site.',
+                icon: 'warning', showCancelButton: true,
+                confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Yes, delete'
+            }).then(function(r) { if (r.isConfirmed) window.location.href = href; });
+        }
 </script>
 
 <?= $this->endSection() ?>

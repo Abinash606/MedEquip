@@ -121,14 +121,19 @@ $(function () {
                 data: null,
                 render: function(row) {
                     if (!row.group_id) return '—';
-                    return '<span class="t-pill" style="font-size:11px;">' + row.group_id.substring(0, 22) + '</span>';
+                    return '<span class="t-pill" style="font-size:11px;">' + row.group_id + '</span>';
                 }
             },
             {
                 data: 'result',
                 render: function(d) {
-                    var cls = d && d.toLowerCase() === 'pass' ? 'bg-success' : (d && d.toLowerCase() === 'fail' ? 'bg-danger' : 'bg-warning text-dark');
-                    return '<span class="badge ' + cls + '">' + (d||'—') + '</span>';
+                    var s = (d || '').toLowerCase();
+                    var cls = s === 'pass' ? 'bg-success'
+                            : s === 'fail' ? 'bg-danger'
+                            : s === 'repair' ? 'bg-warning text-dark'
+                            : s === 'in progress' ? 'bg-info text-dark'
+                            : 'bg-secondary';
+                    return '<span class="badge ' + cls + '">' + (d || 'In Progress') + '</span>';
                 }
             },
             { data: null, render: function(row) { return (row.customer_name||'—') + '<br><small class="text-muted">' + (row.site_name||'—') + '</small>'; } },
@@ -180,6 +185,7 @@ $(function () {
             // Open/closed status filter
             var res = (row.result || '').toLowerCase();
             var isClosed = ['pass','fail','repair','completed'].includes(res);
+            // 'in progress' / '' / any non-result status = open
             if (_inspStatus === 'open'   && isClosed) return false;
             if (_inspStatus === 'closed' && !isClosed) return false;
             // Text filters
@@ -235,8 +241,8 @@ function previewAdminReport(groupId) {
     document.getElementById('adminReportPreviewBody').innerHTML =
         '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report...</p></div>';
     modal.show();
-    fetch('<?= site_url('admin/inspections/reportPdf') ?>/' + groupId, {
-        headers: { 'Accept': 'text/html,application/xhtml+xml' }
+    fetch('<?= site_url('admin/inspections/reportPreview') ?>/' + groupId, {
+        headers: { 'Accept': 'text/html' }
     }).then(function(r) { return r.text(); })
     .then(function(html) {
         // Show in iframe inside modal

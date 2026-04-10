@@ -42,7 +42,7 @@ class InspectionsController extends BaseController
                    e.make, e.model, e.device_type, e.asset_tag, e.serial_number,
                    s.name AS site_name
             FROM inspections i
-            LEFT JOIN equipment e ON e.id = i.equipment_id
+            LEFT JOIN site_equipment e ON e.id = i.equipment_id
             LEFT JOIN sites s     ON s.id = i.site_id
             WHERE i.site_id IN ($inList)
               AND i.status NOT IN ('Pass','Fail','Repair','pass','fail','repair','completed','Closed/Complete')
@@ -58,7 +58,7 @@ class InspectionsController extends BaseController
                    s.name AS site_name,
                    u.full_name AS technician_name
             FROM inspections i
-            LEFT JOIN equipment e   ON e.id = i.equipment_id
+            LEFT JOIN site_equipment e ON e.id = i.equipment_id
             LEFT JOIN sites s       ON s.id = i.site_id
             LEFT JOIN technicians t ON t.id = i.technician_id
             LEFT JOIN users u       ON u.id = t.user_id
@@ -113,11 +113,34 @@ class InspectionsController extends BaseController
         ", [$groupId, $companyId])->getRow();
 
         if (!$check) {
-            return $this->response->setStatusCode(403)->setBody('Access denied.');
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'message' => 'Access denied.']);
         }
 
-        // Delegate to admin report renderer
-        $adminController = new \App\Controllers\Admin\InspectionsController();
-        return $adminController->reportPdf($groupId);
+        // Use InspectionModel directly — avoids instantiating admin controller
+        // which has a `use Dompdf\Dompdf` that throws if Dompdf isn't installed
+        $inspectionModel = new \App\Models\InspectionModel();
+        $rows   = $inspectionModel->getReportRowsByGroup((int)$companyId, $groupId);
+        $latest = !empty($rows) ? $rows[0] : null;
+
+        // Delegate to technician controller's buildReportHtml which is self-contained
+        $techController = new \App\Controllers\Technician\InspectionController();
+        $html = $techController->buildReportHtmlPublic($latest, $rows ?? [], $groupId);
+
+        // Try Dompdf, fall back to HTML
+        try {
+            if (!class_exists('\Dompdf\Dompdf')) throw new \Exception('Dompdf not installed');
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'landscape');
+            $dompdf->render();
+            return $this->response
+                ->setHeader('Content-Type', 'application/pdf')
+                ->setHeader('Content-Disposition', 'inline; filename="inspection-report-' . $groupId . '.pdf"')
+                ->setBody($dompdf->output());
+        } catch (\Throwable $e) {
+            return $this->response
+                ->setHeader('Content-Type', 'text/html; charset=utf-8')
+                ->setBody($html);
+        }
     }
 }

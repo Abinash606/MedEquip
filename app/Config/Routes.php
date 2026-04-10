@@ -35,10 +35,12 @@ $routes->post('reset/(:any)', 'AuthController::reset/$1');
 
 $routes->get('debug/testLogin', 'DebugController::testLogin');
 
+$routes->post('impersonation/restore', 'Admin\\TechniciansController::restoreAdminSession', ['filter' => 'auth']);
 
 // Routes for Super Admin (company owner)
 $routes->group('admin', ['filter' => 'role:super_admin'], static function ($routes) {
     $routes->get('dashboard', 'Admin\\DashboardController::index');
+    $routes->get('dashboard/search',                'Admin\\DashboardController::search');
     $routes->get('customers', 'Admin\\CustomersController::index');
 
     $routes->get('data-operations/generate-backup', 'Admin\DataOperationController::generateBackup');
@@ -67,6 +69,8 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('technicians/store', 'Admin\\TechniciansController::store');
     $routes->post('technicians/update/(:num)', 'Admin\\TechniciansController::update/$1');
     $routes->delete('technicians/delete/(:num)', 'Admin\\TechniciansController::delete/$1');
+    $routes->post('technicians/login-as/(:num)',           'Admin\\TechniciansController::loginAs/$1');
+    $routes->get('technicians/open-as/(:alphanum)',          'Admin\\TechniciansController::openAs/$1');
 
     $routes->get('inspection-reports', 'Admin\InspectionReportsController::index');
     $routes->get('inventory', 'Admin\InventoryController::index');
@@ -81,7 +85,9 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
 
     // Sites
-    $routes->get('sites', 'Admin\SitesController::index');
+    $routes->get('sites', 'Admin\\SitesController::index');
+    $routes->get('sites/equipment-data/(:num)', 'Admin\\SitesController::equipmentData/$1');
+    $routes->get('sites/work-orders-data/(:num)', 'Admin\\SitesController::workOrdersData/$1');
     $routes->post('sites/add', 'Admin\SitesController::add');
     $routes->post('sites/update/(:num)', 'Admin\SitesController::update/$1');
 
@@ -126,17 +132,22 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
 
     $routes->get('inspections/reportData', 'Admin\InspectionsController::reportData');
     $routes->get('inspections/reportData/(:any)', 'Admin\InspectionsController::reportData/$1');
+    $routes->post('inspections/updateGroupTitle',  'Admin\\InspectionsController::updateGroupTitle');
 
     // PDF endpoint for inspection reports
     $routes->get('inspections/reportPdf/(:any)', 'Admin\InspectionsController::reportPdf/$1');
-
+    $routes->get('inspections/reportPreview/(:any)', 'Admin\InspectionsController::reportPreview/$1');
 
 
 
     $routes->post('work-orders/create', 'Admin\WorkOrdersController::create');
     $routes->post('work-orders/update/(:num)', 'Admin\WorkOrdersController::update/$1');
-    $routes->get('work-orders/delete/(:num)', 'Admin\WorkOrdersController::delete/$1');
-    $routes->get('work-orders', 'Admin\\WorkOrdersController::index');
+    $routes->get('work-orders/show/(:num)', 'Admin\WorkOrdersController::show/$1');
+    $routes->get('work-orders/findByGroup', 'Admin\WorkOrdersController::findByGroup');
+    $routes->get('work-orders/delete/(:num)', 'Admin\WorkOrdersController::delete/$1'); // keep for redirect-style deletes
+    $routes->post('work-orders/delete/(:num)', 'Admin\WorkOrdersController::delete/$1');
+    $routes->get('work-orders', 'Admin\WorkOrdersController::index');
+
 
     $routes->get('settings', 'Admin\SystemSettings::index');
     $routes->post('settings/update', 'Admin\SystemSettings::update');
@@ -182,6 +193,9 @@ $routes->group('customer', ['filter' => 'role:customer'], static function ($rout
 // Routes for Technician role
 $routes->group('technician', ['filter' => 'role:technician'], static function ($routes) {
     $routes->get('dashboard',                                   'Technician\\DashboardController::index');
+    $routes->get('search',                                       'Technician\\DashboardController::search');
+    $routes->get('scheduling',                                   'Technician\\SchedulingController::index');
+    $routes->get('scheduling/events',                            'Technician\\SchedulingController::events');
     $routes->get('customers',                                   'Technician\\CustomerController::index');
     $routes->post('sites/add', 'Technician\\SitesController::siteCreate');
     $routes->get('customers/filter-sites/(:num)', 'Technician\\CustomerController::filterSites/$1');
@@ -205,6 +219,7 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->get('site-inspection/get-equipment',               'Technician\\SiteInspectionWorkflowController::getEquipment');
     $routes->get('site-inspection/last-device',                 'Technician\\SiteInspectionWorkflowController::getLastDeviceForSite');
     $routes->get('iq-notes',                                    'Technician\\SiteInspectionWorkflowController::getIqNotes');
+    $routes->post('iq-notes/save',                               'Admin\\SystemSettings::iqNoteSave');
     $routes->post('site-inspection/record',                     'Technician\\SiteInspectionWorkflowController::recordInspection');
     $routes->post('inspections/create',                         'Technician\\SiteInspectionWorkflowController::create');
     $routes->get('inspections/searchBySerial',                  'Technician\\SiteInspectionWorkflowController::searchBySerial');
@@ -215,12 +230,17 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->post('inspections/deleteById/(:any)',              'Technician\\SiteInspectionWorkflowController::deleteById/$1');
     $routes->get('inspections/reportData',                      'Technician\\SiteInspectionWorkflowController::reportData');
     $routes->get('inspections/reportData/(:any)',               'Technician\\SiteInspectionWorkflowController::reportData/$1');
+    $routes->post('inspections/updateGroupTitle',               'Admin\\InspectionsController::updateGroupTitle');
     $routes->post('inspections/deleteGroup', 'Technician\\SiteInspectionWorkflowController::deleteGroup');
     // ── Work Orders ────────────────────────────────────────────
     $routes->get('work-orders',                                 'Technician\\WorkOrdersController::index');
-    $routes->post('work-orders/create',                         'Technician\\SitesController::workOrderCreate');
-    $routes->post('work-orders/update/(:num)',                  'Technician\\SitesController::workOrderUpdate/$1');
-    $routes->get('work-orders/delete/(:num)',                   'Technician\\SitesController::workOrderDelete/$1');
+    $routes->post('work-orders/create',       'Technician\SitesController::workOrderCreate');
+    $routes->get('work-orders/show/(:num)',   'Technician\SitesController::workOrderShow/$1');
+    $routes->get('work-orders/findByGroup', 'Technician\SitesController::workOrderFindByGroup');
+    $routes->post('work-orders/update/(:num)','Technician\SitesController::workOrderUpdate/$1');
+    $routes->get('work-orders/delete/(:num)', 'Technician\SitesController::workOrderDelete/$1'); // keep for redirect-style deletes
+    $routes->post('work-orders/delete/(:num)','Technician\SitesController::workOrderDelete/$1');
+
 
     // ── Sites ──────────────────────────────────────────────────
     $routes->get('sites',                                       'Technician\\SitesController::index');
@@ -228,6 +248,7 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
 
     // ── Equipment ──────────────────────────────────────────────
     $routes->get('equipment/show/(:num)',                       'Technician\\SitesController::equipmentShow/$1');
+    $routes->get('equipment/dropdown-options',                  'Technician\\SitesController::equipmentDropdownOptions');
     $routes->post('equipment/create',                           'Technician\\SitesController::equipmentCreate');
     $routes->post('equipment/update/(:num)',                    'Technician\\SitesController::equipmentUpdate/$1');
     $routes->get('equipment/delete/(:num)',                     'Technician\\SitesController::equipmentDelete/$1');

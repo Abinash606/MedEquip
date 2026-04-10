@@ -280,8 +280,9 @@
                     {
                         data: 'id',
                         render: function(data, type, row) {
+                            var techName = (row.full_name || row.username || 'Technician').replace(/'/g, "\\'");
                             return `
-                            <div class="action-btns">
+                            <div class="action-btns d-flex gap-1 flex-wrap">
                                 <button class="btn btn-sm btn-primary btn-edit-technician"
                                         data-bs-toggle="modal"
                                         data-bs-target="#technicianModal"
@@ -289,8 +290,10 @@
                                 <button class="btn btn-sm btn-danger btn-delete-technician"
                                         onclick="deleteTechnician(${data})">Delete</button>
                                 <button class="btn btn-sm btn-info ms-1 btn-login-technician"
-                                        onclick="loginAsTechnician('${row.username}')">Login as Technician</button>
-                                        </div>
+                                        onclick="loginAsTechnician(${data}, '${techName}')">
+                                    <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Login as Technician
+                                </button>
+                            </div>
                             `;
                         },
                         orderable: false
@@ -596,9 +599,54 @@
         });
     }
 
-    // ─── Login as technician (placeholder) ──────────────────────────────────
-    function loginAsTechnician(username) {
-        // Open technician portal in new window
+    // ─── Login as technician — opens their portal in a new tab ──────────────
+    function loginAsTechnician(techId, techName) {
+        Swal.fire({
+            title: 'Open Technician Portal',
+            html: 'Open the technician dashboard for <strong>' + techName + '</strong> in a new tab?<br><small class="text-muted mt-1 d-block">You will remain logged in as admin in this tab.</small>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#0d6efd',
+            confirmButtonText: '<i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Open New Tab',
+            cancelButtonText: 'Cancel'
+        }).then(function(result) {
+            if (!result.isConfirmed) return;
+
+            // Show loading
+            Swal.fire({
+                title: 'Opening portal…',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: function() { Swal.showLoading(); }
+            });
+
+            // Get CSRF token from meta tag or cookie
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+            fetch('<?= site_url('admin/technicians/login-as') ?>/' + techId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: '<?= csrf_token() ?>=' + encodeURIComponent('<?= csrf_hash() ?>')
+            })
+            .then(r => r.json())
+            .then(res => {
+                Swal.close();
+                if (!res.success) {
+                    Swal.fire('Error', res.message || 'Failed to generate login link.', 'error');
+                    return;
+                }
+                // Open the technician portal in a new tab
+                window.open(res.url, '_blank');
+            })
+            .catch(err => {
+                Swal.close();
+                Swal.fire('Error', 'Network error: ' + err.message, 'error');
+            });
+        });
     }
 
     // ─── Reset modal to "Add" state ─────────────────────────────────────────

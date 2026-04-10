@@ -1,6 +1,32 @@
 <?php
 
-/**
+/*
+        // ── Tab click: refresh data from server on every tab switch ────────
+        (function() {
+            var tabIds = [
+                'inspect-device-tab', 'not-inspected-tab', 'inspected-tab',
+                'archived-tab', 'all-inventory-tab', 'insp-work-orders-tab',
+                'inspection-reports-tab'
+            ];
+            tabIds.forEach(function(id) {
+                var btn = document.getElementById(id);
+                if (btn) {
+                    btn.addEventListener('shown.bs.tab', function() {
+                        if (typeof window.backgroundRefreshTabs === 'function') {
+                            window.backgroundRefreshTabs(function() {
+                                if (window.CURRENT_INSPECTION_GROUP_ID) {
+                                    if (typeof filterInspectedByGroup === 'function')
+                                        filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
+                                    if (typeof filterNotInspectedByGroup === 'function')
+                                        filterNotInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        })();
+*
  * Technician — site inspection workflow partial
  * app/Views/technician/site/site_inspection_workflow.php
  *
@@ -44,10 +70,19 @@
                         <tbody>
                             <?php if (!empty($inspectionList ?? [])): ?>
                                 <?php foreach ($inspectionList as $insp):
-                                    $inspId = 'INSP-' . date('Ymd', strtotime($insp['scheduled_at'])) . '-' . strtoupper(substr(md5($insp['group_id']), 0, 8));
+                                    // Use the actual group_id stored in the database — this is what
+                                    // appears in the report header (e.g. INSP-20260309151712).
+                                    $inspId = $insp['group_id'];
+                                    $stLow  = strtolower($insp['status'] ?? '');
+                                    $isDone = in_array($stLow, ['pass', 'fail', 'repair', 'completed', 'closed/complete']) || !empty($insp['completed_at']);
                                 ?>
                                     <tr>
-                                        <td><span class="fw-medium"><?= esc($inspId) ?></span></td>
+                                        <td>
+                                            <span class="fw-medium"><?= esc($inspId) ?></span>
+                                            <?php if (!$isDone): ?>
+                                                <span class="badge bg-warning text-dark ms-1" style="font-size:10px;">In Progress</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td><?= esc(date('M d, Y', strtotime($insp['scheduled_at']))) ?></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
@@ -75,15 +110,28 @@
                                                 title="View Report">
                                                 <i class="fa-solid fa-file-export"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-primary" onclick="viewInspection(
-                                                '<?= esc($insp['group_id']) ?>',
-                                                '<?= esc($site['name']) ?>',
-                                                '<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>',
-                                                '<?= esc($inspId) ?>',
-                                                '<?= esc($insp['technician_name'] ?? 'N/A') ?>'
-                                            )">
-                                                <i class="fa-solid fa-eye me-1"></i> View
-                                            </button>
+                                            <?php if (!$isDone): ?>
+                                                <button class="btn btn-sm btn-warning me-1 btn-resume-insp"
+                                                    data-group="<?= esc($insp['group_id']) ?>"
+                                                    data-site="<?= esc($site['name']) ?>"
+                                                    data-type="<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>"
+                                                    data-title="<?= esc($insp['title'] ?? '') ?>"
+                                                    data-inspid="<?= esc($inspId) ?>"
+                                                    data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>"
+                                                    title="Resume this in-progress inspection">
+                                                    <i class="fa-solid fa-play me-1"></i> Resume
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-sm btn-primary btn-view-insp"
+                                                    data-group="<?= esc($insp['group_id']) ?>"
+                                                    data-site="<?= esc($site['name']) ?>"
+                                                    data-type="<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>"
+                                                    data-title="<?= esc($insp['title'] ?? '') ?>"
+                                                    data-inspid="<?= esc($inspId) ?>"
+                                                    data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>">
+                                                    <i class="fa-solid fa-eye me-1"></i> View
+                                                </button>
+                                            <?php endif; ?>
                                             <button class="btn btn-sm btn-danger delete-inspection-btn"
                                                 data-id="<?= esc($insp['group_id']) ?>" title="Delete">
                                                 <i class="fa-solid fa-trash"></i>
@@ -134,10 +182,21 @@
                     <div>
                         <div class="badge text-light border mb-2" id="insp-site-label">Site:
                             <?= esc($site['name'] ?? '—') ?></div>
-                        <h2 class="fw-bold" id="insp-title">—</h2>
+                        <h2 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                            <span id="insp-title" contenteditable="true"
+                                style="outline:none;min-width:120px;border-bottom:2px dashed transparent;cursor:text;transition:border-color .2s;"
+                                title="Click to edit inspection title"
+                                onmouseenter="this.style.borderBottomColor='#6c757d'"
+                                onmouseleave="this.style.borderBottomColor='transparent'"
+                                onfocus="this.style.borderBottomColor='#0d6efd'"
+                                onblur="saveInspTitle(this)">—</span>
+                            <i class="fa-solid fa-pencil text-muted" style="font-size:14px;opacity:.5;cursor:text;" onclick="document.getElementById('insp-title').focus()"></i>
+                            <span id="insp-title-saved" style="font-size:11px;color:#22c55e;opacity:0;transition:opacity .4s;font-weight:400;">✓ saved</span>
+                        </h2>
                         <p class="text-muted">
                             <span id="insp-id-label">—</span> •
-                            <span class="text-primary" id="insp-technician">—</span>
+                            <span class="text-primary" id="insp-technician">—</span> •
+                            <span id="insp-date-display" class="small"></span>
                         </p>
                     </div>
                     <div class="text-end">
@@ -233,10 +292,16 @@
                                         inspection.
                                     </div>
                                 </div>
-                                <!-- ── Add Device button (NEW) ── -->
-                                <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
-                                    <i class="fa-solid fa-circle-plus me-1"></i> Add Device
-                                </button>
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    <button class="export-btn btn btn-sm" onclick="techCopyTable('notInspectedTable')">Copy</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportCSV('notInspectedTable')">CSV</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportExcel('notInspectedTable')">Excel</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportPDF('notInspectedTable')">PDF</button>
+                                    <!-- ── Add Device button (NEW) ── -->
+                                    <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
+                                        <i class="fa-solid fa-circle-plus me-1"></i> Add Device
+                                    </button>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-striped mb-0" id="notInspectedTable">
@@ -294,8 +359,6 @@
                                 <div class="card border-0 shadow-sm mb-4 glass-card">
                                     <div class="card-body">
                                         <div class="row g-3 align-items-center">
-                                            <div class="col-md-3 fw-semibold">Customer:</div>
-                                            <div class="col-md-9 fw-semibold" id="inspectCustomerName">—</div>
                                             <div class="col-md-3 fw-semibold">Model:</div>
                                             <div class="col-md-9" id="inspectModelDisplay">—</div>
                                             <div class="col-md-3 fw-semibold">Department:</div>
@@ -309,7 +372,7 @@
                                                     placeholder="Serial #" type="text"></div>
                                             <div class="col-md-3 fw-semibold">Asset ID:</div>
                                             <div class="col-md-9"><input class="form-control" id="inspectAsset"
-                                                    placeholder="Asset ID" readonly type="text"></div>
+                                                    placeholder="Asset ID" type="text" title="You may edit the Asset ID if needed"></div>
                                             <div class="col-md-3 fw-semibold">PM Frequency:</div>
                                             <div class="col-md-9">
                                                 <select class="form-select" id="inspectPMFrequency"
@@ -422,6 +485,12 @@
                                     </div>
                                 </div>
 
+                                <div class="d-flex gap-2 mb-2 flex-wrap">
+                                    <button class="export-btn btn btn-sm" onclick="techCopyTable('inspectedTable')">Copy</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportCSV('inspectedTable')">CSV</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportExcel('inspectedTable')">Excel</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportPDF('inspectedTable')">PDF</button>
+                                </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped mb-0" id="inspectedTable">
                                         <thead>
@@ -447,6 +516,8 @@
                                                 <?php foreach ($inspectedItems as $item): ?>
                                                     <tr class="fade-in" data-row-id="<?= esc($item['id']) ?>"
                                                         data-asset="<?= esc($item['asset_tag']) ?>"
+                                                        data-notes="<?= esc($item['notes'] ?? '') ?>"
+                                                        data-action="<?= esc($item['inspection_type'] ?? $item['action_performed'] ?? '') ?>"
                                                         data-eq-id="<?= esc($item['equipment_id'] ?? '') ?>"
                                                         data-group-id="<?= esc($item['group_id'] ?? '') ?>"
                                                         data-device-type="<?= esc($item['device_type'] ?? '') ?>"
@@ -457,6 +528,7 @@
                                                                 <button class="btn btn-sm btn-primary btn-edit-inspected"
                                                                     title="Edit" data-id="<?= esc($item['id']) ?>"
                                                                     data-model="<?= esc($item['model'] ?? $item['make'] ?? '') ?>"
+                                                                    data-make="<?= esc($item['make'] ?? '') ?>"
                                                                     data-type="<?= esc($item['device_type'] ?? '') ?>"
                                                                     data-serial="<?= esc($item['serial_number'] ?? '') ?>"
                                                                     data-asset="<?= esc($item['asset_tag'] ?? '') ?>"
@@ -520,8 +592,14 @@
 
                         <!-- ══ ARCHIVED ══ -->
                         <div class="tab-pane fade p-4" id="archived" role="tabpanel">
+                            <div class="d-flex gap-2 mb-2 flex-wrap">
+                                <button class="export-btn btn btn-sm" onclick="techCopyTable('archivedTable')">Copy</button>
+                                <button class="export-btn btn btn-sm" onclick="techExportCSV('archivedTable')">CSV</button>
+                                <button class="export-btn btn btn-sm" onclick="techExportExcel('archivedTable')">Excel</button>
+                                <button class="export-btn btn btn-sm" onclick="techExportPDF('archivedTable')">PDF</button>
+                            </div>
                             <div class="table-responsive">
-                                <table class="table table-striped mb-0">
+                                <table class="table table-striped mb-0" id="archivedTable">
                                     <thead>
                                         <tr>
                                             <th>Asset #</th>
@@ -561,10 +639,16 @@
                                     <div class="fw-semibold">All Inventory</div>
                                     <div class="text-muted small">Full list of equipment in the site inventory.</div>
                                 </div>
-                                <!-- Add Device shortcut in Inventory tab too -->
-                                <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
-                                    <i class="fa-solid fa-circle-plus me-1"></i> Add Device
-                                </button>
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    <button class="export-btn btn btn-sm" onclick="techCopyTable('inventoryTable')">Copy</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportCSV('inventoryTable')">CSV</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportExcel('inventoryTable')">Excel</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportPDF('inventoryTable')">PDF</button>
+                                    <!-- Add Device shortcut in Inventory tab too -->
+                                    <button class="btn btn-primary btn-sm" type="button" onclick="openAddDeviceModal()">
+                                        <i class="fa-solid fa-circle-plus me-1"></i> Add Device
+                                    </button>
+                                </div>
                             </div>
                             <div class="table-responsive">
                                 <table class="table table-striped" id="inventoryTable">
@@ -614,17 +698,23 @@
 
                         <!-- ══ WORK ORDERS ══ -->
                         <div class="tab-pane fade p-3" id="insp-work-orders" role="tabpanel">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                                 <div>
                                     <h5 class="fw-bold mb-1">Work Orders</h5>
                                     <p class="text-muted small mb-0">Manage work orders for this site.</p>
                                 </div>
-                                <button class="btn btn-primary" onclick="openWorkOrderModal()">
-                                    <i class="fa-solid fa-plus me-2"></i>Add Work Order
-                                </button>
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                                    <button class="export-btn btn btn-sm" onclick="techCopyTable('workOrdersTable')">Copy</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportCSV('workOrdersTable')">CSV</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportExcel('workOrdersTable')">Excel</button>
+                                    <button class="export-btn btn btn-sm" onclick="techExportPDF('workOrdersTable')">PDF</button>
+                                    <button class="btn btn-primary" onclick="openWorkOrderModal()">
+                                        <i class="fa-solid fa-plus me-2"></i>Add Work Order
+                                    </button>
+                                </div>
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-hover">
+                                <table class="table table-hover" id="workOrdersTable">
                                     <thead>
                                         <tr>
                                             <th>Actions</th>
@@ -692,9 +782,9 @@
                                     <p class="text-muted small mb-0">Preview and export inspection summaries.</p>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-primary" onclick="previewReportPDF()"><i
-                                            class="fa-solid fa-file-lines me-2"></i>Preview</button>
-                                    <button class="btn btn-primary" onclick="exportReportPDF()"><i
+                                    <button class="btn btn-outline-primary" id="techTabPreviewBtn" onclick="techTabPreviewReport()"><i
+                                            class="fa-solid fa-file-pdf me-2"></i>Preview</button>
+                                    <button class="btn btn-primary" id="techTabDownloadBtn" onclick="techTabDownloadReport()"><i
                                             class="fa-solid fa-download me-2"></i>Download PDF</button>
                                 </div>
                             </div>
@@ -901,17 +991,20 @@
                             <div class="col-md-6">
                                 <label class="form-label">Priority</label>
                                 <select class="form-select" id="woPriority">
-                                    <option value="Low">Low</option>
-                                    <option selected value="Medium">Medium</option>
-                                    <option value="High">High</option>
+                                    <option value="low">Low</option>
+                                    <option selected value="normal">Normal</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Status</label>
                                 <select class="form-select" id="woStatus">
-                                    <option value="Open">Open</option>
-                                    <option value="In Progress">In Progress</option>
-                                    <option value="Completed">Completed</option>
+                                    <option value="open">Open</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -948,20 +1041,15 @@
         <!-- ══ INSPECTION REPORT MODAL ══ -->
         <div class="modal fade" id="inspectionReportModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div class="modal-header" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;">
-                        <h5 class="modal-title">Inspection Report</h5>
+                <div class="modal-content" style="background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:16px;">
+                    <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-bottom:none;border-radius:16px 16px 0 0;">
+                        <h5 class="modal-title fw-bold text-white"><i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview</h5>
                         <button class="btn-close btn-close-white" data-bs-dismiss="modal" type="button"></button>
                     </div>
-                    <div class="modal-body">
-                        <div id="reportContent"></div>
-                    </div>
-                    <div class="modal-footer">
+                    <div class="modal-body p-0" id="reportContent"></div>
+                    <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08);background:rgba(7,10,18,.4);border-radius:0 0 16px 16px;">
                         <button class="btn btn-outline-secondary" data-bs-dismiss="modal" type="button">Close</button>
-                        <button class="btn btn-outline-primary" onclick="previewReportPDF()" type="button"><i
-                                class="fa-solid fa-file-lines me-2"></i>Preview</button>
-                        <button class="btn btn-primary" onclick="exportReportPDF()" type="button"><i
-                                class="fa-solid fa-download me-2"></i>Download PDF</button>
+                        <button class="btn btn-primary" id="techSiteReportDownloadBtn" type="button"><i class="fa-solid fa-download me-1"></i>Download PDF</button>
                     </div>
                 </div>
             </div>
@@ -979,10 +1067,12 @@
                         <input type="hidden" id="editInspId">
                         <div class="modal-body">
                             <div class="row g-3">
+                                <div class="col-md-4"><label class="form-label">Manufacturer / Make</label><input class="form-control"
+                                        id="editMake" type="text" placeholder="e.g. Accucold"></div>
                                 <div class="col-md-4"><label class="form-label">Model</label><input class="form-control"
                                         id="editModel" required type="text"></div>
-                                <div class="col-md-4"><label class="form-label">Type</label><input class="form-control"
-                                        id="editType" required type="text"></div>
+                                <div class="col-md-4"><label class="form-label">Device Type</label><input class="form-control"
+                                        id="editType" type="text" placeholder="e.g. Refrigerator"></div>
                                 <div class="col-md-4"><label class="form-label">S/N</label><input class="form-control"
                                         id="editSerial" type="text"></div>
                                 <div class="col-md-4"><label class="form-label">Asset #</label><input
@@ -991,7 +1081,7 @@
                                         class="form-control" id="editDept" type="text"></div>
                                 <div class="col-md-4"><label class="form-label">Room</label><input class="form-control"
                                         id="editRoom" type="text"></div>
-                                <div class="col-md-6"><label class="form-label">Tech</label><input class="form-control"
+                                <div class="col-md-4"><label class="form-label">Tech</label><input class="form-control"
                                         id="editTech" type="text"></div>
                                 <div class="col-12"><label class="form-label">Notes</label><textarea
                                         class="form-control" id="editNotes" rows="3"></textarea></div>
@@ -1008,7 +1098,21 @@
 
     </div>
 </div>
+<style>
+    .model-suggestion-item:hover,
+    .model-suggestion-item.active {
+        background-color: #f0f4ff !important;
+        color: #0d6efd !important;
+    }
 
+    .model-suggestion-item .fw-semibold {
+        color: #212529 !important;
+    }
+
+    .model-suggestion-item small {
+        color: #6c757d !important;
+    }
+</style>
 
 <script>
     (function() {
@@ -1116,6 +1220,7 @@
                 var sub = r.device_type || '';
                 return '<button type="button"' +
                     ' class="list-group-item list-group-item-action py-2 px-3 model-suggestion-item"' +
+                    ' style="color:#212529 !important;background:#fff;border-bottom:1px solid #e9ecef;"' +
                     ' data-make="' + escH(r.make || '') + '"' +
                     ' data-model="' + escH(r.model || '') + '"' +
                     ' data-device_type="' + escH(r.device_type || '') + '"' +
@@ -1264,8 +1369,7 @@
                 var deptEl = document.getElementById('addDept');
                 var roomEl = document.getElementById('addRoom');
                 if (!deptEl || !roomEl) return;
-                fetch('<?= site_url("technician/site-inspection/last-device") ?>?site_id=' + encodeURIComponent(
-                        SITE_ID), {
+                fetch('<?= site_url("technician/site-inspection/last-device") ?>?site_id=' + encodeURIComponent(SITE_ID) + '&group_id=' + encodeURIComponent(window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || ''), {
                         headers: {
                             'Accept': 'application/json',
                             'X-Requested-With': 'XMLHttpRequest'
@@ -1328,7 +1432,7 @@
             var errBox = document.getElementById('addDeviceError');
             if (errBox) errBox.classList.add('d-none');
 
-            var assetTag  = (document.getElementById('addAsset').value || '').trim();
+            var assetTag = (document.getElementById('addAsset').value || '').trim();
             var serialVal = (document.getElementById('addSerial').value || '').trim();
 
             if (!assetTag) {
@@ -1342,10 +1446,14 @@
             }
 
             // Client-side duplicate check: asset tag
-            var existingAssetRow = document.querySelector('#notInspectedTableBody tr[data-asset="' + assetTag.replace(/"/g,'') + '"]')
-                || document.querySelector('#allInventoryTableBody tr[data-asset="' + assetTag.replace(/"/g,'') + '"]');
+            var existingAssetRow = document.querySelector('#notInspectedTableBody tr[data-asset="' + assetTag.replace(/"/g, '') + '"]') ||
+                document.querySelector('#allInventoryTableBody tr[data-asset="' + assetTag.replace(/"/g, '') + '"]');
             if (existingAssetRow) {
-                Swal.fire({ icon: 'error', title: 'Duplicate Asset #', text: 'Asset # "' + assetTag + '" already exists in this site\'s inventory.' });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Duplicate Asset #',
+                    text: 'Asset # "' + assetTag + '" already exists in this site\'s inventory.'
+                });
                 document.getElementById('addAsset').focus();
                 return;
             }
@@ -1395,31 +1503,61 @@
                         var errMsg = (res && res.message) || 'Failed to save device. Please try again.';
                         // Show SweetAlert for duplicate errors
                         if (errMsg.indexOf('already exists') !== -1) {
-                            Swal.fire({ icon: 'error', title: 'Duplicate Found', text: errMsg });
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Duplicate Found',
+                                text: errMsg
+                            });
                         } else {
                             _showAddDeviceError(errMsg);
                         }
                         return;
                     }
-                    // Save last used dept/room for this site to localStorage
-                    var lastDept = (document.getElementById('addDept').value || '').trim();
-                    var lastRoom = (document.getElementById('addRoom').value || '').trim();
-                    if (lastDept || lastRoom) {
-                        // dept/room is auto-loaded from server on next modal open
 
-                    }
-                    bootstrap.Modal.getInstance(document.getElementById('addDeviceModal')).hide();
-                    toast('Device "' + assetTag + '" added to site inventory.', 'success');
+                    var modalEl = document.getElementById('addDeviceModal');
+                    var deviceData = {
+                        asset_tag: res.asset_tag || assetTag,
+                        make: res.make || (document.getElementById('addManufacturer').value || '').trim(),
+                        model: res.model || (document.getElementById('addModel').value || '').trim(),
+                        device_type: res.device_type || (document.getElementById('addType').value || '').trim(),
+                        serial_number: res.serial_number || (document.getElementById('addSerial').value || '').trim(),
+                        department: res.department || (document.getElementById('addDept').value || '').trim(),
+                        location: res.location || (document.getElementById('addRoom').value || '').trim(),
+                        equipment_id: res.equipment_id || null,
+                        source: res.reused ? 'equipment' : 'inspection'
+                    };
 
-                    backgroundRefreshTabs(function() {
-                        if (res.start_inspection) {
-                            var ai = document.getElementById('assetInput');
-                            if (ai) {
-                                ai.value = assetTag;
-                                handleAssetGo();
+                    if (modalEl) {
+                        modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+
+                            if (typeof window.startInspectionWithDeviceData === 'function') {
+                                window.startInspectionWithDeviceData(deviceData);
                             }
+
+                            toast(
+                                res.reused ?
+                                ('Device "' + assetTag + '" found and ready to inspect.') :
+                                ('Device "' + assetTag + '" ready to inspect.'),
+                                'success'
+                            );
+                        }, {
+                            once: true
+                        });
+
+                        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                    } else {
+                        if (typeof window.startInspectionWithDeviceData === 'function') {
+                            window.startInspectionWithDeviceData(deviceData);
                         }
-                    });
+
+                        toast(
+                            res.reused ?
+                            ('Device "' + assetTag + '" found and ready to inspect.') :
+                            ('Device "' + assetTag + '" ready to inspect.'),
+                            'success'
+                        );
+                    }
                 })
                 .catch(function(err) {
                     _showAddDeviceError(err.message || 'An unexpected error occurred.');
@@ -1451,6 +1589,14 @@
                 if (msgF && msgL) msgL.textContent = msgF.textContent;
                 var newMeta = doc.querySelector('meta[name="csrf-token"]');
                 if (newMeta) csrfHash = newMeta.getAttribute('content');
+                // Fix 4: Restore user-edited title after DOM refresh
+                if (window._savedInspTitle) {
+                    var titleEl = document.getElementById('insp-title');
+                    if (titleEl) titleEl.textContent = window._savedInspTitle;
+                }
+                if (typeof window.restoreInspTitle === 'function') {
+                    window.restoreInspTitle(window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID);
+                }
                 if (window.CURRENT_INSPECTION_GROUP_ID) {
                     filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
                     filterNotInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
@@ -1558,9 +1704,11 @@
            ══════════════════════════════════════════════════════════════════ */
         window.viewInspection = function(groupId, siteName, inspType, inspDisplayId, techName) {
             document.getElementById('insp-site-label').textContent = 'Site: ' + (siteName || '—');
+            // Fix 4: Restore title from localStorage if previously saved
             document.getElementById('insp-title').textContent = inspType || 'Equipment Inspection';
             document.getElementById('insp-id-label').textContent = 'Inspection #' + (inspDisplayId || groupId);
             document.getElementById('insp-technician').textContent = techName || '—';
+            window._savedInspTitle = inspType || 'Equipment Inspection';
             window.CURRENT_INSPECTION_GROUP_ID = groupId;
             window.CURRENT_REPORT_GROUP_ID = groupId;
             filterInspectedByGroup(groupId);
@@ -1573,6 +1721,60 @@
                 block: 'start'
             });
         };
+
+        // Resume an in-progress inspection: same as viewInspection but activates
+        // the Not Inspected tab so technician can scan more devices immediately
+        window.resumeInspection = function(groupId, siteName, inspType, inspDisplayId, techName) {
+            document.getElementById('insp-site-label').textContent = 'Site: ' + (siteName || '—');
+            // Fix 4: Restore title from localStorage if previously saved
+            document.getElementById('insp-title').textContent = inspType || 'Equipment Inspection';
+            document.getElementById('insp-id-label').textContent = 'Inspection #' + (inspDisplayId || groupId);
+            document.getElementById('insp-technician').textContent = techName || '—';
+            window._savedInspTitle = inspType || 'Equipment Inspection';
+            window.CURRENT_INSPECTION_GROUP_ID = groupId;
+            window.CURRENT_REPORT_GROUP_ID = groupId;
+            filterInspectedByGroup(groupId);
+            filterNotInspectedByGroup(groupId);
+            document.getElementById('view-dashboard').classList.add('d-none-view');
+            document.getElementById('view-inspection').classList.remove('d-none-view');
+            // Switch to Not Inspected tab so they can keep adding devices
+            var notInspTab = document.getElementById('not-inspected-tab');
+            if (notInspTab) bootstrap.Tab.getOrCreateInstance(notInspTab).show();
+            // Reset Pass/Fail form to empty state
+            var emptyV = document.getElementById('inspectDeviceEmpty');
+            var formW = document.getElementById('inspectDeviceFormWrapper');
+            if (emptyV) emptyV.classList.remove('d-none');
+            if (formW) formW.classList.add('d-none');
+            // Clear and focus asset input
+            var ai = document.getElementById('assetInput');
+            if (ai) {
+                ai.value = '';
+                ai.focus();
+            }
+            var wf = document.getElementById('site-inspection-workflow');
+            if (wf) wf.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        };
+
+        // ── Event delegation for View / Resume buttons ─────────────────────
+        // Uses data-attributes instead of inline onclick to safely handle
+        // inspection_type text with newlines, apostrophes, parentheses etc.
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-view-insp, .btn-resume-insp');
+            if (!btn) return;
+            var groupId = btn.dataset.group || '';
+            var siteName = btn.dataset.site || '';
+            var inspType = btn.dataset.title || btn.dataset.type || 'Equipment Inspection';
+            var inspId = btn.dataset.inspid || groupId;
+            var techName = btn.dataset.tech || '—';
+            if (btn.classList.contains('btn-resume-insp')) {
+                resumeInspection(groupId, siteName, inspType, inspId, techName);
+            } else {
+                viewInspection(groupId, siteName, inspType, inspId, techName);
+            }
+        });
 
         window.showDashboard = function() {
             document.getElementById('view-inspection').classList.add('d-none-view');
@@ -1609,10 +1811,16 @@
         window.startInspection = function() {
             window.CURRENT_INSPECTION_GROUP_ID = null;
             window.CURRENT_REPORT_GROUP_ID = null;
+            window._savedInspTitle = null; // Fix 4: clear saved title on new inspection
             _pendingWOAsset = '';
 
             document.getElementById('insp-site-label').textContent = 'Site: <?= esc($site['name'] ?? '—') ?>';
-            document.getElementById('insp-title').textContent = 'New Inspection';
+            var titleEl = document.getElementById('insp-title');
+            if (titleEl) {
+                titleEl.textContent = 'New Inspection';
+                titleEl.focus();
+                titleEl.select && titleEl.select();
+            }
             document.getElementById('insp-id-label').textContent = '—';
             // Auto-assign the logged-in technician immediately
             document.getElementById('insp-technician').textContent = '<?= esc(session('full_name') ?? '—') ?>';
@@ -1626,7 +1834,10 @@
             if (ai) ai.value = '';
             var alertEl = document.getElementById('assetLookupAlert');
             if (alertEl) alertEl.style.display = 'none';
+            // Fix 1: Reset Action Performed to "-- Select --" and blank Notes on new inspection
             $('#inspectAsset,#inspectNotes,#inspectDept,#inspectRoom,#inspectSerial').val('');
+            var actionSel = document.getElementById('inspectActionPerformed');
+            if (actionSel) actionSel.selectedIndex = 0;
 
             var emptyV = document.getElementById('inspectDeviceEmpty');
             var formW = document.getElementById('inspectDeviceFormWrapper');
@@ -1660,6 +1871,57 @@
         /* ══════════════════════════════════════════════════════════════════
            ASSET LOOKUP
            ══════════════════════════════════════════════════════════════════ */
+        window.startInspectionWithDeviceData = function(resp) {
+            resp = resp || {};
+            var assetVal = resp.asset_tag || '';
+            _pendingWOAsset = assetVal;
+            window._inspectionDeviceMeta = {
+                equipment_id: resp.equipment_id || null,
+                asset_tag: assetVal,
+                make: resp.make || '',
+                model: resp.model || '',
+                device_type: resp.device_type || '',
+                serial_number: resp.serial_number || '',
+                department: resp.department || '',
+                location: resp.location || '',
+                est: resp.est || '',
+                cal: resp.cal || ''
+            };
+
+            var tabBtn = document.getElementById('inspect-device-tab');
+            var emptyV = document.getElementById('inspectDeviceEmpty');
+            var formW = document.getElementById('inspectDeviceFormWrapper');
+            if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+            if (emptyV) emptyV.classList.add('d-none');
+            if (formW) formW.classList.remove('d-none');
+
+            $('#inspectAsset').val(assetVal);
+            $('#inspectModelDisplay').text((resp.model && resp.model.length) ? resp.model : (resp.make || '—'));
+            // Restore last-used dept/room when device has none saved
+            $('#inspectDept').val(resp.department || window._lastDept || '');
+            $('#inspectRoom').val(resp.location || window._lastRoom || '');
+            $('#inspectSerial').val(resp.serial_number || '');
+            $('#inspectPMFrequency').val('12 Month');
+
+            var existingNotesRow = document.querySelector('#inspectionTableBody tr[data-asset="' + assetVal.replace(/"/g, '') + '"]');
+            var existingNotes = existingNotesRow ? (existingNotesRow.dataset.notes || existingNotesRow.getAttribute('data-notes') || '') : (resp.notes || '');
+            var existingAction = existingNotesRow ? (existingNotesRow.dataset.action || existingNotesRow.getAttribute('data-action') || '') : (resp.action_performed || '');
+            var apSel = document.getElementById('inspectActionPerformed');
+            $('#inspectNotes').val(existingNotes || '');
+            if (apSel) {
+                if (existingAction) {
+                    for (var oi = 0; oi < apSel.options.length; oi++) {
+                        if (apSel.options[oi].value === existingAction) {
+                            apSel.selectedIndex = oi;
+                            break;
+                        }
+                    }
+                } else {
+                    apSel.selectedIndex = 0;
+                }
+            }
+        };
+
         window.handleAssetGo = function() {
             var asset = $.trim($('#assetInput').val());
             if (!asset) {
@@ -1683,7 +1945,8 @@
                 dataType: 'json',
                 data: {
                     asset_tag: asset,
-                    site_id: SITE_ID
+                    site_id: SITE_ID,
+                    group_id: window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || ''
                 },
                 success: function(resp) {
                     if (goBtn) {
@@ -1698,33 +1961,9 @@
                         openAddDeviceModal(asset);
                         return;
                     }
-
-                    _pendingWOAsset = resp.asset_tag || asset;
-                    var tabBtn = document.getElementById('inspect-device-tab');
-                    var emptyV = document.getElementById('inspectDeviceEmpty');
-                    var formW = document.getElementById('inspectDeviceFormWrapper');
-                    if (tabBtn) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-                    if (emptyV) emptyV.classList.add('d-none');
-                    if (formW) formW.classList.remove('d-none');
-
-                    $('#inspectAsset').val(resp.asset_tag || '');
-                    $('#inspectModelDisplay').text((resp.model && resp.model.length) ? resp.model : (
-                        resp.make || '—'));
-                    $('#inspectCustomerName').text('<?= esc($customer['name'] ?? '') ?>');
-                    $('#inspectDept').val(resp.department || '');
-                    $('#inspectRoom').val(resp.location || '');
-                    $('#inspectSerial').val(resp.serial_number || '');
-                    $('#inspectPMFrequency').val('12 Month');
-                    var apSel = document.getElementById('inspectActionPerformed');
-                    if (apSel && apSel.options.length > 1) {
-                        apSel.selectedIndex = 1;
+                    if (typeof window.startInspectionWithDeviceData === 'function') {
+                        window.startInspectionWithDeviceData(resp || {});
                     }
-                    $('#inspectNotes').val('');
-                    setTimeout(function() {
-                        if (typeof window._techIqNoteHandler === 'function') {
-                            window._techIqNoteHandler();
-                        }
-                    }, 50);
                 },
                 error: function(xhr) {
                     if (goBtn) {
@@ -1757,16 +1996,28 @@
            ══════════════════════════════════════════════════════════════════ */
         function recordInspection(result, onSuccessCallback) {
             var assetTag = $('#inspectAsset').val();
+            var now = new Date();
+            var pad = function(n) {
+                return n < 10 ? '0' + n : n;
+            };
+            var localNow = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate()) +
+                ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+            var meta = window._inspectionDeviceMeta || {};
             var payload = {
                 site_id: SITE_ID,
                 asset_tag: assetTag,
+                original_asset_tag: _pendingWOAsset || assetTag,
                 result: result,
                 notes: $('#inspectNotes').val(),
                 department: $('#inspectDept').val(),
                 room: $('#inspectRoom').val(),
                 serial_number: $('#inspectSerial').val(),
                 action_performed: $('#inspectActionPerformed').val(),
-                pm_frequency: $('#inspectPMFrequency').val()
+                pm_frequency: $('#inspectPMFrequency').val(),
+                completed_at: localNow,
+                make: meta.make || '',
+                model: meta.model || '',
+                device_type: meta.device_type || ''
             };
             if (window.CURRENT_REPORT_GROUP_ID) payload.group_id = window.CURRENT_REPORT_GROUP_ID;
             if (!assetTag) {
@@ -1788,10 +2039,32 @@
                         var idLabel = document.getElementById('insp-id-label');
                         if (idLabel && (idLabel.textContent === '—' || !idLabel.textContent.trim())) idLabel
                             .textContent = ng;
+                        // Fix 4: Restore user-edited title
+                        if (typeof window.restoreInspTitle === 'function') window.restoreInspTitle(ng);
+                    }
+                    // Fix 8: Update live timestamp when inspection result is recorded
+                    var nowDisp = new Date();
+                    var dateDisplayEl = document.getElementById('insp-date-display');
+                    if (dateDisplayEl) {
+                        var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                        var pd = function(n) {
+                            return n < 10 ? '0' + n : n;
+                        };
+                        var h = nowDisp.getHours(),
+                            ampm = h >= 12 ? 'PM' : 'AM';
+                        h = h % 12 || 12;
+                        dateDisplayEl.textContent = months[nowDisp.getMonth()] + ' ' + nowDisp.getDate() + ', ' +
+                            nowDisp.getFullYear() + ' ' + h + ':' + pd(nowDisp.getMinutes()) + ' ' + ampm;
                     }
 
                     $('#assetInput').val('');
-                    $('#inspectAsset,#inspectNotes,#inspectDept,#inspectRoom,#inspectSerial').val('');
+                    // Keep dept and room so they carry over to the next device.
+                    // Only clear device-specific fields.
+                    $('#inspectAsset,#inspectNotes,#inspectSerial').val('');
+                    // Store last-used dept/room for autofill on next scan
+                    window._lastDept = $('#inspectDept').val();
+                    window._lastRoom = $('#inspectRoom').val();
+                    window._inspectionDeviceMeta = null;
                     var alertEl = document.getElementById('assetLookupAlert');
                     if (alertEl) alertEl.style.display = 'none';
                     var emptyV = document.getElementById('inspectDeviceEmpty');
@@ -1806,25 +2079,8 @@
                             filterNotInspectedByGroup(cgid);
                         }
                         if (cgid) {
-                            $.ajax({
-                                url: REPORT_DATA_URL + '?group_id=' + encodeURIComponent(cgid),
-                                type: 'GET',
-                                dataType: 'json',
-                                headers: {
-                                    'X-Requested-With': 'XMLHttpRequest'
-                                },
-                                success: function(res) {
-                                    if (res && res.success) {
-                                        var html = generateInspectionReportHTML(res.latest,
-                                            res.rows, res.group_id || cgid);
-                                        var tc = document.getElementById(
-                                            'reportsTabContent');
-                                        if (tc) tc.innerHTML = html;
-                                        var rc = document.getElementById('reportContent');
-                                        if (rc) rc.innerHTML = html;
-                                    }
-                                }
-                            });
+                            var tc = document.getElementById('reportsTabContent');
+                            if (tc) loadReportIntoContainer(cgid, tc, true);
                         }
                         toast('Inspection recorded: ' + result, 'success');
                         if (typeof onSuccessCallback === 'function') {
@@ -1882,6 +2138,28 @@
                     showWorkOrdersTab();
                     setTimeout(function() {
                         openWorkOrderModalFromInventory(assetId);
+                        // Look up the auto-created WO so Save does UPDATE not INSERT duplicate
+                        var groupId = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || '';
+                        if (groupId && assetId) {
+                            $.get(BASE + '/work-orders/findByGroup', {
+                                group_id: groupId,
+                                asset_tag: assetId,
+                                site_id: SITE_ID
+                            }, function(res) {
+                                if (res && res.success && res.work_order_id) {
+                                    $('#woId').val(res.work_order_id);
+                                    // Pre-fill title/description from existing WO if not yet set
+                                    if (res.title && !$.trim($('#woTitle').val())) {
+                                        $('#woTitle').val(res.title);
+                                    }
+                                    if (res.description) {
+                                        $('#woDescription').val(res.description);
+                                    }
+                                    document.getElementById('workOrderModalTitle').textContent = 'Edit Work Order';
+                                    document.getElementById('saveWorkOrderBtn').textContent = 'Update Work Order';
+                                }
+                            }, 'json').fail(function() { /* silent - stays as new WO */ });
+                        }
                     }, 350);
                 });
             });
@@ -1897,23 +2175,33 @@
 
             $(document).on('click', '.delete-inspection-btn', function() {
                 var groupId = $(this).data('id');
-                if (!confirm('Delete all inspections in group ' + groupId + '? This cannot be undone.'))
-                    return;
-                $.post(BASE + '/inspections/deleteGroup', {
-                    group_id: groupId
-                }, function(res) {
-                    if (res && res.success) {
-                        toast('Inspection group deleted.', 'warning');
-                        location.reload();
-                    } else toast('Delete failed.', 'danger');
-                }, 'json').fail(function() {
-                    toast('Delete request failed.', 'danger');
+                Swal.fire({
+                    title: 'Delete Inspection Group?',
+                    text: 'All inspections in group ' + groupId + ' will be permanently deleted.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete'
+                }).then(function(result) {
+                    if (!result.isConfirmed) return;
+                    $.post(BASE + '/inspections/deleteGroup', {
+                        group_id: groupId
+                    }, function(res) {
+                        if (res && res.success) {
+                            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Inspection group deleted.', timer: 1500, showConfirmButton: false });
+                            setTimeout(function() { location.reload(); }, 1600);
+                        } else Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed.' });
+                    }, 'json').fail(function() {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Delete request failed.' });
+                    });
                 });
             });
 
             $(document).on('click', '.btn-edit-inspected', function() {
                 var d = $(this).data();
                 $('#editInspId').val(d.id || '');
+                $('#editMake').val(d.make || '');
                 $('#editModel').val(d.model || '');
                 $('#editType').val(d.type || '');
                 $('#editSerial').val(d.serial || '');
@@ -1928,27 +2216,33 @@
             $(document).on('click', '.btn-delete-inspected', function() {
                 var id = $(this).data('id');
                 var asset = $(this).data('asset') || id;
-                if (!confirm('Remove inspection record for asset #' + asset +
-                        '?\nThis cannot be undone.')) return;
-                fetch(URL_DELETE_INSP + encodeURIComponent(id), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    },
-                    body: CSRF_NAME + '=' + encodeURIComponent(csrfHash)
-                }).then(function(r) {
-                    if (r.ok || r.status === 302 || r.redirected) {
-                        var row = document.querySelector(
-                            '#inspectionTableBody tr[data-row-id="' + id + '"]');
-                        if (row) row.remove();
-                        backgroundRefreshTabs(function() {
-                            toast('Inspection record deleted.', 'warning');
-                        });
-                    } else {
-                        toast('Delete failed (HTTP ' + r.status + ').', 'danger');
-                    }
-                }).catch(function(err) {
-                    toast('Delete failed – ' + err.message, 'danger');
+                Swal.fire({
+                    title: 'Remove Inspection Record?',
+                    text: 'Inspection record for asset #' + asset + ' will be permanently removed.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, remove'
+                }).then(function(result) {
+                    if (!result.isConfirmed) return;
+                    fetch(URL_DELETE_INSP + encodeURIComponent(id), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: CSRF_NAME + '=' + encodeURIComponent(csrfHash)
+                    }).then(function(r) {
+                        if (r.ok || r.status === 302 || r.redirected) {
+                            var row = document.querySelector('#inspectionTableBody tr[data-row-id="' + id + '"]');
+                            if (row) row.remove();
+                            backgroundRefreshTabs(function() {
+                                Swal.fire({ icon: 'success', title: 'Removed', text: 'Inspection record deleted.', timer: 1500, showConfirmButton: false });
+                            });
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed (HTTP ' + r.status + ').' });
+                        }
+                    }).catch(function(err) {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed – ' + err.message });
+                    });
                 });
             });
 
@@ -1963,6 +2257,10 @@
                     'department' + '=' + encodeURIComponent($('#editDept').val().trim()),
                     'location' + '=' + encodeURIComponent($('#editRoom').val().trim()),
                     'serial_number' + '=' + encodeURIComponent($('#editSerial').val().trim()),
+                    'asset_tag' + '=' + encodeURIComponent($('#editAsset').val().trim()),
+                    'make' + '=' + encodeURIComponent($('#editMake').val().trim()),
+                    'model' + '=' + encodeURIComponent($('#editModel').val().trim()),
+                    'device_type' + '=' + encodeURIComponent($('#editType').val().trim()),
                 ].join('&');
                 var saveBtn = this.querySelector('[type=submit]');
                 saveBtn.disabled = true;
@@ -1998,14 +2296,16 @@
                     });
             });
 
-            $(document).on('click', '.btn-edit-wo', function() {
+           $(document).on('click', '.btn-edit-wo', function() {
                 var id = $(this).data('id');
                 _resetWO();
                 document.getElementById('woId').value = id;
                 document.getElementById('workOrderModalTitle').textContent = 'Edit Work Order';
                 document.getElementById('saveWorkOrderBtn').textContent = 'Update Work Order';
+
+                // Load data THEN show modal so all fields (incl. technician) are populated
                 $.get(BASE + '/work-orders/show/' + id, function(res) {
-                    if (res && res.data) {
+                    if (res && res.success && res.data) {
                         var d = res.data;
                         $('#woTitle').val(d.title || '');
                         $('#woAsset').val(d.asset_tag || '');
@@ -2013,23 +2313,40 @@
                         $('#woModel').val(d.model || '');
                         $('#woSerial').val(d.serial_number || '');
                         $('#woEquipment').val(d.device_type || '');
-                        $('#woPriority').val(d.priority || 'Medium');
-                        $('#woStatus').val(d.status || 'Open');
-                        $('#woTech').val(d.assigned_to || '');
+                        $('#woPriority').val(d.priority || 'normal');
+                        $('#woStatus').val(d.status || 'open');
+                        // Trigger change so select visually highlights the saved option
+                        $('#woTech').val(d.assigned_to || '').trigger('change');
                         $('#woStartDate').val(d.start_date || '');
                         $('#woEndDate').val(d.end_date || '');
                         $('#woDescription').val(d.description || '');
-                        $('#woEquipmentId').val(d.equipment_id || '');
+                        $('#woEquipmentId').val(d.site_equipment_id || d.equipment_id || '');
                     }
-                }, 'json');
-                bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+                    // Show modal inside callback so all fields are populated before it opens
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+                }, 'json').fail(function() {
+                    // On fail still show modal with empty fields
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('workOrderModal')).show();
+                });
             });
 
             $(document).on('click', '.btn-delete-wo', function() {
                 var id = $(this).data('id');
-                if (!confirm('Delete work order #' + id + '?')) return;
-                window.location.href = BASE + '/work-orders/delete/' + id;
+                Swal.fire({
+                    title: 'Delete work order?',
+                    text: 'This work order will be soft deleted.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete it'
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        window.location.href = BASE + '/work-orders/delete/' + id;
+                    }
+                });
             });
+
 
             /* Work Orders tab — always show all rows */
             var woTabBtn = document.getElementById('insp-work-orders-tab');
@@ -2046,42 +2363,16 @@
             if (reportsTabBtn) {
                 reportsTabBtn.addEventListener('shown.bs.tab', function() {
                     var container = document.getElementById('reportsTabContent');
-                    if (container && container.querySelector('p.fst-italic') === null && container
-                        .innerHTML.trim() !== '') return;
+                    // Skip if iframe already loaded
+                    if (container && container.querySelector('iframe')) return;
                     var groupId = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID;
                     if (!groupId) {
                         if (container) container.innerHTML =
-                            '<div class="alert alert-info">No inspection loaded yet.</div>';
+                            '<div class="alert alert-info m-3">No inspection loaded yet. Open an inspection first.</div>';
                         return;
                     }
                     window.CURRENT_REPORT_GROUP_ID = groupId;
-                    if (container) container.innerHTML =
-                        '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading…</p></div>';
-                    $.ajax({
-                        url: REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId),
-                        type: 'GET',
-                        dataType: 'json',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        success: function(res) {
-                            if (!res || !res.success) {
-                                if (container) container.innerHTML =
-                                    '<div class="alert alert-warning">No data.</div>';
-                                return;
-                            }
-                            var html = generateInspectionReportHTML(res.latest, res.rows,
-                                res.group_id || groupId);
-                            if (container) container.innerHTML = html;
-                            var rc = document.getElementById('reportContent');
-                            if (rc) rc.innerHTML = html;
-                        },
-                        error: function(xhr) {
-                            if (container) container.innerHTML =
-                                '<div class="alert alert-danger">Error HTTP ' + xhr.status +
-                                '</div>';
-                        }
-                    });
+                    loadReportIntoContainer(groupId, container, true);
                 });
             }
 
@@ -2106,32 +2397,57 @@
                         notes.forEach(function(n) {
                             var o = document.createElement('option');
                             o.value = n.note || n.title;
+                            o.setAttribute('data-id', n.id || '');
                             o.setAttribute('data-title', n.title || '');
                             o.setAttribute('data-note', n.note || '');
                             o.textContent = n.title || n.note;
                             sel.appendChild(o);
                         });
-                        // ADD THIS RIGHT AFTER THE forEach:
+                        // Pre-select first option — do NOT fill notes on load (Fix 1)
                         if (sel.options.length > 1) {
-                            sel.selectedIndex = 1;
+                            sel.selectedIndex = 0; // Reset to "-- Select --"
                         }
-                        // Small defer to ensure DOM is settled before reading selected option
-                        setTimeout(function() {
-                            if (typeof window._techIqNoteHandler === 'function') {
-                                window._techIqNoteHandler();
-                            }
-                        }, 50);
-                        // Auto-populate notes textarea when IQ note selected
+                        // Fix 2: Only fill notes when user actively CHANGES the action
                         sel.removeEventListener('change', window._techIqNoteHandler);
                         window._techIqNoteHandler = function() {
                             var selected = sel.options[sel.selectedIndex];
-                            if (!selected) return;
+                            if (!selected || selected.value === '') return;
                             var noteText = selected.getAttribute('data-note') || '';
                             var notesArea = document.getElementById('inspectNotes');
+                            // Always fill notes when user actively changes the dropdown
                             if (notesArea && noteText) notesArea.value = noteText;
                         };
-                        sel.addEventListener('change', window._techIqNoteHandler); // ← correct name
-                        window._techIqNoteHandler(); // ← correct name, fires immediately
+                        sel.addEventListener('change', window._techIqNoteHandler);
+                        // Do NOT call on load — notes stay blank until technician interacts
+
+                        // Fix 3: When user edits notes textarea, save back to IQ notes table
+                        var notesArea = document.getElementById('inspectNotes');
+                        if (notesArea) {
+                            notesArea.removeEventListener('blur', window._techNotesBlurHandler);
+                            window._techNotesBlurHandler = function() {
+                                var selected = sel.options[sel.selectedIndex];
+                                if (!selected || selected.value === '') return;
+                                var noteId = selected.getAttribute('data-id') || '';
+                                var noteTitle = selected.getAttribute('data-title') || selected.textContent;
+                                var newNote = notesArea.value.trim();
+                                if (!newNote || !noteTitle) return;
+                                // Update cached data-note so future selects use updated text
+                                selected.setAttribute('data-note', newNote);
+                                // Persist to server via technician IQ notes endpoint
+                                var fd = new FormData();
+                                if (noteId) fd.append('id', noteId);
+                                fd.append('title', noteTitle);
+                                fd.append('note', newNote);
+                                fetch('<?= site_url("technician/iq-notes/save") ?>', {
+                                    method: 'POST',
+                                    body: fd,
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                }).catch(function() {});
+                            };
+                            notesArea.addEventListener('blur', window._techNotesBlurHandler);
+                        }
                     })
                     .catch(function() {
                         /* keep static defaults on error */
@@ -2151,119 +2467,257 @@
             var rc = document.getElementById('reportContent');
             var modalEl = document.getElementById('inspectionReportModal');
             if (!rc || !modalEl) return;
-            rc.innerHTML =
-                '<div class="text-center py-5"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading…</p></div>';
             bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            $.ajax({
-                url: REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId),
-                type: 'GET',
-                dataType: 'json',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                success: function(res) {
-                    if (!res || !res.success) {
-                        rc.innerHTML = '<div class="alert alert-warning">No data found.</div>';
-                        return;
-                    }
-                    var html = generateInspectionReportHTML(res.latest, res.rows, res.group_id ||
-                        groupId);
-                    rc.innerHTML = html;
-                    var tc = document.getElementById('reportsTabContent');
-                    if (tc) tc.innerHTML = html;
-                },
-                error: function(xhr) {
-                    rc.innerHTML = '<div class="alert alert-danger">Error: HTTP ' + xhr.status +
-                        '</div>';
-                }
-            });
+            loadReportIntoContainer(groupId, rc, false);
+
+            // Wire download button
+            var dlBtn = document.getElementById('techSiteReportDownloadBtn');
+            if (dlBtn) {
+                dlBtn.onclick = function() {
+                    window.open(BASE + '/inspections/reportPdf/' + encodeURIComponent(groupId), '_blank');
+                };
+            }
         };
 
-        function generateInspectionReportHTML(latest, rows, groupId) {
-            var lh = '<p class="text-muted fst-italic">No device data available.</p>';
-            if (latest) {
-                lh = '<div class="table-responsive mb-4"><table class="table table-striped"><thead><tr>' +
-                    '<th>Model</th><th>Type</th><th>S/N</th><th>Action</th><th>Asset #</th><th>Dept</th><th>Room</th><th>Tech</th><th>Notes</th>' +
-                    '</tr></thead><tbody><tr>' +
-                    '<td>' + escH(latest.model || '—') + '</td><td>' + escH(latest.device_type || '—') + '</td>' +
-                    '<td>' + escH(latest.serial_number || 'N/A') + '</td><td>' + escH(latest.action_performed || '—') +
-                    '</td>' +
-                    '<td>' + escH(latest.asset_tag || '—') + '</td><td>' + escH(latest.dept || '—') + '</td>' +
-                    '<td>' + escH(latest.room || '—') + '</td><td>' + escH(latest.technician_name || 'N/A') + '</td>' +
-                    '<td>' + escH(latest.notes || '') + '</td>' +
-                    '</tr></tbody></table></div>';
+        /**
+         * loadReportIntoContainer — mirrors the admin's implementation exactly.
+         * Fetches the reportPreview HTML and writes it into a dark-themed iframe
+         * wrapper inside the given container element.
+         */
+        // inline=true  → dark theme (Inspection Reports tab inside the app)
+        // inline=false → white theme (modal preview, matches admin)
+        function loadReportIntoContainer(groupId, container, inline) {
+            if (!groupId || !container) return;
+            container.innerHTML = '';
+            var wrapper = document.createElement('div');
+            var iframe = document.createElement('iframe');
+            iframe.setAttribute('scrolling', 'yes');
+            if (inline) {
+                wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                iframe.style.cssText = 'width:100%;height:72vh;border:none;display:block;';
+                iframe.src = BASE + '/inspections/reportPreview/' + encodeURIComponent(groupId) + '?inline=1';
+            } else {
+                wrapper.style.cssText = 'width:100%;';
+                iframe.style.cssText = 'width:100%;height:72vh;border:none;display:block;background:#fff;';
+                iframe.src = BASE + '/inspections/reportPreview/' + encodeURIComponent(groupId);
             }
-            var ra = (rows || []).slice().sort(function(a, b) {
-                var o = {
-                    'Fail': 0,
-                    'Repair': 1,
-                    'Pass': 2
-                };
-                return (o[a.result || a.status] ?? 3) - (o[b.result || b.status] ?? 3);
-            });
-            var rh = ra.length === 0 ?
-                '<tr><td colspan="12" class="text-center text-muted py-3">No inspections found.</td></tr>' :
-                ra.map(function(r) {
-                    return '<tr><td>' + resultBadge(r.result || r.status) + '</td>' +
-                        '<td>' + escH(r.customer_name || r.site_name || '—') + '</td>' +
-                        '<td>' + escH(r.model || '—') + '</td><td>' + escH(r.device_type || '—') + '</td>' +
-                        '<td>' + escH(r.serial_number || 'N/A') + '</td><td>' + escH(r.action_performed || '—') +
-                        '</td>' +
-                        '<td>' + escH(r.asset_tag || '—') + '</td><td>' + escH(r.dept || '—') + '</td>' +
-                        '<td>' + escH(r.room || '—') + '</td><td>' + escH(r.technician_name || 'N/A') + '</td>' +
-                        '<td>' + (r.inspection_date ? formatDate(r.inspection_date) :
-                            '<span class="text-muted">—</span>') + '</td>' +
-                        '<td>' + escH(r.notes || '') + '</td></tr>';
-                }).join('');
-            return '<section class="mb-4"><h5 class="fw-semibold">Latest Added Device</h5>' + lh + '</section>' +
-                '<section><h5 class="fw-semibold">Inspection Report Overview</h5>' +
-                '<div class="table-responsive"><table class="table table-striped"><thead><tr>' +
-                '<th>Result</th><th>Customer</th><th>Model</th><th>Type</th><th>S/N</th>' +
-                '<th>Action</th><th>Asset #</th><th>Dept</th><th>Room</th><th>Tech</th><th>Date</th><th>Notes</th>' +
-                '</tr></thead><tbody>' + rh + '</tbody></table></div></section>';
+            wrapper.appendChild(iframe);
+            container.appendChild(wrapper);
         }
 
-        window.previewReportPDF = function() {
-            var src = document.getElementById('reportsTabContent') || document.getElementById('reportContent');
-            if (!src || !src.innerHTML.trim()) {
-                alert('Please load a report first.');
+        function generateInspectionReportHTML(latest, rows, groupId) {
+            // Shim — delegate to loadReportIntoContainer
+            if (groupId) {
+                var tc = document.getElementById('reportsTabContent');
+                if (tc) loadReportIntoContainer(groupId, tc, true);
+            }
+            return '';
+        }
+
+
+        // Tab Preview button: open current report in modal using iframe
+        window.techTabPreviewReport = function() {
+            var groupId = window.CURRENT_REPORT_GROUP_ID;
+            if (!groupId) {
+                toast('Click the report icon on an inspection first.', 'warning');
                 return;
             }
-            var win = window.open('', '_blank', 'width=900,height=650,scrollbars=yes');
-            if (!win) {
-                alert('Please allow pop-ups.');
-                return;
-            }
-            win.document.write(
-                '<html><head><title>Inspection Report</title><style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px;font-size:12px}th{background:#f8f9fa}</style></head><body>'
-            );
-            win.document.write(src.innerHTML);
-            win.document.write('</body></html>');
-            win.document.close();
-            win.focus();
+            openInspectionReport(groupId);
         };
 
-        window.exportReportPDF = function() {
-            var src = document.getElementById('reportsTabContent') || document.getElementById('reportContent');
-            if (!src || !src.innerHTML.trim()) {
-                alert('Please load a report first.');
+        // Tab Download button: open PDF in new tab
+        window.techTabDownloadReport = function() {
+            var groupId = window.CURRENT_REPORT_GROUP_ID;
+            if (!groupId) {
+                toast('Click the report icon on an inspection first.', 'warning');
                 return;
             }
-            var win = window.open('', '_blank', 'width=900,height=650');
-            if (!win) {
-                alert('Please allow pop-ups.');
-                return;
+            window.open(BASE + '/inspections/reportPdf/' + encodeURIComponent(groupId), '_blank');
+        };
+
+        window.previewReportPDF = window.techTabPreviewReport;
+        window.exportReportPDF = window.techTabDownloadReport;
+
+        /* ══════════════════════════════════════════════════════════════════
+           TABLE EXPORT UTILITIES (Copy / CSV / Excel / PDF)
+           Mirrors the admin implementation. Skips the first column (Action
+           buttons) so only data columns are exported.
+        ══════════════════════════════════════════════════════════════════ */
+        (function() {
+            var SITE_NAME = '<?= esc($site['name'] ?? '') ?>';
+
+            function getTableData(tableId) {
+                var table = document.getElementById(tableId);
+                if (!table) return { headers: [], rows: [] };
+                var headers = [];
+                var rows    = [];
+
+                // Headers — skip col 0 (Action)
+                var ths = table.querySelectorAll('thead th');
+                ths.forEach(function(th, i) {
+                    if (i === 0) return;
+                    headers.push(th.textContent.trim());
+                });
+
+                // Visible data rows — skip col 0 (buttons)
+                var trs = table.querySelectorAll('tbody tr:not([style*="display: none"]):not([style*="display:none"])');
+                trs.forEach(function(tr) {
+                    var tds = tr.querySelectorAll('td');
+                    if (tds.length <= 1) return;
+                    var row = [];
+                    tds.forEach(function(td, i) {
+                        if (i === 0) return;
+                        row.push(td.textContent.trim().replace(/\s+/g, ' '));
+                    });
+                    if (row.length) rows.push(row);
+                });
+
+                return { headers: headers, rows: rows };
             }
-            win.document.write(
-                '<html><head><title>Inspection Report</title><style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px;font-size:12px}th{background:#f8f9fa}@media print{button{display:none}}</style></head><body>'
-            );
-            win.document.write(src.innerHTML);
-            win.document.write('</body></html>');
-            win.document.close();
-            setTimeout(function() {
-                win.focus();
-                win.print();
-            }, 300);
+
+            function labelFor(tableId) {
+                var map = {
+                    notInspectedTable : 'Not_Inspected',
+                    inspectedTable    : 'Inspected_Items',
+                    archivedTable     : 'Archived_Items',
+                    inventoryTable    : 'All_Inventory',
+                    workOrdersTable   : 'Work_Orders',
+                };
+                return map[tableId] || tableId;
+            }
+
+            function safeFilename(str) {
+                return str.replace(/[^a-z0-9_\-]/gi, '_');
+            }
+
+            function buildFilename(tableId, ext) {
+                return safeFilename(SITE_NAME) + '_' + labelFor(tableId) + '_' + new Date().toISOString().slice(0,10) + '.' + ext;
+            }
+
+            window.techCopyTable = function(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to copy.' }); return; }
+                var text = [d.headers.join('\t')]
+                    .concat(d.rows.map(function(r) { return r.join('\t'); })).join('\n');
+                navigator.clipboard.writeText(text).then(function() {
+                    var btn = event && event.target;
+                    if (btn) { var o = btn.textContent; btn.textContent = '✓ Copied!'; setTimeout(function() { btn.textContent = o; }, 1500); }
+                }).catch(function() {
+                    var ta = document.createElement('textarea');
+                    ta.value = text; document.body.appendChild(ta); ta.select();
+                    document.execCommand('copy'); document.body.removeChild(ta);
+                });
+            };
+
+            window.techExportCSV = function(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var esc = function(v) {
+                    v = String(v);
+                    return (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1)
+                        ? '"' + v.replace(/"/g, '""') + '"' : v;
+                };
+                var csv = [d.headers.map(esc).join(',')]
+                    .concat(d.rows.map(function(r) { return r.map(esc).join(','); })).join('\n');
+                var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = buildFilename(tableId, 'csv');
+                a.click();
+            };
+
+            window.techExportExcel = function(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var tsv = [d.headers.join('\t')]
+                    .concat(d.rows.map(function(r) { return r.join('\t'); })).join('\n');
+                var blob = new Blob([tsv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = buildFilename(tableId, 'xls');
+                a.click();
+            };
+
+            window.techExportPDF = function(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var label = labelFor(tableId).replace(/_/g,' ');
+                var ths = d.headers.map(function(h) { return '<th>' + h + '</th>'; }).join('');
+                var trs = d.rows.map(function(r) {
+                    return '<tr>' + r.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+                }).join('');
+                var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + SITE_NAME + ' — ' + label + '</title>'
+                    + '<style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;}'
+                    + 'h2{font-size:15px;margin-bottom:2px;}h3{font-size:12px;color:#475569;margin:0 0 10px;font-weight:400;}'
+                    + 'p{font-size:11px;color:#555;margin:0 0 12px;}'
+                    + 'table{width:100%;border-collapse:collapse;}'
+                    + 'th{background:#1e293b;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;}'
+                    + 'td{padding:6px 10px;border-bottom:1px solid #e2e8f0;}'
+                    + 'tr:nth-child(even) td{background:#f8fafc;}'
+                    + '@media print{body{margin:0;}}</style></head><body>'
+                    + '<h2>' + SITE_NAME + '</h2>'
+                    + '<h3>' + label + '</h3>'
+                    + '<p>Generated: ' + new Date().toLocaleString() + '</p>'
+                    + '<table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>'
+                    + '<script>window.onload=function(){window.print();}<\/script>'
+                    + '</body></html>';
+                var w = window.open('', '_blank');
+                w.document.write(html);
+                w.document.close();
+            };
+        })();
+
+        /* ══════════════════════════════════════════════════════════════════
+           INSPECTION TITLE — database persistence
+           ══════════════════════════════════════════════════════════════════ */
+        window.saveInspTitle = function(el) {
+            el.style.borderBottomColor = 'transparent';
+            var title = (el.textContent || '').trim();
+            if (!title || title === '—') return;
+            window._savedInspTitle = title;
+            var gid = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID;
+            if (!gid) return;
+            var fd = new FormData();
+            fd.append('group_id', gid);
+            fd.append('title', title);
+            fetch('<?= site_url("technician/inspections/updateGroupTitle") ?>', {
+                    method: 'POST',
+                    body: fd,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(r) {
+                    return r.json();
+                })
+                .then(function(res) {
+                    var badge = document.getElementById('insp-title-saved');
+                    if (badge) {
+                        badge.textContent = res.success ? '✓ saved' : '✗ error';
+                        badge.style.color = res.success ? '#22c55e' : '#ef4444';
+                        badge.style.opacity = '1';
+                        setTimeout(function() {
+                            badge.style.opacity = '0';
+                        }, 2000);
+                    }
+                })
+                .catch(function() {
+                    var badge = document.getElementById('insp-title-saved');
+                    if (badge) {
+                        badge.textContent = '✗ error';
+                        badge.style.color = '#ef4444';
+                        badge.style.opacity = '1';
+                        setTimeout(function() {
+                            badge.style.opacity = '0';
+                        }, 2000);
+                    }
+                });
+        };
+
+        window.restoreInspTitle = function(groupId) {
+            if (!window._savedInspTitle) return;
+            var titleEl = document.getElementById('insp-title');
+            if (titleEl) titleEl.textContent = window._savedInspTitle;
         };
 
         /* ══════════════════════════════════════════════════════════════════
@@ -2293,8 +2747,9 @@
                 var e = document.getElementById(id);
                 if (e) e.value = '';
             });
-            $('#woPriority').val('Medium');
-            $('#woStatus').val('Open');
+            
+            $('#woPriority').val('normal');
+            $('#woStatus').val('open');
             // Pre-select the logged-in technician
             if (LOGGED_IN_TECH_ID) {
                 $('#woTech').val(LOGGED_IN_TECH_ID);
@@ -2353,6 +2808,8 @@
             params.append('site_id', SITE_ID);
             params.append('title', title);
             params.append('equipment_id', document.getElementById('woEquipmentId').value);
+            params.append('asset_tag', ($('#woAsset').val() || '').trim());
+            params.append('serial_number', ($('#woSerial').val() || '').trim());
             params.append('status', document.getElementById('woStatus').value);
             params.append('priority', document.getElementById('woPriority').value);
             params.append('assigned_to', document.getElementById('woTech').value);
@@ -2389,8 +2846,13 @@
                         return;
                     }
                     bootstrap.Modal.getInstance(document.getElementById('workOrderModal')).hide();
-                    toast('Work order created successfully.', 'success');
-                    backgroundRefreshTabs();
+                    toast('Work order saved successfully.', 'success');
+                    backgroundRefreshTabs(function() {
+                        // Switch to Work Orders tab so new WO is immediately visible
+                        if (typeof window.showWorkOrdersTab === 'function') {
+                            window.showWorkOrdersTab();
+                        }
+                    });
                 })
                 .catch(function(err) {
                     var eb = document.getElementById('workOrderError');

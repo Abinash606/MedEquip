@@ -205,7 +205,7 @@ class AssetsController extends BaseController
         // Resolve site_id (work_orders.site_id is NOT NULL)
         $siteId = 0;
         if ($equipmentId) {
-            $eq = $db->query("SELECT site_id FROM equipment WHERE id = ? AND deleted_at IS NULL LIMIT 1", [$equipmentId])->getRow();
+            $eq = $db->query("SELECT site_id FROM site_equipment WHERE id = ? AND deleted_at IS NULL LIMIT 1", [$equipmentId])->getRow();
             if ($eq) $siteId = (int)$eq->site_id;
         }
         if (!$siteId && $customerId) {
@@ -387,7 +387,7 @@ class AssetsController extends BaseController
 
             // Duplicate check
             $dup = $db->query(
-                "SELECT id FROM equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
+                "SELECT id FROM site_equipment WHERE company_id = ? AND asset_tag = ? AND deleted_at IS NULL LIMIT 1",
                 [$companyId, $assetTag]
             )->getRow();
 

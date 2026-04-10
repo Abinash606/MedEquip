@@ -119,8 +119,7 @@ table.dataTable tbody td{border-bottom:1px solid rgba(255,255,255,.05)!important
 
                 // Open inspections
                 foreach ($upcomingInspections as $insp):
-                    $inspId = 'INSP-' . (isset($insp['scheduled_at']) ? date('Ymd', strtotime($insp['scheduled_at'])) : date('Ymd'))
-                            . '-' . strtoupper(substr(md5($insp['group_id'] ?? $insp['id']), 0, 8));
+                    $inspId = $insp['group_id'] ?? '—'; // Use real group_id from DB
                     $equip  = trim(($insp['make'] ?? '') . ' ' . ($insp['model'] ?? '')) ?: ($insp['device_type'] ?? '—');
                 ?>
                 <tr data-status="open" data-site-id="<?= esc($insp['site_id'] ?? '') ?>">
@@ -147,8 +146,7 @@ table.dataTable tbody td{border-bottom:1px solid rgba(255,255,255,.05)!important
                 <?php
                 // Closed/completed inspections
                 foreach ($inspectionHistory as $insp):
-                    $inspId = 'INSP-' . (isset($insp['scheduled_at']) ? date('Ymd', strtotime($insp['scheduled_at'])) : date('Ymd'))
-                            . '-' . strtoupper(substr(md5($insp['group_id'] ?? $insp['id']), 0, 8));
+                    $inspId = $insp['group_id'] ?? '—'; // Use real group_id from DB
                     $equip  = trim(($insp['make'] ?? '') . ' ' . ($insp['model'] ?? '')) ?: ($insp['device_type'] ?? '—');
                     $stLow  = strtolower($insp['status'] ?? '');
                     $stCls  = ($stLow === 'pass') ? 'bg-success' : (($stLow === 'fail') ? 'bg-danger' : 'bg-warning text-dark');

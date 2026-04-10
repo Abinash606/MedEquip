@@ -810,7 +810,7 @@
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="equipmentTableBody">
                         <?php if (!empty($equipment)): ?>
                             <?php foreach ($equipment as $eq): ?>
                                 <tr>
@@ -856,7 +856,7 @@
                                         </button>
                                         <a href="<?= site_url('admin/equipment/delete/' . $eq['id']) ?>"
                                             class="btn btn-sm btn-danger btn-action"
-                                            onclick="return confirm('Are you sure you want to delete this equipment?')">
+                                            onclick="deleteEquipmentConfirm(this)">
                                             <i class="fa fa-trash"></i> Delete
                                         </a>
                                     </td>
@@ -906,7 +906,7 @@
                             <th>Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="workOrdersTableBody">
                         <?php if (!empty($workOrders)): ?>
                             <?php foreach ($workOrders as $wo): ?>
                                 <tr>
@@ -938,6 +938,7 @@
                                         <div class="action-btns">
                                             <button class="btn btn-sm btn-info btn-action edit-workorder-btn"
                                                 data-id="<?= $wo['id'] ?>" data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
+                                                data-site_equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
                                                 data-serial_number="<?= $wo['serial_number'] ?? '' ?>"
                                                 data-title="<?= esc($wo['title'], 'attr') ?>"
                                                 data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
@@ -948,11 +949,17 @@
                                                 data-end_date="<?= $wo['end_date'] ?? '' ?>">
                                                 <i class="fa fa-edit"></i> Edit
                                             </button>
-                                            <a href="<?= site_url('admin/work-orders/delete/' . $wo['id']) ?>"
-                                                class="btn btn-sm btn-danger btn-action"
-                                                onclick="return confirm('Are you sure you want to delete this work order?')">
+                                            <button type="button"
+                                                class="btn btn-sm btn-danger btn-action delete-workorder-btn"
+                                                data-id="<?= $wo['id'] ?>">
                                                 <i class="fa fa-trash"></i> Delete
-                                            </a>
+                                            </button>
+
+                                            <!-- <a href="<?= site_url('admin/work-orders/delete/' . $wo['id']) ?>"
+                                                class="btn btn-sm btn-danger btn-action"
+                                                onclick="deleteWorkOrderConfirm(this)">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </a> -->
                                         </div>
                                     </td>
                                 </tr>
@@ -1818,11 +1825,11 @@
 
                         $('#viewInspectionModal').modal('show');
                     } else {
-                        alert('Error: ' + response.message);
+                        Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'An error occurred.' });
                     }
                 },
                 error: function() {
-                    alert('Failed to fetch inspection details');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch inspection details.' });
                 }
             });
         }
@@ -1860,21 +1867,153 @@
                 inspTabBtn.addEventListener('shown.bs.tab', function() {
                     if (typeof backgroundRefreshTabs === 'function') {
                         backgroundRefreshTabs(function() {
-                            // If currently viewing an inspection (not the dashboard list),
-                            // re-apply the group filter to restore filtered state.
                             if (window.CURRENT_INSPECTION_GROUP_ID &&
                                 typeof filterInspectedByGroup === 'function') {
                                 filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
                             }
-                            // If reports tab is active and a group is loaded, re-render report
                             var reportsTabActive = document.querySelector(
                                 '#inspection-reports.active, #inspection-reports.show');
                             if (reportsTabActive && window.CURRENT_REPORT_GROUP_ID &&
-                                typeof openInspectionReport === 'function') {
-                                openInspectionReport(window.CURRENT_REPORT_GROUP_ID);
+                                typeof loadReportIntoContainer === 'function') {
+                                var rtEl = document.getElementById('reportsTabContent');
+                                if (rtEl && !rtEl.querySelector('iframe')) {
+                                    loadReportIntoContainer(window.CURRENT_REPORT_GROUP_ID, rtEl);
+                                }
                             }
                         });
                     }
+                });
+            }
+
+            // ── AJAX data URLs for Equipment and Work Orders tabs ────────────────
+            var SITE_ID_DETAIL = <?= (int)$site['id'] ?>;
+            var EQ_DATA_URL = '<?= site_url('admin/sites/equipment-data/') ?>' + SITE_ID_DETAIL;
+            var WO_DATA_URL = '<?= site_url('admin/sites/work-orders-data/') ?>' + SITE_ID_DETAIL;
+
+            // HTML-escape helper
+            function escHtml(s) {
+                return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+
+            // Destroy + re-init a DataTable safely
+            function reInitDT(selector, opts) {
+                try {
+                    if ($.fn.DataTable && $.fn.DataTable.isDataTable(selector)) {
+                        $(selector).DataTable().destroy();
+                    }
+                    if ($.fn.DataTable) $(selector).DataTable(opts || { pageLength: 25, responsive: true });
+                } catch(e) {}
+            }
+
+            // ── Equipment tab: fetch fresh rows and rebuild table ────────────────
+            function refreshEquipmentTable() {
+                $.getJSON(EQ_DATA_URL, function(res) {
+                    if (!res || !res.success) return;
+                    var tbody = document.getElementById('equipmentTableBody');
+                    if (!tbody) return;
+                    var statusColors = {
+                        'ready': '#16a34a', 'need_attention': '#d97706',
+                        'repair': '#0ea5e9', 'out_of_service': '#dc2626'
+                    };
+                    var deleteBase = '<?= site_url('admin/equipment/delete/') ?>';
+                    var html = '';
+                    res.data.forEach(function(eq) {
+                        var color = statusColors[eq.status] || '#6b7280';
+                        html += '<tr>'
+                            + '<td>' + escHtml(eq.asset_tag) + '</td>'
+                            + '<td>' + escHtml(eq.make) + '</td>'
+                            + '<td>' + escHtml(eq.model) + '</td>'
+                            + '<td>' + escHtml(eq.serial_number) + '</td>'
+                            + '<td>' + escHtml(eq.device_type) + '</td>'
+                            + '<td>' + escHtml(eq.location) + '</td>'
+                            + '<td>' + escHtml(eq.department) + '</td>'
+                            + '<td><span class="badge" style="background:' + color + ';color:#fff;padding:5px 10px;border-radius:20px;">' + escHtml(eq.status_label) + '</span></td>'
+                            + '<td>'
+                            +   '<button class="btn btn-sm btn-info btn-action edit-equipment-btn"'
+                            +     ' data-id="' + eq.id + '"'
+                            +     ' data-asset_tag="' + escHtml(eq.asset_tag) + '"'
+                            +     ' data-make="' + escHtml(eq.make) + '"'
+                            +     ' data-model="' + escHtml(eq.model) + '"'
+                            +     ' data-serial_number="' + escHtml(eq.serial_number) + '"'
+                            +     ' data-device_type="' + escHtml(eq.device_type) + '"'
+                            +     ' data-location="' + escHtml(eq.location) + '"'
+                            +     ' data-department="' + escHtml(eq.department) + '"'
+                            +     ' data-status="' + escHtml(eq.status) + '">'
+                            +   '<i class="fa fa-edit"></i> Edit</button> '
+                            +   '<a href="' + deleteBase + eq.id + '"'
+                            +     ' class="btn btn-sm btn-danger btn-action"'
+                            +     ' onclick="deleteEquipmentConfirm(this)">'
+                            +   '<i class="fa fa-trash"></i> Delete</a>'
+                            + '</td></tr>';
+                    });
+                    tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No equipment found.</td></tr>';
+                    reInitDT('#equipment-datatable');
+                });
+            }
+
+            // ── Work Orders tab: fetch fresh rows and rebuild table ───────────────
+            function refreshWorkOrdersTable() {
+                $.getJSON(WO_DATA_URL, function(res) {
+                    if (!res || !res.success) return;
+                    var tbody = document.getElementById('workOrdersTableBody');
+                    if (!tbody) return;
+                    var statusClasses = {
+                        'completed': 'status-completed',
+                        'in_progress': 'status-in-progress',
+                        'cancelled': 'status-need-attention'
+                    };
+                    var html = '';
+                    res.data.forEach(function(wo) {
+                        var sCls = 'status-badge ' + (statusClasses[wo.status] || 'status-open');
+                        var sLabel = wo.status.replace(/_/g,' ').replace(/\b\w/g, function(l){ return l.toUpperCase(); });
+                        var sd = wo.start_date ? new Date(wo.start_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
+                        var ed = wo.end_date   ? new Date(wo.end_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
+                        html += '<tr>'
+                            + '<td>WO-' + wo.id + '</td>'
+                            + '<td>' + escHtml(wo.title) + '</td>'
+                            + '<td>' + escHtml(wo.asset_tag) + '</td>'
+                            + '<td><span class="' + sCls + '">' + escHtml(sLabel) + '</span></td>'
+                            + '<td>' + escHtml(wo.priority) + '</td>'
+                            + '<td>' + escHtml(wo.assigned_to_name) + '</td>'
+                            + '<td>' + sd + '</td>'
+                            + '<td>' + ed + '</td>'
+                            + '<td><div class="action-btns">'
+                            +   '<button class="btn btn-sm btn-info btn-action edit-workorder-btn"'
+                            +     ' data-id="' + wo.id + '"'
+                            +     ' data-equipment_id="' + (wo.equipment_id || '') + '"'
+                            +     ' data-site_equipment_id="' + (wo.equipment_id || '') + '"'
+                            +     ' data-serial_number="' + escHtml(wo.serial_number) + '"'
+                            +     ' data-title="' + escHtml(wo.title) + '"'
+                            +     ' data-description="' + escHtml(wo.description) + '"'
+                            +     ' data-status="' + escHtml(wo.status) + '"'
+                            +     ' data-priority="' + escHtml(wo.priority) + '"'
+                            +     ' data-assigned_to="' + (wo.assigned_to || '') + '"'
+                            +     ' data-start_date="' + (wo.start_date || '') + '"'
+                            +     ' data-end_date="' + (wo.end_date || '') + '">'
+                            +   '<i class="fa fa-edit"></i> Edit</button> '
+                            +   '<button type="button" class="btn btn-sm btn-danger btn-action delete-workorder-btn"'
+                            +     ' data-id="' + wo.id + '">'
+                            +   '<i class="fa fa-trash"></i> Delete</button>'
+                            + '</div></td>'
+                            + '</tr>';
+                    });
+                    tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No work orders found.</td></tr>';
+                    reInitDT('#work-orders-datatable');
+                });
+            }
+
+            // ── Bind tab click listeners ─────────────────────────────────────────
+            var equipTabBtn = document.getElementById('equipment-tab');
+            if (equipTabBtn) {
+                equipTabBtn.addEventListener('shown.bs.tab', function() {
+                    refreshEquipmentTable();
+                });
+            }
+
+            var woMainTabBtn = document.getElementById('work-orders-tab');
+            if (woMainTabBtn) {
+                woMainTabBtn.addEventListener('shown.bs.tab', function() {
+                    refreshWorkOrdersTable();
                 });
             }
 
@@ -1945,7 +2084,7 @@
                         }
                     },
                     error: function() {
-                        alert('Failed to load inspection data');
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load inspection data.' });
                     }
                 });
             }
@@ -2022,17 +2161,20 @@
                     dataType: 'json',
                     success: function(res) {
                         if (!res.success) return;
-
                         equipmentLists.make = res.makes;
                         equipmentLists.model = res.models;
                         equipmentLists['device-type'] = res.device_types;
-
-                        if (selectedMake) $('#equipment-make').val(selectedMake);
-                        if (selectedModel) $('#equipment-model').val(selectedModel);
+                        // Only set values when explicitly passed (Add mode).
+                        // In Edit mode the values are already set directly before
+                        // this AJAX call, so we must NOT overwrite them here.
+                        if (selectedMake)       $('#equipment-make').val(selectedMake);
+                        if (selectedModel)      $('#equipment-model').val(selectedModel);
                         if (selectedDeviceType) $('#equipment-device-type').val(selectedDeviceType);
                     }
                 });
             }
+            // Expose to window so workflow partial can access it
+            window.loadEquipmentDropdownOptions = loadEquipmentDropdownOptions;
 
             // ── Suggest dropdown logic ────────────────────────────────────
             function showSuggestions($input, items) {
@@ -2114,9 +2256,14 @@
                 }
             });
 
-            // Load when modal opens
+            // Load dropdown options when modal opens in Add mode only.
+            // In Edit mode the equipment-id hidden field is already set, so we
+            // skip the empty call that would race against and blank out the
+            // values that the edit AJAX just populated.
             $('#addEquipmentModal').on('show.bs.modal', function() {
-                loadEquipmentDropdownOptions('', '', '');
+                if (!$('#equipment-id').val()) {
+                    loadEquipmentDropdownOptions('', '', '');
+                }
             });
             // Step 1 Next
             $('#edit-wiz-step1-next').click(function() {
@@ -2200,7 +2347,7 @@
                     dataType: 'json',
                     success: function(response) {
                         if (response.success) {
-                            alert('Inspection updated successfully!');
+                            Swal.fire({ icon: 'success', title: 'Updated', text: 'Inspection updated successfully!', timer: 1800, showConfirmButton: false });
                             $('#editInspectionWizardModal').modal('hide');
 
                             // Reopen the view modal with updated data
@@ -2209,11 +2356,11 @@
                             // Optionally reload the page
                             // location.reload();
                         } else {
-                            alert('Error: ' + response.message);
+                            Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'An error occurred.' });
                         }
                     },
                     error: function() {
-                        alert('Failed to update inspection');
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update inspection.' });
                     }
                 });
             });
@@ -2229,13 +2376,110 @@
 
         });
     </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // ── Read navigation intent from sessionStorage (set by dashboard search) ──
+    // Falls back to URL params for any legacy bookmarks / direct links.
+    var intentJson = sessionStorage.getItem('siteNavIntent');
+    var intent = null;
+    if (intentJson) {
+        sessionStorage.removeItem('siteNavIntent'); // consume immediately
+        try { intent = JSON.parse(intentJson); } catch(e) {}
+    }
 
+    // Legacy URL-param fallback
+    if (!intent) {
+        var params  = new URLSearchParams(window.location.search);
+        var openTab = (params.get('open_tab') || '').trim();
+        if (openTab) {
+            intent = {
+                open_tab:         openTab,
+                group_id:         params.get('group_id')         || '',
+                inspection_title: params.get('inspection_title') || 'Inspection',
+                asset_tag:        params.get('asset_tag')        || '',
+                equipment_id:     params.get('equipment_id')     || '',
+            };
+        }
+    }
+
+    if (!intent) return;
+
+    var openTab = (intent.open_tab || '').trim();
+
+    var equipmentTabBtn   = document.getElementById('equipment-tab');
+    var inspectionsTabBtn = document.getElementById('inspections-tab');
+    var workOrdersTabBtn  = document.getElementById('workorders-tab');
+
+    // 1) Open correct main tab
+    if (openTab === 'equipment' && equipmentTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(equipmentTabBtn).show();
+    } else if (openTab === 'inspections' && inspectionsTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(inspectionsTabBtn).show();
+    } else if (openTab === 'workorders' && workOrdersTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(workOrdersTabBtn).show();
+    }
+
+    // 2) If this came from inspection search, open that exact inspection group too
+    if (openTab === 'inspections') {
+        var groupId   = intent.group_id         || '';
+        var inspTitle = intent.inspection_title || 'Inspection';
+        var siteName  = <?= json_encode($site['name'] ?? '') ?>;
+
+        if (groupId) {
+            setTimeout(function () {
+                if (typeof window.viewInspection === 'function') {
+                    // Call with placeholder title first so the view opens immediately.
+                    // We then fetch the real title + technician from the DB and patch
+                    // the header so it always matches what's stored — regardless of
+                    // what the search result's inspection_title field contained.
+                    window.viewInspection(groupId, siteName, inspTitle || groupId, groupId, '—');
+
+                    // Fetch real group metadata and overwrite the header elements
+                    var REPORT_DATA_URL = '<?= site_url('admin/inspections/reportData') ?>';
+                    fetch(REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId), {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.success || !data.latest) return;
+                        var latest = data.latest;
+
+                        // Real title from DB (title column, fallback to inspection_type)
+                        var realTitle = (latest.title || latest.inspection_type || groupId).trim();
+                        var titleEl = document.getElementById('insp-title');
+                        if (titleEl) titleEl.textContent = realTitle;
+                        window._savedInspTitle = realTitle;
+
+                        // Real inspection # (always the group_id)
+                        var idLabel = document.getElementById('insp-id-label');
+                        if (idLabel) idLabel.textContent = groupId;
+
+                        // Real technician name
+                        var techName = latest.technician_name || '—';
+                        var techEl = document.getElementById('insp-technician');
+                        if (techEl) techEl.textContent = techName;
+                    })
+                    .catch(function() { /* non-fatal: header shows groupId as fallback */ });
+                }
+            }, 500);
+        }
+    }
+});
+</script>
     <!-- Custom dynamic behaviour for inspection workflow and work orders -->
     <script>
         // Immediately invoked function to avoid global scope pollution
         (function() {
             // Constants for API endpoints and settings
             const SITE_ID = <?= (int) ($site['id'] ?? 0) ?>;
+            // Expose key constants to window so site_inspection_workflow.php partial
+            // and inline onclick handlers (onWOAssetChange, workOrderModal submit)
+            // can access them — they live outside this IIFE's scope.
+            window.SITE_ID               = SITE_ID;
+            window.GET_EQUIPMENT_URL      = "<?= site_url('admin/site-inspection/get-equipment') ?>";
+            window.WORK_ORDER_CREATE_URL  = "<?= site_url('admin/work-orders/create') ?>";
+            window.WORK_ORDER_UPDATE_URL  = "<?= site_url('admin/work-orders/update') ?>";
+            window.WORK_ORDER_DELETE_URL  = "<?= site_url('admin/work-orders/delete') ?>";
             // CSRF helper — reads fresh from cookie (CI4 regenerate=true rotates token)
             function getFreshCsrf() {
                 var m = document.cookie.match(/csrf_cookie_name=([^;]+)/);
@@ -2282,10 +2526,10 @@
                 if (title) title.textContent = testName || '—';
                 if (idLabel) idLabel.textContent = inspIdLabel || '—';
                 if (techLabel) techLabel.textContent = techName || '—';
+                // Fix 4: Save the title so background refreshes don't overwrite it
+                window._savedInspTitle = testName || '—';
 
-                // Store the active group_id in BOTH variables so that every
-                // Pass / Fail / Repair record inside this session is appended to the
-                // SAME inspection group rather than creating a brand-new one each time.
+                // Store the active group_id so Pass/Fail records go to the same group
                 window.CURRENT_INSPECTION_GROUP_ID = groupId;
                 window.CURRENT_REPORT_GROUP_ID = groupId;
 
@@ -2295,9 +2539,7 @@
                 if (dashView) dashView.classList.add('d-none-view');
                 if (inspView) inspView.classList.remove('d-none-view');
 
-                // KEY FIX: Refresh all tab data from server, then filter to current group.
-                // backgroundRefreshTabs fetches fresh HTML, replaces table bodies,
-                // then calls filterInspectedByGroup to show only this inspection's rows.
+                // Refresh all tab data from server, then filter to current group
                 if (typeof backgroundRefreshTabs === 'function') {
                     backgroundRefreshTabs(function() {
                         if (typeof filterInspectedByGroup === 'function') {
@@ -2307,9 +2549,8 @@
                 } else if (typeof filterInspectedByGroup === 'function') {
                     filterInspectedByGroup(groupId);
                 }
-
-                // Load report into Reports tab (non-blocking)
-                openInspectionReport(groupId);
+                // NOTE: Report modal is NOT opened here.
+                // Use the report icon (fa-file-export) button to open the report modal.
             };
 
             /**
@@ -2320,210 +2561,109 @@
              */
             window.openInspectionReport = function openInspectionReport(groupId) {
                 CURRENT_REPORT_GROUP_ID = groupId;
-                // If we are currently on the dashboard view, switch to the inspection view
-                // and activate the Inspection Reports tab so the report is visible inline
-                const dashView = document.getElementById('view-dashboard');
-                const inspView = document.getElementById('view-inspection');
-                if (dashView && !dashView.classList.contains('d-none-view')) {
-                    dashView.classList.add('d-none-view');
-                    if (inspView) inspView.classList.remove('d-none-view');
-                    // Activate reports tab
-                    var reportsTabBtn = document.getElementById('reports-tab');
-                    if (reportsTabBtn) bootstrap.Tab.getOrCreateInstance(reportsTabBtn).show();
-                }
-                // Clear any previous content
-                const reportContentEl = document.getElementById('reportContent');
-                const reportsTabEl = document.getElementById('reportsTabContent');
-                if (reportContentEl) reportContentEl.innerHTML = '<p class="text-muted">Loading report...</p>';
-                if (reportsTabEl) reportsTabEl.innerHTML =
-                    '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-3 text-muted">Loading report data…</p></div>';
-                fetch(REPORT_DATA_URL + '/' + encodeURIComponent(groupId), {
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(resp => resp.json())
-                    .then(res => {
-                        if (!res || !res.success) {
-                            const msg = res && res.message ? res.message : 'Failed to load report';
-                            if (reportContentEl) reportContentEl.innerHTML =
-                                '<div class="alert alert-danger">' + escapeHtml(msg) + '</div>';
-                            if (reportsTabEl) reportsTabEl.innerHTML = '<div class="alert alert-danger">' +
-                                escapeHtml(msg) + '</div>';
-                            return;
-                        }
-                        const latest = res.latest || null;
-                        const rows = res.rows || [];
-                        const html = generateInspectionReportHTML(latest, rows, groupId);
-                        if (reportContentEl) reportContentEl.innerHTML = html;
-                        if (reportsTabEl) reportsTabEl.innerHTML = html;
+                window.CURRENT_REPORT_GROUP_ID = groupId;
 
-                        // ── Populate the inspection header elements if they are currently empty ──
-                        // This happens when the user clicks the report icon from the list directly
-                        // without going through viewInspection() first.
-                        const titleEl = document.getElementById('insp-title');
-                        const idLabel = document.getElementById('insp-id-label');
-                        const techEl = document.getElementById('insp-technician');
-                        const siteEl = document.getElementById('insp-site-label');
-                        if (latest) {
-                            if (titleEl && (!titleEl.textContent || titleEl.textContent === '—'))
-                                titleEl.textContent = latest.action_performed || latest.inspection_type ||
-                                'Inspection';
-                            if (idLabel && (!idLabel.textContent || idLabel.textContent === '—'))
-                                idLabel.textContent = 'Inspection #: ' + groupId;
-                            if (techEl && (!techEl.textContent || techEl.textContent === '—'))
-                                techEl.textContent = latest.technician_name || 'N/A';
-                            if (siteEl && (!siteEl.textContent || siteEl.textContent.trim() === 'Site: —'))
-                                siteEl.textContent = 'Site: ' + (latest.site_name || latest.customer_name ||
-                                    '');
-                        }
+                // Open the report modal — same as technician portal
+                var reportContent = document.getElementById('reportContent');
+                var modalEl = document.getElementById('inspectionReportModal');
+
+                if (reportContent && modalEl) {
+                    // Show spinner, open modal, load iframe
+                    reportContent.innerHTML =
+                        '<div class="text-center py-5">' +
+                        '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
+                        '<p class="mt-3 text-muted">Loading report...</p></div>';
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+                    fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), {
+                        headers: { 'Accept': 'text/html' }
                     })
-                    .catch(err => {
-                        const errMsg = err && err.message ? err.message : 'Unknown error';
-                        if (reportContentEl) reportContentEl.innerHTML = '<div class="alert alert-danger">' +
-                            escapeHtml(errMsg) + '</div>';
-                        if (reportsTabEl) reportsTabEl.innerHTML = '<div class="alert alert-danger">' +
-                            escapeHtml(errMsg) + '</div>';
+                    .then(function(r) { return r.text(); })
+                    .then(function(html) {
+                        reportContent.innerHTML = '';
+                        var iframe = document.createElement('iframe');
+                        iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#fff;border-radius:0 0 14px 14px;';
+                        reportContent.appendChild(iframe);
+                        iframe.contentDocument.open();
+                        iframe.contentDocument.write(html);
+                        iframe.contentDocument.close();
+                    })
+                    .catch(function() {
+                        reportContent.innerHTML =
+                            '<div class="alert alert-danger m-3">Failed to load report.</div>';
                     });
+
+                    // Wire download button
+                    var dlBtn = document.getElementById('adminReportDownloadBtn');
+                    if (dlBtn) {
+                        dlBtn.onclick = function() {
+                            window.open('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), '_blank');
+                        };
+                    }
+                } else {
+                    // Fallback: if on dashboard view, switch to inspection + reports tab
+                    const dashView = document.getElementById('view-dashboard');
+                    const inspView = document.getElementById('view-inspection');
+                    if (dashView && !dashView.classList.contains('d-none-view')) {
+                        dashView.classList.add('d-none-view');
+                        if (inspView) inspView.classList.remove('d-none-view');
+                        var reportsTabBtn = document.getElementById('reports-tab');
+                        if (reportsTabBtn) bootstrap.Tab.getOrCreateInstance(reportsTabBtn).show();
+                    }
+                }
             };
 
             /**
-             * Generate report HTML for the preview and tab display.  Includes
-             * header with site, logo and inspection details, plus latest and
-             * overview tables.
-             *
-             * @param {object|null} latest Latest inspection row (most recent)
-             * @param {Array} rows Full array of inspection rows
-             * @param {string} groupId The inspection group id
-             * @returns {string} HTML string
+             * loadReportIntoContainer — fetches the clean reportPreview HTML
+             * and renders it in an iframe inside the given container.
+             * Same approach as the technician portal.
              */
-            function generateInspectionReportHTML(latest, rows, groupId) {
-                // Header section (hidden — page header already shows this info)
-                let siteName = latest && (latest.site_name || latest.customer_name) ? escapeHtml(latest.site_name ||
-                    latest.customer_name) : '';
-                let action = latest && (latest.action_performed || latest.inspection_type) ? escapeHtml(latest
-                    .action_performed || latest.inspection_type) : '';
-                let technician = latest && latest.technician_name ? escapeHtml(latest.technician_name) : 'N/A';
-                let logoHTML = '';
-                if (latest && latest.logo_path) {
-                    const logoUrl = LOGO_BASE_URL + '/' + latest.logo_path;
-                    logoHTML = '<img src="' + escapeHtml(logoUrl) + '" style="height:60px;">';
-                }
-                // let headerHtml = `
-                //     <section class="mb-4">
-                //         <div class="d-flex justify-content-between align-items-center">
-                //             <div>
-                //                 <strong>Site:</strong> ${siteName}<br>
-                //                 <em>${action}</em>
-                //             </div>
-                //             <div>${logoHTML}</div>
-                //             <div class="text-end">
-                //                 <strong>Inspection #:</strong> ${escapeHtml(groupId)}<br>
-                //                 <em>Technician: ${technician}</em>
-                //             </div>
-                //         </div>
-                //     </section>`;
-
-                let headerHtml = `
-        <section class="mb-4" style="display:none;">
-                <div class="d-flex justify-content-between align-items-center">
-                <div><strong>Site:</strong> ${siteName}<br><em>${action}</em></div>
-                    <div>${logoHTML}</div>
-                    <div class="text-end">
-                    <strong>Inspection #:</strong> ${escapeHtml(groupId || '')}<br>
-                        <em>Technician: ${technician}</em>
-                    </div>
-                </div>
-            </section>`;
-
-                // ── Shared table columns (EST/CAL removed per meeting notes) ─────────
-                const tableHead = `<thead><tr>
-            <th>Result</th><th>Model</th><th>Type</th><th>S/N</th>
-            <th>Action Performed</th><th>Asset #</th><th>Dept</th>
-            <th>Room</th><th>Tech</th><th>Inspection Date</th><th>Notes</th>
-        </tr></thead>`;
-
-                function makeRow(r) {
-                    return `<tr>
-                <td>${resultBadge(r.result || r.status)}</td>
-                <td>${escapeHtml(r.model || '')}</td>
-                <td>${escapeHtml(r.device_type || '')}</td>
-                <td>${escapeHtml(r.serial_number || 'N/A')}</td>
-                <td>${escapeHtml(r.action_performed || r.inspection_type || '')}</td>
-                <td>${escapeHtml(r.asset_tag || '')}</td>
-                <td>${escapeHtml(r.dept || r.department || '')}</td>
-                <td>${escapeHtml(r.room || r.location || '')}</td>
-                <td>${escapeHtml(r.technician_name || 'N/A')}</td>
-                <td>${r.inspection_date ? formatInspectionDateHTML(r.inspection_date) : '<span class="text-muted">-</span>'}</td>
-                <td>${escapeHtml(r.notes || '')}</td>
-            </tr>`;
-                }
-
-                function makeTable(rowsArr, emptyMsg) {
-                    const body = rowsArr.length > 0 ?
-                        rowsArr.map(makeRow).join('') :
-                        `<tr><td colspan="11" class="text-center text-muted py-3">${emptyMsg}</td></tr>`;
-                    return `<div class="table-responsive mb-2">
-                <table class="table table-custom table-striped table-sm">
-                    ${tableHead}<tbody>${body}</tbody>
-                </table>
-            </div>`;
-                }
-
-                // ── Split rows into Needs Attention vs Passed ─────────────────────────
-                const allRows = rows || [];
-                const needsRows = allRows.filter(function(r) {
-                    const res = String(r.result || r.status || '').trim();
-                    return res === 'Fail' || res === 'Repair' || res === 'Fail + WO';
+            function loadReportIntoContainer(groupId, container) {
+                if (!groupId || !container) return;
+                container.innerHTML =
+                    '<div class="text-center py-5">' +
+                    '<i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i>' +
+                    '<p class="mt-3 text-muted">Loading report…</p>' +
+                    '</div>';
+                var previewUrl = '<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId) + '?inline=1';
+                fetch(previewUrl, {
+                    headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.text();
+                })
+                .then(function(html) {
+                    container.innerHTML = '';
+                    var iframe = document.createElement('iframe');
+                    iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                    iframe.setAttribute('scrolling', 'yes');
+                    var wrapper = document.createElement('div');
+                    wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                    wrapper.appendChild(iframe);
+                    container.appendChild(wrapper);
+                    iframe.contentDocument.open();
+                    iframe.contentDocument.write(html);
+                    iframe.contentDocument.close();
+                })
+                .catch(function(err) {
+                    container.innerHTML =
+                        '<div class="alert alert-danger m-3">' +
+                        '<i class="fa-solid fa-triangle-exclamation me-2"></i>' +
+                        'Failed to load report: ' + escapeHtml(String(err)) + '</div>';
                 });
-                const passRows = allRows.filter(function(r) {
-                    const res = String(r.result || r.status || '').trim();
-                    return res === 'Pass';
-                });
-                const otherRows = allRows.filter(function(r) {
-                    const res = String(r.result || r.status || '').trim();
-                    return res !== 'Fail' && res !== 'Repair' && res !== 'Fail + WO' && res !== 'Pass';
-                });
-
-                const needsSection = `
-            <section class="mb-4">
-            <h5 class="fw-semibold text-danger">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i>Needs Attention
-                <span class="badge bg-danger ms-2">${needsRows.length}</span>
-            </h5>
-            <p class="text-muted small mb-2">Devices that failed or require repair.</p>
-            ${makeTable(needsRows, 'No failed or repair items — all devices passed!')}
-            </section>`;
-
-                const passSection = `
-        <section class="mb-4">
-            <h5 class="fw-semibold text-success">
-                <i class="fa-solid fa-circle-check me-2"></i>Passed
-                <span class="badge bg-success ms-2">${passRows.length}</span>
-            </h5>
-            <p class="text-muted small mb-2">Devices that passed inspection.</p>
-            ${makeTable(passRows, 'No passed items yet.')}
-        </section>`;
-
-                const otherSection = otherRows.length > 0 ? `
-        <section class="mb-4">
-            <h5 class="fw-semibold text-secondary">Other</h5>
-            ${makeTable(otherRows, '')}
-        </section>` : '';
-
-                return headerHtml + needsSection + passSection + otherSection;
             }
 
-            /**
-             * Display the report preview in a new browser window and trigger the
-             * print dialog.  Uses the current content of the report modal.
-             */
-            /**
-             * Build an HTML string for the report header (site, logo, inspection #, tech).
-             * Reads live data from the page elements populated by openInspectionReport().
-             * Returns an HTML string safe to inject into a new window.
-             */
+            // Shim — legacy callers pass (latest, rows, groupId); we only need groupId
+            function generateInspectionReportHTML(latest, rows, groupId) {
+                if (groupId) {
+                    var tabContainer = document.getElementById('reportsTabContent');
+                    if (tabContainer) loadReportIntoContainer(groupId, tabContainer);
+                }
+                return '';
+            }
+
+
             function buildReportHeaderForPrint() {
                 var getText = function(id) {
                     var el = document.getElementById(id);
@@ -2558,69 +2698,24 @@
             }
 
             window.previewReportPDF = function previewReportPDF() {
-                var sourceEl = document.getElementById('reportsTabContent');
-                if (!sourceEl || !sourceEl.innerHTML.trim() || (sourceEl.querySelector && sourceEl.querySelector(
-                        'p.fst-italic'))) {
-                    sourceEl = document.getElementById('reportContent');
-                }
-                if (!sourceEl || !sourceEl.innerHTML.trim()) {
-                    alert('Please click the report icon on an inspection row first.');
+                var groupId = CURRENT_REPORT_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || window.CURRENT_INSPECTION_GROUP_ID;
+                if (!groupId) {
+                    Swal.fire({ icon: 'warning', title: 'Notice', text: 'Please click the report icon on an inspection row first.' });
                     return;
                 }
-                var win = window.open('', '_blank', 'width=900,height=650,scrollbars=yes');
-                if (!win) {
-                    alert('Please allow pop-ups to preview the report.');
-                    return;
-                }
-                var doc = win.document;
-                doc.write('<html><head><title>Inspection Report Preview</title>');
-                doc.write(
-                    '<style>body{font-family:Arial,sans-serif;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#f8f9fa;font-weight:bold;}.text-danger{color:#dc3545;font-weight:bold;}.text-primary{color:#0d6efd;font-weight:bold;}.text-success{color:#198754;font-weight:bold;}.fw-bold{font-weight:bold;}h4,h5{margin:0.5em 0;}</style>'
-                );
-                doc.write('</head><body>');
-                var headerHtml = buildReportHeaderForPrint();
-                if (headerHtml) doc.write(headerHtml);
-                doc.write(sourceEl.innerHTML);
-                doc.write('</body></html>');
-                doc.close();
-                win.focus();
+                openInspectionReport(groupId);
             };
 
             /**
              * Trigger download of the PDF for the current report group.
              */
             window.exportReportPDF = function exportReportPDF() {
-                // Choose best source: reportsTabContent first, then modal reportContent
-                var sourceEl = document.getElementById('reportsTabContent');
-                if (!sourceEl || !sourceEl.innerHTML.trim() || sourceEl.querySelector(
-                        'p.fst-italic, p.text-muted')) {
-                    sourceEl = document.getElementById('reportContent');
-                }
-                if (!sourceEl || !sourceEl.innerHTML.trim()) {
-                    alert('Please click the report icon on an inspection row first.');
+                var groupId = CURRENT_REPORT_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || window.CURRENT_INSPECTION_GROUP_ID;
+                if (!groupId) {
+                    Swal.fire({ icon: 'warning', title: 'Notice', text: 'Please click the report icon on an inspection row first.' });
                     return;
                 }
-                var win = window.open('', '_blank', 'width=900,height=650');
-                if (!win) {
-                    alert('Please allow pop-ups to download the report.');
-                    return;
-                }
-                var doc = win.document;
-                doc.write('<html><head><title>Inspection Report</title>');
-                doc.write(
-                    '<style>body{font-family:Arial,sans-serif;margin:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}th{background:#f8f9fa;font-weight:bold;}.text-danger{color:#dc3545;font-weight:bold;}.text-primary{color:#0d6efd;font-weight:bold;}.text-success{color:#198754;font-weight:bold;}.fw-bold{font-weight:bold;}h4,h5{margin:0.5em 0;}@media print{button{display:none;}}</style>'
-                );
-                doc.write('</head><body>');
-                // Write report header with logo (built from live page data)
-                var reportHeaderEl = buildReportHeaderForPrint();
-                if (reportHeaderEl) doc.write(reportHeaderEl);
-                doc.write(sourceEl.innerHTML);
-                doc.write('</body></html>');
-                doc.close();
-                setTimeout(function() {
-                    win.focus();
-                    win.print();
-                }, 300);
+                window.open('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), '_blank');
             };
 
             // Helper: convert result to a badge
@@ -2680,8 +2775,8 @@
                 document.getElementById('woModel').value = '';
                 document.getElementById('woSerial').value = '';
                 document.getElementById('woEquipment').value = '';
-                document.getElementById('woPriority').value = 'Medium';
-                document.getElementById('woStatus').value = 'Open';
+                document.getElementById('woPriority').value = 'normal';
+                document.getElementById('woStatus').value = 'open';
                 document.getElementById('woTech').value = '';
                 document.getElementById('woStartDate').value = '';
                 document.getElementById('woEndDate').value = '';
@@ -2741,6 +2836,8 @@
                         document.getElementById('woEquipmentId').value = '';
                     });
             }
+            // Expose to window so workflow partial and onclick handlers can call it
+            window.loadEquipmentDetails = loadEquipmentDetails;
 
             /**
              * Open the work order modal for the given asset.  Pre-fills the
@@ -2902,7 +2999,7 @@
              * @param {HTMLElement} tr
              */
             function deleteWorkOrder(id, tr) {
-                if (!confirm('Are you sure you want to delete this work order?')) return;
+                // Handled by Swal — see deleteWorkOrderConfirm()
                 fetch(WORK_ORDER_DELETE_URL + '/' + encodeURIComponent(id), {
                         method: 'GET',
                         headers: {
@@ -2924,8 +3021,21 @@
             }
 
             // ── Add Device Form (from "asset not found" flow) ────────────────────────
-            // Handles saving a new device to site inventory and adds it to the
-            // Not Inspected tab without a page reload.
+            // Handles saving a new device directly into the inspection flow.
+            const addDeviceModalElRef = document.getElementById('addDeviceModal');
+            if (addDeviceModalElRef) {
+                addDeviceModalElRef.addEventListener('shown.bs.modal', function() {
+                    const deptEl = document.getElementById('addDept');
+                    const roomEl = document.getElementById('addRoom');
+                    if (!deptEl || !roomEl) return;
+                    fetch('<?= site_url('admin/site-inspection/last-device') ?>?site_id=' + encodeURIComponent(siteId) + '&group_id=' + encodeURIComponent(window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || ''), {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    }).then(r => r.json()).then(data => {
+                        if (data.department && !deptEl.value) deptEl.value = data.department;
+                        if (data.location && !roomEl.value) roomEl.value = data.location;
+                    }).catch(() => {});
+                });
+            }
             const addDeviceFormEl = document.getElementById('addDeviceForm');
             if (addDeviceFormEl) {
                 addDeviceFormEl.addEventListener('submit', function(e) {
@@ -3009,62 +3119,53 @@
                                 }
                                 return;
                             }
-
-                            // ── Close the modal ──────────────────────────────────────────
+                            // ── Close the modal and continue inspection directly ─────────
+                           
                             const modalEl = document.getElementById('addDeviceModal');
-                            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                            const deviceData = {
+                                asset_tag: res.asset_tag || assetTag,
+                                make: res.make || (document.getElementById('addManufacturer')?.value || '').trim(),
+                                model: res.model || (document.getElementById('addModel')?.value || '').trim(),
+                                device_type: res.device_type || (document.getElementById('addType')?.value || '').trim(),
+                                serial_number: res.serial_number || (document.getElementById('addSerial')?.value || '').trim(),
+                                department: res.department || (document.getElementById('addDept')?.value || '').trim(),
+                                location: res.location || (document.getElementById('addRoom')?.value || '').trim(),
+                                equipment_id: res.equipment_id || null,
+                                source: res.reused ? 'equipment' : 'inspection'
+                            };
 
-                            // ── Inject the new device into the Not Inspected table body ─
-                            const tbody = document.getElementById('notInspectedTableBody');
-                            if (tbody) {
-                                // Remove the "no equipment" placeholder row if present
-                                const emptyRow = tbody.querySelector('td[colspan]');
-                                if (emptyRow) emptyRow.closest('tr').remove();
+                            if (modalEl) {
+                                modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+                                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
 
-                                const model = escapeHtml(res.model || '');
-                                const deptRoom = escapeHtml(res.department || '') + (res.location ? ' / ' +
-                                    escapeHtml(res.location) : '');
-                                const newRow = document.createElement('tr');
-                                newRow.setAttribute('data-asset', escapeHtml(res.asset_tag));
-                                newRow.innerHTML =
-                                    '<td><button class="btn btn-sm btn-primary" type="button" onclick="inspectFromNotInspected(\'' +
-                                    escapeHtml(res.asset_tag) + '\')">' +
-                                    '<i class="fa-solid fa-arrow-right me-1"></i> Inspect</button></td>' +
-                                    '<td>' + escapeHtml(res.asset_tag) + '</td>' +
-                                    '<td>' + model + '</td>' +
-                                    '<td>' + escapeHtml(res.device_type || '') + '</td>' +
-                                    '<td>' + deptRoom + '</td>' +
-                                    '<td><span class="badge bg-secondary">Not Inspected</span></td>';
-                                tbody.prepend(newRow);
+                                    if (typeof window.startInspectionWithDeviceData === 'function') {
+                                        window.startInspectionWithDeviceData(deviceData);
+                                    }
+
+                                    if (typeof showToast === 'function') {
+                                        showToast(
+                                            res.reused ? 'Device found and ready to inspect.' : 'Device ready to inspect.',
+                                            'success'
+                                        );
+                                    }
+                                }, { once: true });
+
+                                bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                            } else {
+                                if (typeof window.startInspectionWithDeviceData === 'function') {
+                                    window.startInspectionWithDeviceData(deviceData);
+                                }
+
+                                if (typeof showToast === 'function') {
+                                    showToast(
+                                        res.reused ? 'Device found and ready to inspect.' : 'Device ready to inspect.',
+                                        'success'
+                                    );
+                                }
                             }
 
-                            // ── Update the Not Inspected count badge ─────────────────────
-                            const countBadge = document.getElementById('not-inspected-count');
-                            if (countBadge) {
-                                const current = parseInt(countBadge.textContent || '0', 10);
-                                countBadge.textContent = current + 1;
-                            }
-                            const msgEl = document.getElementById('not-inspected-message');
-                            if (msgEl) {
-                                const badge = document.getElementById('not-inspected-count');
-                                const n = badge ? badge.textContent : '';
-                                msgEl.textContent = n +
-                                    ' item(s) remaining in site inventory pending inspection.';
-                            }
 
-                            // ── Switch to the Not Inspected tab ──────────────────────────
-                            const notInspTabBtn = document.getElementById('not-inspected-tab');
-                            if (notInspTabBtn) bootstrap.Tab.getOrCreateInstance(notInspTabBtn).show();
-
-                            // ── Auto-open the Pass/Fail form for the new device ──────────
-                            if (typeof inspectFromNotInspected === 'function') {
-                                setTimeout(function() {
-                                    inspectFromNotInspected(res.asset_tag);
-                                }, 250);
-                            }
-
-                            if (typeof showToast === 'function') showToast(
-                                'Device added and ready to inspect.', 'success');
+                            
                         })
                         .catch(err => {
                             if (errBox) {
@@ -3090,9 +3191,16 @@
                     const url = woId ? (WORK_ORDER_UPDATE_URL + '/' + encodeURIComponent(woId)) :
                         WORK_ORDER_CREATE_URL;
                     const params = new URLSearchParams();
+                    // Include CSRF token (fetch() bypasses $.ajaxSetup)
+                    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+                    var csrfCookie = (document.cookie.match(/csrf_cookie_name=([^;]+)/) || [])[1];
+                    var csrfVal = (csrfMeta ? csrfMeta.getAttribute('content') : null) || (csrfCookie ? decodeURIComponent(csrfCookie) : '');
+                    if (csrfVal) params.append('csrf_test_name', csrfVal);
                     params.append('site_id', SITE_ID);
                     params.append('title', document.getElementById('woTitle').value);
                     params.append('equipment_id', document.getElementById('woEquipmentId').value);
+                    params.append('asset_tag', document.getElementById('woAsset').value || '');
+                    params.append('serial_number', (document.getElementById('woSerial') ? document.getElementById('woSerial').value : '') || '');
                     params.append('status', document.getElementById('woStatus').value);
                     params.append('priority', document.getElementById('woPriority').value);
                     params.append('assigned_to', document.getElementById('woTech').value);
@@ -3130,7 +3238,10 @@
                                 title: document.getElementById('woTitle').value,
                                 priority: document.getElementById('woPriority').value,
                                 status: document.getElementById('woStatus').value,
-                                assigned_to_name: document.getElementById('woTech').value || 'N/A',
+                                assigned_to_name: (function () {
+                                    var sel = document.getElementById('woTech');
+                                    return sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : 'N/A';
+                                })(),
                                 start_date: document.getElementById('woStartDate').value,
                                 end_date: document.getElementById('woEndDate').value,
                                 description: document.getElementById('woDescription').value,
@@ -3147,8 +3258,14 @@
                             const modal = bootstrap.Modal.getInstance(document.getElementById(
                                 'workOrderModal'));
                             if (modal) modal.hide();
-                            // Switch to Work Orders tab
-                            window.showWorkOrdersTab();
+                            // Switch to Work Orders tab and refresh
+                            if (typeof window.showWorkOrdersTab === 'function') window.showWorkOrdersTab();
+                            // Also add serial_number to row data
+                            if (typeof backgroundRefreshTabs === 'function') {
+                                backgroundRefreshTabs(function() {
+                                    if (typeof window.showWorkOrdersTab === 'function') window.showWorkOrdersTab();
+                                });
+                            }
                         })
                         .catch(() => {
                             const errBox = document.getElementById('workOrderError');
@@ -3186,9 +3303,8 @@
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="workorder-equipment" class="form-label">Equipment <span
-                                        class="text-danger">*</span></label>
-                                <select class="form-select" id="workorder-equipment" name="equipment_id" required>
+                                    <label for="edit-inspection-equipment" class="form-label">Equipment <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="edit-inspection-equipment" name="equipment_id" required>
                                     <option value="">-- Select Equipment --</option>
                                     <?php foreach ($equipment as $eq): ?>
                                         <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> -
@@ -3291,8 +3407,12 @@
                             <select class="form-select" id="workorder-equipment" name="equipment_id" required>
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
-                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?>
-                                        <?= esc($eq['model']) ?></option>
+                                    <option
+                                        value="<?= (int) $eq['id'] ?>"
+                                        data-master-equipment-id="<?= (int) ($eq['master_equipment_id'] ?? 0) ?>"
+                                        data-asset-tag="<?= esc(strtolower(trim($eq['asset_tag'] ?? '')), 'attr') ?>">
+                                        <?= esc($eq['asset_tag']) ?> - <?= esc($eq['make']) ?> <?= esc($eq['model']) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -3313,6 +3433,7 @@
                             <select class="form-select" id="workorder-priority" name="priority" required>
                                 <option value="">-- Select Priority --</option>
                                 <option value="low">Low</option>
+                                <option value="normal" selected>Normal</option>
                                 <option value="medium">Medium</option>
                                 <option value="high">High</option>
                                 <option value="critical">Critical</option>
@@ -3570,50 +3691,45 @@
         // Handle Edit Equipment button click
         $(document).on('click', '.edit-equipment-btn', function() {
             var equipmentId = $(this).data('id');
-
-            // Change modal title
             $('#equipmentModalLabel').text('Edit Equipment');
-
-            // Change form action to update
             $('#equipmentForm').attr('action', '<?= site_url('admin/equipment/update/') ?>' + equipmentId);
 
-            // Fetch equipment data via AJAX
             $.ajax({
                 url: '<?= site_url('admin/equipment/show/') ?>' + equipmentId,
                 method: 'GET',
                 dataType: 'json',
                 success: function(response) {
-                    if (response.status === 'success') {
-                        var data = response.data;
-                        $('#equipment-id').val(data.id);
-                        $('#equipment-asset-tag').val(data.asset_tag);
-                        $('#equipment-serial-number').val(data.serial_number);
-                        $('#equipment-department').val(data.department);
-                        $('#equipment-location').val(data.location);
-                        $('#equipment-status').val(data.status);
-                        $('#equipment-pm-kit').val(data.pm_kit);
-                        $('#equipment-fast-notes').val(data.fast_notes);
-                        $('#equipment-customer-location').val(data.site_id);
-                        $('#equipment-installation-date').val(data.installation_date);
-                        $('#equipment-warranty-expires').val(data.warranty_expires);
-
-                        // Show modal first, then load dropdowns with pre-selected values
-                        $('#addEquipmentModal').modal('show');
-
-                        // Wait for modal and dropdown options to load
-                        setTimeout(function() {
-                            loadEquipmentDropdownOptions(
-                                data.make || '',
-                                data.model || '',
-                                data.device_type || ''
-                            );
-                        }, 300);
-                    } else {
-                        alert('Error loading equipment data');
+                    if (response.status !== 'success') {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Error loading equipment data.' });
+                        return;
                     }
+                    var data = response.data;
+                    // Populate all plain fields immediately
+                    $('#equipment-id').val(data.id);
+                    $('#equipment-asset-tag').val(data.asset_tag);
+                    $('#equipment-serial-number').val(data.serial_number);
+                    $('#equipment-department').val(data.department);
+                    $('#equipment-location').val(data.location);
+                    $('#equipment-status').val(data.status);
+                    $('#equipment-pm-kit').val(data.pm_kit);
+                    $('#equipment-fast-notes').val(data.fast_notes);
+                    $('#equipment-customer-location').val(data.site_id);
+                    $('#equipment-installation-date').val(data.installation_date);
+                    $('#equipment-warranty-expires').val(data.warranty_expires);
+                    // Set make/model/device_type directly — do NOT rely on the
+                    // dropdown AJAX callback which can race and blank these out.
+                    $('#equipment-make').val(data.make || '');
+                    $('#equipment-model').val(data.model || '');
+                    $('#equipment-device-type').val(data.device_type || '');
+                    // Show modal; the show.bs.modal guard ensures dropdown
+                    // suggestions load only in Add mode (no equipment-id set yet,
+                    // but we set it above so the guard will skip the empty call).
+                    $('#addEquipmentModal').modal('show');
+                    // Populate suggestion lists in background (does NOT overwrite values)
+                    loadEquipmentDropdownOptions(data.make || '', data.model || '', data.device_type || '');
                 },
                 error: function() {
-                    alert('Failed to fetch equipment data');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch equipment data.' });
                 }
             });
         });
@@ -3633,6 +3749,7 @@
          * are targeting.
          */
         const siteId = <?= (int)($site['id'] ?? 0) ?>;
+        window.siteId = siteId; // needed by workflow partial inline handlers
         // Switch view from dashboard to inspection.  Hide other views when
         // starting an inspection and show the inspection detail view.
         window.startInspection = function startInspection() {
@@ -3641,6 +3758,7 @@
             // the first Pass/Fail is recorded.
             window.CURRENT_INSPECTION_GROUP_ID = null;
             window.CURRENT_REPORT_GROUP_ID = null;
+            window._savedInspTitle = null; // clear saved title on new inspection
 
             // Clear the inspection header labels
             var siteLabel = document.getElementById('insp-site-label');
@@ -3649,9 +3767,11 @@
             var techEl = document.getElementById('insp-technician');
             var siteName = '<?= esc($site['name'] ?? '—') ?>';
             if (siteLabel) siteLabel.textContent = 'Site: ' + siteName;
-            if (titleEl) titleEl.textContent = 'New Inspection';
+            if (titleEl) { titleEl.textContent = 'New Inspection'; }
             if (idLabel) idLabel.textContent = '—';
             if (techEl) techEl.textContent = '—';
+            var dateDisp = document.getElementById('insp-date-display');
+            if (dateDisp) dateDisp.textContent = '';
 
             // Reset the status badge to "In Progress"
             var statusBtn = document.getElementById('statusDropdown');
@@ -3662,13 +3782,14 @@
 
             // Clear the asset barcode input and pass/fail form
             var assetInput = document.getElementById('assetInput');
-            if (assetInput) {
-                assetInput.value = '';
-            }
+            if (assetInput) { assetInput.value = ''; }
             var inspectAsset = document.getElementById('inspectAsset');
             if (inspectAsset) inspectAsset.value = '';
+            // Fix 1: Reset Action Performed to "-- Select --" and blank Notes on new inspection
             var inspectNotes = document.getElementById('inspectNotes');
             if (inspectNotes) inspectNotes.value = '';
+            var actionSel = document.getElementById('inspectActionPerformed');
+            if (actionSel) actionSel.selectedIndex = 0;
 
             // Switch Pass/Fail tab back to "Not Inspected" tab by default
             var notInspTabBtn = document.getElementById('not-inspected-tab');
@@ -3724,6 +3845,57 @@
             }
         }
 
+        window.startInspectionWithDeviceData = function startInspectionWithDeviceData(resp) {
+            resp = resp || {};
+            const assetVal = resp.asset_tag || '';
+            _originalScannedAsset = assetVal;
+            window._inspectionDeviceMeta = {
+                equipment_id: resp.equipment_id || null,
+                asset_tag: assetVal,
+                make: resp.make || '',
+                model: resp.model || '',
+                device_type: resp.device_type || '',
+                serial_number: resp.serial_number || '',
+                department: resp.department || '',
+                location: resp.location || '',
+                est: resp.est || '',
+                cal: resp.cal || ''
+            };
+
+            const tabButton = document.getElementById('inspect-device-tab');
+            const emptyView = document.getElementById('inspectDeviceEmpty');
+            const formWrapper = document.getElementById('inspectDeviceFormWrapper');
+            if (tabButton) bootstrap.Tab.getOrCreateInstance(tabButton).show();
+            if (emptyView) emptyView.classList.add('d-none');
+            if (formWrapper) formWrapper.classList.remove('d-none');
+
+            $('#inspectAsset').val(assetVal);
+            $('#inspectModelDisplay').text(resp.model && resp.model.length ? resp.model : (resp.make || '—'));
+            // Restore last-used dept/room when device has none saved
+            $('#inspectDept').val(resp.department || window._lastDept || '');
+            $('#inspectRoom').val(resp.location || window._lastRoom || '');
+            $('#inspectSerial').val(resp.serial_number || '');
+            $('#inspectPMFrequency').val('12 Month');
+
+            var existingRow = document.querySelector('#inspectionTableBody tr[data-asset="' + assetVal.replace(/"/g, '') + '"]');
+            var existingNotes = existingRow ? (existingRow.getAttribute('data-notes') || '') : (resp.notes || '');
+            var existingAction = existingRow ? (existingRow.getAttribute('data-action') || '') : (resp.action_performed || '');
+            var actionSel = document.getElementById('inspectActionPerformed');
+            $('#inspectNotes').val(existingNotes || '');
+            if (actionSel) {
+                if (existingAction) {
+                    for (var oi = 0; oi < actionSel.options.length; oi++) {
+                        if (actionSel.options[oi].value === existingAction) {
+                            actionSel.selectedIndex = oi;
+                            break;
+                        }
+                    }
+                } else {
+                    actionSel.selectedIndex = 0;
+                }
+            }
+        };
+
         // Handle asset submission.  For demonstration this simply enables
         // the Pass/Fail tab and populates example values.  Integrate your
         // actual asset lookup here.
@@ -3731,74 +3903,50 @@
             const assetInput = document.getElementById('assetInput');
             const asset = assetInput ? assetInput.value.trim() : '';
             if (!asset) {
-                alert('Please enter an Asset number.');
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter an Asset number.' });
                 return;
             }
             // Query the backend for equipment details by asset tag and site ID.
             $.get('<?= site_url('admin/site-inspection/get-equipment') ?>', {
                     asset_tag: asset,
-                    site_id: siteId
+                    site_id: siteId,
+                    group_id: window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || ''
                 }, function(resp) {
+                   if (resp && resp.exists_other_site) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Asset already assigned',
+                            text: resp.message || ('Asset # "' + asset + '" already belongs to another site.'),
+                            confirmButtonColor: '#7c3aed'
+                        });
+                        return;
+                    }
+
                     if (!resp || resp.found === false) {
-                        // Asset not found – trigger new equipment addition flow (Step 2–5)
-                        // Pre-fill the Asset # field in the Add Device modal and open it
                         var addAssetInput = document.getElementById('addAsset');
                         if (addAssetInput) addAssetInput.value = asset;
-                        // Clear other fields so the user fills them in fresh
+
                         ['addModel', 'addSerial', 'addManufacturer', 'addType', 'addDescription', 'addDept',
                             'addRoom', 'addNotes'
                         ].forEach(function(id) {
                             var el = document.getElementById(id);
                             if (el) el.value = '';
                         });
+
                         var addDeviceModalEl = document.getElementById('addDeviceModal');
                         if (addDeviceModalEl) {
-                            var addDeviceModal = bootstrap.Modal.getOrCreateInstance(addDeviceModalEl);
-                            addDeviceModal.show();
+                            bootstrap.Modal.getOrCreateInstance(addDeviceModalEl).show();
                         } else {
-                            alert('Device with Asset # ' + asset +
-                                ' was not found for this site. Please add it as new equipment.');
+                            Swal.fire({ icon: 'warning', title: 'Device Not Found', text: 'Device with Asset # ' + asset + ' was not found for this site. Please add it as new equipment.' });
                         }
                         return;
                     }
-                    // Enable the Pass/Fail tab and show the form
-                    const tabButton = document.getElementById('inspect-device-tab');
-                    const emptyView = document.getElementById('inspectDeviceEmpty');
-                    const formWrapper = document.getElementById('inspectDeviceFormWrapper');
-                    if (tabButton) {
-                        tabButton.classList.remove('disabled');
-                        // Use Bootstrap Tab API to activate the tab
-                        var tabInstance = bootstrap.Tab.getOrCreateInstance(tabButton);
-                        tabInstance.show();
+                    if (typeof window.startInspectionWithDeviceData === 'function') {
+                        window.startInspectionWithDeviceData(resp || {});
                     }
-                    if (emptyView) emptyView.classList.add('d-none');
-                    if (formWrapper) formWrapper.classList.remove('d-none');
-                    // Re-trigger action performed handler so notes auto-fill on form open
-                    var actionSel = document.getElementById('inspectActionPerformed');
-                    if (actionSel) actionSel.dispatchEvent(new Event('change'));
-                    // Populate the form fields with the equipment details
-                    $('#inspectAsset').val(resp.asset_tag || '');
-                    // For display we prioritise model; fallback to make
-                    var modelDisplay = resp.model && resp.model.length ? resp.model : (resp.make || '—');
-                    $('#inspectModelDisplay').text(modelDisplay);
-                    // Customer name is not returned; leave blank or set as needed
-                    $('#inspectCustomerName').text('');
-                    $('#inspectDept').val(resp.department || '');
-                    $('#inspectRoom').val(resp.location || '');
-                    $('#inspectSerial').val(resp.serial_number || '');
-                    // Reset notes and checkboxes
-                    $('#inspectNotes').val('');
-                    // EST/CAL are managed in Add Device / Equipment Settings, not on pass/fail screen
-                    // Reset action performed and frequency to defaults
-                    var actionSel = document.getElementById('inspectActionPerformed');
-                    if (actionSel) {
-                        if (actionSel.options.length > 1) actionSel.selectedIndex = 1;
-                        actionSel.dispatchEvent(new Event('change'));
-                    }
-                    $('#inspectPMFrequency').val('12 Month');
                 }, 'json')
                 .fail(function() {
-                    alert('Error looking up equipment. Please try again.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Error looking up equipment. Please try again.' });
                 });
         }
 
@@ -3833,17 +3981,30 @@
          *
          * @param {string} result Pass | Fail | Repair
          */
+        // Track the original scanned asset tag so changes to the ID field don't break lookup
+        var _originalScannedAsset = '';
+
         function recordInspection(result, onSuccessCallback) {
+            var now = new Date();
+            var pad = function(n){ return n < 10 ? '0'+n : n; };
+            var localNow = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+                + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+            var meta = window._inspectionDeviceMeta || {};
             var payload = {
                 site_id: siteId,
                 asset_tag: $('#inspectAsset').val(),
+                original_asset_tag: _originalScannedAsset || $('#inspectAsset').val(),
                 result: result,
                 notes: $('#inspectNotes').val(),
                 department: $('#inspectDept').val(),
                 room: $('#inspectRoom').val(),
                 serial_number: $('#inspectSerial').val(),
                 action_performed: $('#inspectActionPerformed').val(),
-                pm_frequency: $('#inspectPMFrequency').val()
+                pm_frequency: $('#inspectPMFrequency').val(),
+                completed_at: localNow,
+                make: meta.make || '',
+                model: meta.model || '',
+                device_type: meta.device_type || ''
             };
 
             // ── KEY FIX: if we are already viewing an active inspection session,
@@ -3854,7 +4015,7 @@
             }
 
             if (!payload.asset_tag) {
-                alert('Asset tag is missing. Please enter a valid Asset #.');
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Asset tag is missing. Please enter a valid Asset #.' });
                 return;
             }
 
@@ -3886,12 +4047,29 @@
                         if (idLabel && (idLabel.textContent === '—' || !idLabel.textContent.trim())) {
                             idLabel.textContent = newGroupId;
                         }
-                        // Update title if still showing "New Inspection"
-                        var titleEl = document.getElementById('insp-title');
-                        if (titleEl && titleEl.textContent === 'New Inspection') {
-                            titleEl.textContent = resp.inspection_type || 'Inspection';
+                        // Fix 4: Use localStorage to persist title — restoreInspTitle handles it
+                        if (typeof window.restoreInspTitle === 'function') {
+                            window.restoreInspTitle(newGroupId);
+                        } else {
+                            var titleEl = document.getElementById('insp-title');
+                            var currentTitle = titleEl ? titleEl.textContent.trim() : '';
+                            if (titleEl && (currentTitle === 'New Inspection' || currentTitle === '—' || currentTitle === '')) {
+                                titleEl.textContent = window._savedInspTitle || resp.inspection_type || 'Inspection';
+                            }
                         }
                     }
+                    // Fix 8: Update live timestamp when inspection result is recorded
+                    (function() {
+                        var dateDisplayEl = document.getElementById('insp-date-display');
+                        if (!dateDisplayEl) return;
+                        var nowDisp = new Date();
+                        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                        var pd = function(n) { return n < 10 ? '0' + n : n; };
+                        var h = nowDisp.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+                        h = h % 12 || 12;
+                        dateDisplayEl.textContent = months[nowDisp.getMonth()] + ' ' + nowDisp.getDate()
+                            + ', ' + nowDisp.getFullYear() + ' ' + h + ':' + pd(nowDisp.getMinutes()) + ' ' + ampm;
+                    })();
 
                     // ── Background refresh: reload page HTML silently, then restore state ──
                     $.get(window.location.href, function(html) {
@@ -3932,9 +4110,29 @@
                             filterInspectedByGroup(currentGroupId);
                         }
 
-                        // ── Refresh the inspection report (covers new inspection first-record case) ──
-                        if (currentGroupId && typeof openInspectionReport === 'function') {
-                            openInspectionReport(currentGroupId);
+                        // ── Silently refresh the Reports tab content (no modal) ──────────
+                        // The modal only opens when the user clicks the report icon explicitly.
+                        if (currentGroupId) {
+                            var reportsTabEl = document.getElementById('reportsTabContent');
+                            if (reportsTabEl) {
+                                reportsTabEl.innerHTML = '';
+                                var rIframe = document.createElement('iframe');
+                                rIframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                                var rWrapper = document.createElement('div');
+                                rWrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                                rWrapper.appendChild(rIframe);
+                                reportsTabEl.appendChild(rWrapper);
+                                fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(currentGroupId) + '?inline=1', {
+                                    headers: { 'Accept': 'text/html' }
+                                })
+                                .then(function(r) { return r.text(); })
+                                .then(function(html) {
+                                    rIframe.contentDocument.open();
+                                    rIframe.contentDocument.write(html);
+                                    rIframe.contentDocument.close();
+                                })
+                                .catch(function() {});
+                            }
                         }
 
                         // ── Clear asset input fields for next inspection ──────────────────
@@ -3944,12 +4142,15 @@
                             assetInput.value = '';
                         }
 
-                        // Clear the Pass/Fail form fields
+                        // Clear device-specific fields but KEEP dept and room
+                        // so they carry over to the next device in the same area.
                         $('#inspectAsset').val('');
                         $('#inspectNotes').val('');
-                        $('#inspectDept').val('');
-                        $('#inspectRoom').val('');
                         $('#inspectSerial').val('');
+                        // dept (#inspectDept) and room (#inspectRoom) intentionally NOT cleared
+                        // but store them so next scan can restore if device has no saved location
+                        window._lastDept = $('#inspectDept').val();
+                        window._lastRoom = $('#inspectRoom').val();
 
                         // ── Switch to "Inspected Items" sub-tab (unless a callback overrides) ──
                         if (typeof onSuccessCallback === 'function') {
@@ -3985,10 +4186,10 @@
                     });
                 } else {
                     var msg = resp && resp.message ? resp.message : 'Failed to record inspection.';
-                    alert(msg);
+                    Swal.fire({ icon: 'warning', title: 'Notice', text: msg });
                 }
             }, 'json').fail(function() {
-                alert('Error recording inspection. Please try again.');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error recording inspection. Please try again.' });
             });
         }
 
@@ -4006,51 +4207,206 @@
                 recordInspection('Repair');
             });
             $('#btnFailWOInspection').off('click').on('click', function() {
-                // Capture asset before recordInspection refreshes UI
                 var assetId = $('#inspectAsset').val();
                 if (!assetId) {
-                    alert('Please scan or enter an Asset # first.');
+                    Swal.fire({ icon: 'warning', title: 'Required', text: 'Please scan or enter an Asset # first.' });
                     return;
                 }
 
                 recordInspection('Fail', function() {
-                    // 1) Switch to INSPECTION -> Work Orders tab (your updated inner tab id)
                     if (typeof window.showWorkOrdersTab === 'function') {
                         window.showWorkOrdersTab();
                     }
 
-                    // 2) Open the inspection work order modal with auto-fill
+                    // Open WO modal and pre-fill asset details
                     if (typeof window.openWorkOrderModalFromInventory === 'function') {
                         window.openWorkOrderModalFromInventory(assetId);
                     } else {
-                        // fallback: at least set asset and trigger change
                         var woAssetEl = document.getElementById('woAsset');
                         if (woAssetEl) {
                             woAssetEl.value = assetId;
-                            if (typeof window.onWOAssetChange === 'function') window
-                                .onWOAssetChange();
+                            if (typeof window.onWOAssetChange === 'function') window.onWOAssetChange();
                         }
+                    }
+
+                    // Look up the auto-created WO by group_id + asset_tag so
+                    // Save does UPDATE (not INSERT duplicate).
+                    var groupId = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID || '';
+                    if (groupId && assetId) {
+                        $.get('<?= site_url('admin/work-orders/findByGroup') ?>', {
+                            group_id: groupId,
+                            asset_tag: assetId,
+                            site_id: SITE_ID
+                        }, function(res) {
+                            if (res && res.success && res.work_order_id) {
+                                document.getElementById('woId').value = res.work_order_id;
+                                // Pre-fill description/title from existing WO
+                                if (res.title && !document.getElementById('woTitle').value) {
+                                    document.getElementById('woTitle').value = res.title;
+                                }
+                                if (res.description) {
+                                    document.getElementById('woDescription').value = res.description;
+                                }
+                            }
+                        }, 'json').fail(function() { /* silent - woId stays empty, will INSERT */ });
                     }
                 });
             });
 
         });
 
-        // Generic functions for exporting tables.  These are placeholders
-        // demonstrating how you might trigger a DataTables export.  They
-        // simply log to the console for now.
-        window.copyTable = function copyTable(tableId) {
-            console.log('Copy table', tableId);
-        }
-        window.exportTableCSV = function exportTableCSV(tableId) {
-            console.log('Export CSV', tableId);
-        }
-        window.exportTableExcel = function exportTableExcel(tableId) {
-            console.log('Export Excel', tableId);
-        }
-        window.exportTablePDF = function exportTablePDF(tableId) {
-            console.log('Export PDF', tableId);
-        }
+        /* ══════════════════════════════════════════════════════════════
+           TABLE EXPORT UTILITIES
+           Reads visible rows from any table and exports to
+           Copy / CSV / Excel (TSV) / PDF (print window).
+           Skips the first column (Action buttons) automatically.
+        ══════════════════════════════════════════════════════════════ */
+        (function() {
+            var SITE_NAME = '<?= esc($site['name'] ?? '') ?>';
+
+            // Extract header + data rows from a table, skipping Action column
+            function getTableData(tableId) {
+                var table  = document.getElementById(tableId);
+                if (!table) return { headers: [], rows: [] };
+
+                var headers = [];
+                var rows    = [];
+
+                // Headers — skip col 0 (Action)
+                var ths = table.querySelectorAll('thead th');
+                ths.forEach(function(th, i) {
+                    if (i === 0) return; // skip Action
+                    headers.push(th.textContent.trim());
+                });
+
+                // Visible data rows — skip col 0 (buttons)
+                var trs = table.querySelectorAll('tbody tr:not([style*="display: none"]):not([style*="display:none"])');
+                trs.forEach(function(tr) {
+                    // Skip "empty" placeholder rows
+                    var tds = tr.querySelectorAll('td');
+                    if (tds.length <= 1) return;
+                    var row = [];
+                    tds.forEach(function(td, i) {
+                        if (i === 0) return; // skip Action
+                        // Get plain text (strip badge HTML etc.)
+                        row.push(td.textContent.trim().replace(/\s+/g, ' '));
+                    });
+                    if (row.length) rows.push(row);
+                });
+
+                return { headers: headers, rows: rows };
+            }
+
+            function tableLabel(tableId) {
+                var map = {
+                    notInspectedTable : 'Not_Inspected',
+                    inspectedTable    : 'Inspected_Items',
+                    archivedTable     : 'Archived_Items',
+                    inventoryTable    : 'All_Inventory',
+                    workOrdersTable   : 'Work_Orders',
+                };
+                return map[tableId] || tableId;
+            }
+
+            function safeFilename(str) {
+                return str.replace(/[^a-z0-9_\-]/gi, '_');
+            }
+
+            function buildFilename(tableId, ext) {
+                return safeFilename(SITE_NAME) + '_' + tableLabel(tableId) + '_' + new Date().toISOString().slice(0,10) + '.' + ext;
+            }
+
+            // ── Copy ─────────────────────────────────────────────────
+            window.copyTable = function copyTable(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to copy.' }); return; }
+                var text = [d.headers.join('\t')]
+                    .concat(d.rows.map(function(r) { return r.join('\t'); }))
+                    .join('\n');
+                navigator.clipboard.writeText(text).then(function() {
+                    var btn = event && event.target;
+                    if (btn) { var orig = btn.textContent; btn.textContent = '✓ Copied!'; setTimeout(function() { btn.textContent = orig; }, 1500); }
+                }).catch(function() {
+                    var ta = document.createElement('textarea');
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                });
+            };
+
+            // ── CSV ──────────────────────────────────────────────────
+            window.exportTableCSV = function exportTableCSV(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var esc = function(v) {
+                    v = String(v);
+                    if (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) {
+                        return '"' + v.replace(/"/g, '""') + '"';
+                    }
+                    return v;
+                };
+                var csv = [d.headers.map(esc).join(',')]
+                    .concat(d.rows.map(function(r) { return r.map(esc).join(','); }))
+                    .join('\n');
+                var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                var a    = document.createElement('a');
+                a.href   = URL.createObjectURL(blob);
+                a.download = buildFilename(tableId, 'csv');
+                a.click();
+            };
+
+            // ── Excel (TSV → .xls which Excel opens natively) ────────
+            window.exportTableExcel = function exportTableExcel(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var tsv = [d.headers.join('\t')]
+                    .concat(d.rows.map(function(r) { return r.join('\t'); }))
+                    .join('\n');
+                var blob = new Blob([tsv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                var a    = document.createElement('a');
+                a.href   = URL.createObjectURL(blob);
+                a.download = buildFilename(tableId, 'xls');
+                a.click();
+            };
+
+            // ── PDF (print window) ────────────────────────────────────
+            window.exportTablePDF = function exportTablePDF(tableId) {
+                var d = getTableData(tableId);
+                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                var label = tableLabel(tableId).replace(/_/g,' ');
+                var ths = d.headers.map(function(h) { return '<th>' + h + '</th>'; }).join('');
+                var trs = d.rows.map(function(r) {
+                    return '<tr>' + r.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+                }).join('');
+
+                var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+                    + '<title>' + SITE_NAME + ' — ' + label + '</title>'
+                    + '<style>'
+                    + 'body{font-family:Arial,sans-serif;font-size:11px;margin:20px;}'
+                    + 'h2{font-size:15px;margin-bottom:2px;}'
+                    + 'h3{font-size:12px;color:#475569;margin:0 0 10px;font-weight:400;}'
+                    + 'p{font-size:11px;color:#555;margin:0 0 12px;}'
+                    + 'table{width:100%;border-collapse:collapse;}'
+                    + 'th{background:#1e293b;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;}'
+                    + 'td{padding:6px 10px;border-bottom:1px solid #e2e8f0;}'
+                    + 'tr:nth-child(even) td{background:#f8fafc;}'
+                    + '@media print{body{margin:0;}}'
+                    + '</style></head><body>'
+                    + '<h2>' + SITE_NAME + '</h2>'
+                    + '<h3>' + label + '</h3>'
+                    + '<p>Generated: ' + new Date().toLocaleString() + '</p>'
+                    + '<table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>'
+                    + '<script>window.onload=function(){window.print();}<\/script>'
+                    + '</body></html>';
+
+                var w = window.open('', '_blank');
+                w.document.write(html);
+                w.document.close();
+            };
+
+        })();
 
         // Show the Work Orders view inside the inspection workflow
         // IMPORTANT: Work Orders is a tab INSIDE view-inspection — do NOT hide view-inspection.
@@ -4248,45 +4604,118 @@
                 }
             });
         });
-        $(document).on('click', '.edit-workorder-btn', function() {
-            var id = $(this).data('id');
-            $('#workorder-id').val(id);
-            $('#workorder-title').val($(this).data('title'));
-            $('#workorder-equipment').val($(this).data('equipment_id'));
-            $('#workorder-sn').val($(this).attr('data-serial_number'));
 
 
+        const ADMIN_WORKORDER_SHOW_URL = '<?= site_url('admin/work-orders/show/') ?>';
+        const $adminWoModal = $('#addWorkOrderModal');
+        const $adminWoEquip = $adminWoModal.find('#workorder-equipment');
 
-            $('#workorder-description').val($(this).data('description'));
-            $('#workorder-status').val($(this).data('status'));
-            $('#workorder-priority').val($(this).data('priority'));
-            $('#workorder-assigned-to').val($(this).data('assigned_to'));
-            $('#workorder-start-date').val($(this).data('start_date'));
-            $('#workorder-end-date').val($(this).data('end_date'));
-
-            $('#workOrderModalLabel').text('Edit Work Order');
-            $('#workOrderSubmitBtn').text('Update Work Order');
-            $('#workOrderForm').attr('action', '<?= site_url('admin/work-orders/update/') ?>' + id);
-            $('#addWorkOrderModal').modal('show');
-        });
-
-        // ─── Delete handlers (unchanged) ─────────────────────
-        $(document).on('click', '.delete-equipment-btn', function() {
-            var id = $(this).data('id');
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then(function(result) {
-                if (result.isConfirmed) {
-                    window.location.href = '<?= site_url('admin/equipment/delete/') ?>' + id;
+        $adminWoEquip.on('change', function() {
+            var equipmentId = $(this).val();
+            if (!equipmentId) {
+                $('#workorder-sn').val('');
+                return;
+            }
+            $.ajax({
+                url: '<?= site_url('admin/equipment/show/') ?>' + equipmentId,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        $('#workorder-sn').val(response.data.serial_number || '');
+                    }
                 }
             });
         });
+
+        function setAdminWorkOrderEquipment(siteEquipmentId, masterEquipmentId, assetTag) {
+            let matched = false;
+            const normalizedAsset = String(assetTag || '').trim().toLowerCase();
+
+            if (siteEquipmentId && $adminWoEquip.find('option[value="' + siteEquipmentId + '"]').length) {
+                $adminWoEquip.val(String(siteEquipmentId));
+                matched = true;
+            }
+
+            if (!matched && masterEquipmentId) {
+                $adminWoEquip.find('option').each(function() {
+                    const masterId = String($(this).data('master-equipment-id') || '');
+                    if (masterId === String(masterEquipmentId)) {
+                        $adminWoEquip.val(String($(this).val()));
+                        matched = true;
+                        return false;
+                    }
+                });
+            }
+
+            if (!matched && normalizedAsset !== '') {
+                $adminWoEquip.find('option').each(function() {
+                    const optAsset = String($(this).data('asset-tag') || '').trim().toLowerCase();
+                    if (optAsset === normalizedAsset) {
+                        $adminWoEquip.val(String($(this).val()));
+                        matched = true;
+                        return false;
+                    }
+                });
+            }
+
+            if (!matched) {
+                $adminWoEquip.val('');
+            }
+
+            $adminWoEquip.trigger('change');
+        }
+
+        $(document).on('click', '.edit-workorder-btn', function() {
+            var id = $(this).data('id');
+
+            $('#workorder-id').val(id);
+            $('#workOrderModalLabel').text('Edit Work Order');
+            $('#workOrderSubmitBtn').text('Update Work Order');
+            $('#workOrderForm').attr('action', '<?= site_url('admin/work-orders/update/') ?>' + id);
+
+            $.getJSON(ADMIN_WORKORDER_SHOW_URL + id, function(res) {
+                if (!(res && res.success && res.data)) return;
+
+                var d = res.data;
+                $('#workorder-title').val(d.title || '');
+                $('#workorder-sn').val(d.serial_number || '');
+                $('#workorder-description').val(d.description || '');
+                $('#workorder-status').val(d.status || 'open').trigger('change');
+                $('#workorder-priority').val(d.priority || 'normal').trigger('change');
+                $('#workorder-assigned-to').val(d.assigned_to || '').trigger('change');
+                $('#workorder-start-date').val(d.start_date || '');
+                $('#workorder-end-date').val(d.end_date || '');
+
+                setAdminWorkOrderEquipment(
+                    d.site_equipment_id || '',
+                    d.equipment_id || '',
+                    d.asset_tag || ''
+                );
+
+                $('#addWorkOrderModal').modal('show');
+            }).fail(function() {
+                $('#addWorkOrderModal').modal('show');
+            });
+        });
+
+        $(document).on('click', '.delete-workorder-btn', function() {
+            var id = $(this).data('id');
+            Swal.fire({
+                title: 'Delete work order?',
+                text: 'This work order will be soft deleted.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    window.location.href = '<?= site_url('admin/work-orders/delete/') ?>' + id;
+                }
+            });
+        });
+
 
         $(document).on('click', '.delete-inspection-btn', function() {
             var id = $(this).data('id');
@@ -4462,7 +4891,7 @@
             // CHANGED: get serial number instead of barcode
             var serialNumber = $.trim($('#wiz-serial-number').val());
             if (serialNumber === '') {
-                alert('Please enter a serial number.');
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a serial number.' });
                 return;
             }
 
@@ -4493,7 +4922,7 @@
                 },
                 error: function() {
                     $('#wizStep1Next').prop('disabled', false).text('Next');
-                    alert('Search failed. Please try again.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Search failed. Please try again.' });
                 }
             });
         });
@@ -4648,23 +5077,17 @@
         // ─── STEP 3 ► Outcome Buttons (UPDATED) ───
         $('#wizBtnPass').on('click', function() {
             addToQueue('Pass');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            Swal.fire({ icon: 'success', title: 'Added to Queue', text: 'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.', timer: 2500, showConfirmButton: false });
         });
 
         $('#wizBtnFail').on('click', function() {
             addToQueue('Fail');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            Swal.fire({ icon: 'success', title: 'Added to Queue', text: 'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.', timer: 2500, showConfirmButton: false });
         });
 
         $('#wizBtnRepair').on('click', function() {
             addToQueue('Repair');
-            alert(
-                'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.'
-            );
+            Swal.fire({ icon: 'success', title: 'Added to Queue', text: 'Inspection added to queue. Click "Add to Queue & Next Device" to continue or "Complete Inspections" to finish.', timer: 2500, showConfirmButton: false });
         });
 
         // ─── Add to Queue & Next Device ───
@@ -4676,7 +5099,7 @@
         // ─── Complete All Inspections (NEW) ───
         $('#wizBtnComplete').on('click', function() {
             if (inspectionQueue.length === 0) {
-                alert('No inspections in queue.');
+                Swal.fire({ icon: 'info', title: 'Queue Empty', text: 'No inspections in queue.' });
                 return;
             }
 
@@ -4718,7 +5141,7 @@
                 error: function(xhr) {
                     console.error('Failed to save inspections', xhr);
                     console.error('Response Text:', xhr.responseText);
-                    alert('Failed to save inspections. Check console for details.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save inspections. Please try again.' });
                     $('#wizBtnComplete').prop('disabled', false).html(
                         '<i class="fa fa-check-double me-1"></i>Complete Inspections');
                 }
@@ -4913,8 +5336,7 @@
     // ── Download Sample CSV ─────────────────────────────────────────────────────
     document.getElementById('adminDownloadSampleCsv').addEventListener('click', function() {
         var headers = ['Make','Model','Device Type','Asset Tag','Serial Number','Department','Location Or Room'];
-        var sample  = ['Philips','IntelliVue MX800','Patient Monitor','A-10001','SN123456','ICU','Room 4B'];
-        var csv = headers.join(',') + '\r\n' + sample.join(',') + '\r\n';
+        var csv = headers.join(',') + '\r\n';
         var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
         var url  = URL.createObjectURL(blob);
         var a    = document.createElement('a');
@@ -5078,6 +5500,37 @@
             xhr.send(fd);
         });
     })();
+
+            // ─── Swal confirm helpers for delete buttons ───────────────────────
+            window.deleteEquipmentConfirm = function(btn) {
+                var url = btn.getAttribute('data-url') || btn.closest('form') && btn.closest('form').getAttribute('action') || '';
+                var href = btn.getAttribute('href') || '';
+                Swal.fire({
+                    title: 'Delete Equipment?',
+                    text: 'This will remove the equipment from this site.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete it'
+                }).then(function(result) {
+                    if (result.isConfirmed) { window.location.href = href; }
+                });
+            };
+            window.deleteWorkOrderConfirm = function(btn) {
+                var href = btn.getAttribute('href') || '';
+                Swal.fire({
+                    title: 'Delete Work Order?',
+                    text: 'This work order will be permanently removed.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, delete it'
+                }).then(function(result) {
+                    if (result.isConfirmed) { window.location.href = href; }
+                });
+            };
 </script>
 
 <?= $this->endSection() ?>

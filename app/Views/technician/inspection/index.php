@@ -135,7 +135,7 @@ function exportTablePDF() {
     var html = '<html><head><title>Inspection Report</title><style>body{font-family:Arial,sans-serif;font-size:10px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:3px 5px;}th{background:#eee;}</style></head><body>';
     html += '<h3>Inspection Report</h3><table><thead><tr><th>ID</th><th>Pass/Fail</th><th>Customer/Site</th><th>Model</th><th>S/N</th><th>Asset#</th><th>Action</th><th>Dept</th><th>Room</th><th>EST</th><th>CAL</th><th>Tech</th><th>Date</th><th>Notes</th></tr></thead><tbody>';
     rows.forEach(function(r) {
-        html += '<tr><td>'+(r.group_id||'').substring(0,20)+'</td><td><b>'+(r.result||'')+'</b></td><td>'+(r.customer_name||'')+' / '+(r.site_name||'')+'</td><td>'+(r.model||'')+'</td><td>'+(r.serial_number||'')+'</td><td>'+(r.asset_tag||'')+'</td><td>'+(r.action_performed||'')+'</td><td>'+(r.department||'')+'</td><td>'+(r.room||'')+'</td><td>'+(r.est||'')+'</td><td>'+(r.cal||'')+'</td><td>'+(r.technician_name||'')+'</td><td>'+((r.inspection_date||'').substring(0,10))+'</td><td>'+(r.notes||'')+'</td></tr>';
+        html += '<tr><td>'+(r.group_id||'')+'</td><td><b>'+(r.result||'')+'</b></td><td>'+(r.customer_name||'')+' / '+(r.site_name||'')+'</td><td>'+(r.model||'')+'</td><td>'+(r.serial_number||'')+'</td><td>'+(r.asset_tag||'')+'</td><td>'+(r.action_performed||'')+'</td><td>'+(r.department||'')+'</td><td>'+(r.room||'')+'</td><td>'+(r.est||'')+'</td><td>'+(r.cal||'')+'</td><td>'+(r.technician_name||'')+'</td><td>'+((r.inspection_date||'').substring(0,10))+'</td><td>'+(r.notes||'')+'</td></tr>';
     });
     html += '</tbody></table></body></html>';
     var w = window.open('','_blank'); w.document.write(html); w.document.close(); w.print();
@@ -154,14 +154,18 @@ $(function() {
         columns: [
             { data: null, render: function(row) {
                 if (!row.group_id) return '—';
-                return '<span class="t-pill" style="font-size:11px;">' + row.group_id.substring(0, 22) + '</span>';
+                return '<span class="t-pill" style="font-size:11px;">' + row.group_id + '</span>';
             }},
             {
                 data: 'result',
                 render: function(d) {
                     var s = (d || '').toLowerCase();
-                    var cls = s === 'pass' ? 'bg-success' : (s === 'fail' ? 'bg-danger' : 'bg-warning text-dark');
-                    return '<span class="badge ' + cls + '">' + (d || '—') + '</span>';
+                    var cls = s === 'pass' ? 'bg-success'
+                            : s === 'fail' ? 'bg-danger'
+                            : s === 'repair' ? 'bg-warning text-dark'
+                            : s === 'in progress' ? 'bg-info text-dark'
+                            : 'bg-secondary';
+                    return '<span class="badge ' + cls + '">' + (d || 'In Progress') + '</span>';
                 }
             },
             { data: null, render: function(row) {
@@ -219,6 +223,7 @@ $(function() {
             if (!row) return true;
             var res = (row.result || '').toLowerCase();
             var isClosed = ['pass','fail','repair','completed'].includes(res);
+            // 'in progress' / '' / any non-result status = open
             if (_techInspMode === 'open'   && isClosed)  return false;
             if (_techInspMode === 'closed' && !isClosed) return false;
             if (site     && !(row.site_name     || '').toLowerCase().includes(site))     return false;
@@ -265,15 +270,15 @@ function previewTechInspReport(groupId) {
 <!-- Technician Inspection Report Preview Modal -->
 <div class="modal fade" id="techInspReportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
+        <div class="modal-content" style="background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:16px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(34,211,238,.8));border-bottom:none;border-radius:16px 16px 0 0;">
                 <h5 class="modal-title fw-bold text-white">
                     <i class="fa-solid fa-file-pdf me-2"></i>Inspection Report Preview
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0" id="techInspReportBody"></div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08);background:rgba(7,10,18,.4);border-radius:0 0 16px 16px;">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
                 <button type="button" class="btn btn-primary" id="techInspReportDownloadBtn">
                     <i class="fa-solid fa-download me-1"></i> Download PDF

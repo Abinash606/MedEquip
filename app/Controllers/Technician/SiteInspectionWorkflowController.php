@@ -4,8 +4,10 @@ namespace App\Controllers\Technician;
 
 use App\Controllers\BaseController;
 use App\Models\EquipmentModel;
+use App\Models\SiteEquipmentModel;
 use App\Models\InspectionModel;
 use App\Models\TechnicianModel;
+use App\Libraries\OperationalWorkOrderService;
 
 class SiteInspectionWorkflowController extends BaseController
 {
@@ -72,9 +74,150 @@ class SiteInspectionWorkflowController extends BaseController
         return $safe;
     }
 
+    private function findSiteEquipment(int $companyId, int $siteId, string $assetTag): ?array
+    {
+        if ($siteId <= 0 || $assetTag === '') {
+            return null;
+        }
+
+        $row = (new SiteEquipmentModel())->findByAssetTag($companyId, $siteId, $assetTag);
+        return $row ?: null;
+    }
+
+    private function findMasterReference(int $companyId, string $assetTag = '', string $model = ''): ?array
+    {
+        if ($assetTag === '' && $model === '') {
+            return null;
+        }
+
+        $db = \Config\Database::connect();
+        $builder = $db->table('equipment')
+            ->select('id, asset_tag, make, model, device_type, serial_number, department, location, est, cal')
+            ->where('company_id', $companyId)
+            ->where('deleted_at', null);
+
+        if ($assetTag !== '' && $model !== '') {
+            $builder->groupStart()
+                ->where('asset_tag', $assetTag)
+                ->orWhere('model', $model)
+                ->groupEnd();
+        } elseif ($assetTag !== '') {
+            $builder->where('asset_tag', $assetTag);
+        } else {
+            $builder->where('model', $model);
+        }
+
+        $row = $builder->get()->getRowArray();
+        return $row ?: null;
+    }
+
+    private function findInspectionSnapshotByAsset(int $companyId, int $siteId, string $assetTag, string $groupId = ''): ?array
+    {
+        if ($siteId <= 0 || $assetTag === '') {
+            return null;
+        }
+
+        $db = \Config\Database::connect();
+        $builder = $db->table('inspections i')
+            ->select([
+                'i.id AS inspection_id',
+                'i.group_id',
+                'i.equipment_id',
+                'COALESCE(i.asset_tag, e.asset_tag) AS asset_tag',
+                'COALESCE(i.make, e.make) AS make',
+                'COALESCE(i.model, e.model) AS model',
+                'COALESCE(i.device_type, e.device_type) AS device_type',
+                'COALESCE(i.serial_number, e.serial_number) AS serial_number',
+                'COALESCE(i.department, e.department) AS department',
+                'COALESCE(i.location, e.location) AS location',
+                'COALESCE(i.est, e.est) AS est',
+                'COALESCE(i.cal, e.cal) AS cal',
+                'COALESCE(i.action_performed, i.inspection_type) AS action_performed',
+                'i.notes',
+            ])
+            ->join('equipment e', 'e.id = i.equipment_id', 'left')
+            ->where('i.company_id', $companyId)
+            ->where('i.site_id', $siteId)
+            ->where('i.deleted_at', null)
+            ->where('COALESCE(i.asset_tag, e.asset_tag)', $assetTag, false);
+
+        if ($groupId !== '') {
+            $builder->where('i.group_id', $groupId);
+        }
+
+        $row = $builder->orderBy('i.id', 'DESC')->get()->getRowArray();
+        return $row ?: null;
+    }
+
+    private function latestInspectionLocation(int $companyId, int $siteId, string $groupId = ''): ?array
+    {
+        if ($siteId <= 0) {
+            return null;
+        }
+
+        $db = \Config\Database::connect();
+        $builder = $db->table('inspections i')
+            ->select([
+                'COALESCE(i.department, e.department) AS department',
+                'COALESCE(i.location, e.location) AS location',
+            ])
+            ->join('site_equipment e', 'e.id = i.equipment_id', 'left')
+            ->where('i.company_id', $companyId)
+            ->where('i.site_id', $siteId)
+            ->where('i.deleted_at', null)
+            ->groupStart()
+                ->where('i.department <>', '')
+                ->orWhere('i.location <>', '')
+                ->orWhere('e.department <>', '')
+                ->orWhere('e.location <>', '')
+            ->groupEnd();
+
+        if ($groupId !== '') {
+            $builder->where('i.group_id', $groupId);
+        }
+
+        $row = $builder->orderBy('i.id', 'DESC')->get()->getRowArray();
+        return $row ?: null;
+    }
+
     // ─────────────────────────────────────────────────────────────────
     // GET  technician/site-inspection/get-equipment
     // ─────────────────────────────────────────────────────────────────
+    // public function getEquipment()
+    // {
+    //     $assetTag  = trim((string) $this->request->getGet('asset_tag'));
+    //     $siteId    = (int) $this->request->getGet('site_id');
+    //     $companyId = (int) session('company_id');
+
+    //     if ($assetTag === '' || $siteId === 0) {
+    //         return $this->response->setJSON(['found' => false]);
+    //     }
+
+    //     $em = new EquipmentModel();
+    //     $eq = $em->where('company_id', $companyId)
+    //         ->where('site_id',    $siteId)
+    //         ->where('asset_tag',  $assetTag)
+    //         ->first();
+
+    //     if (!$eq) {
+    //         return $this->response->setJSON(['found' => false]);
+    //     }
+
+    //     return $this->response->setJSON([
+    //         'found'         => true,
+    //         'id'            => (int) $eq['id'],
+    //         'asset_tag'     => $eq['asset_tag'],
+    //         'make'          => $eq['make']          ?? '',
+    //         'model'         => $eq['model']         ?? '',
+    //         'device_type'   => $eq['device_type']   ?? '',
+    //         'serial_number' => $eq['serial_number'] ?? '',
+    //         'department'    => $eq['department']    ?? '',
+    //         'location'      => $eq['location']      ?? '',
+    //         'est'           => $eq['est']            ?? '0',
+    //         'cal'           => $eq['cal']            ?? '0',
+    //     ]);
+    // }
+
     public function getEquipment()
     {
         $assetTag  = trim((string) $this->request->getGet('asset_tag'));
@@ -85,29 +228,54 @@ class SiteInspectionWorkflowController extends BaseController
             return $this->response->setJSON(['found' => false]);
         }
 
-        $em = new EquipmentModel();
-        $eq = $em->where('company_id', $companyId)
-            ->where('site_id',    $siteId)
-            ->where('asset_tag',  $assetTag)
-            ->first();
+        // 1. Look up in site_equipment for this site
+        $seModel = new SiteEquipmentModel();
+        $eq = $seModel->findByAssetTag($companyId, $siteId, $assetTag);
 
-        if (!$eq) {
-            return $this->response->setJSON(['found' => false]);
+        if ($eq) {
+            return $this->response->setJSON([
+                'found'         => true,
+                'id'            => (int) $eq['id'],
+                'asset_tag'     => $eq['asset_tag'],
+                'make'          => $eq['make'] ?? '',
+                'model'         => $eq['model'] ?? '',
+                'device_type'   => $eq['device_type'] ?? '',
+                'serial_number' => $eq['serial_number'] ?? '',
+                'department'    => $eq['department'] ?? '',
+                'location'      => $eq['location'] ?? '',
+                'est'           => $eq['est'] ?? '0',
+                'cal'           => $eq['cal'] ?? '0',
+            ]);
         }
 
-        return $this->response->setJSON([
-            'found'         => true,
-            'id'            => (int) $eq['id'],
-            'asset_tag'     => $eq['asset_tag'],
-            'make'          => $eq['make']          ?? '',
-            'model'         => $eq['model']         ?? '',
-            'device_type'   => $eq['device_type']   ?? '',
-            'serial_number' => $eq['serial_number'] ?? '',
-            'department'    => $eq['department']    ?? '',
-            'location'      => $eq['location']      ?? '',
-            'est'           => $eq['est']            ?? '0',
-            'cal'           => $eq['cal']            ?? '0',
-        ]);
+        // 2. Not in site_equipment — check master catalogue for make/model auto-fill
+        $master = (new EquipmentModel())
+            ->where('company_id', $companyId)
+            ->where('asset_tag', $assetTag)
+            ->where('deleted_at', null)
+            ->first();
+
+        if ($master) {
+            // Auto-create a site_equipment entry from master catalogue
+            $newId = $seModel->createFromMaster($master, $siteId);
+            return $this->response->setJSON([
+                'found'         => true,
+                'id'            => $newId,
+                'asset_tag'     => $master['asset_tag'],
+                'make'          => $master['make'] ?? '',
+                'model'         => $master['model'] ?? '',
+                'device_type'   => $master['device_type'] ?? '',
+                'serial_number' => $master['serial_number'] ?? '',
+                'department'    => $master['department'] ?? '',
+                'location'      => $master['location'] ?? '',
+                'est'           => $master['est'] ?? '0',
+                'cal'           => $master['cal'] ?? '0',
+                'from_master'   => true,
+            ]);
+        }
+
+        // 3. Not found anywhere — frontend will open Add Device modal
+        return $this->response->setJSON(['found' => false]);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -121,65 +289,44 @@ class SiteInspectionWorkflowController extends BaseController
 
         $companyId    = (int) session('company_id');
         $userId       = (int) session('user_id');
-
-        // ── CRITICAL: use technicians.id not users.id ────────────
         $technicianId = $this->resolveTechnicianId();
-
-        $siteId   = (int)    $this->request->getPost('site_id');
-        $assetTag = trim((string) $this->request->getPost('asset_tag'));
-        $result   = trim((string) $this->request->getPost('result'));
-        $notes    = trim((string) $this->request->getPost('notes'));
-        $dept     = trim((string) $this->request->getPost('department'));
-        $room     = trim((string) $this->request->getPost('room'));
-        $serial   = trim((string) $this->request->getPost('serial_number'));
-        $action   = trim((string) $this->request->getPost('action_performed'));
-        $pmFreq   = trim((string) $this->request->getPost('pm_frequency'));
-        $est      = trim((string) $this->request->getPost('est'));
-        $cal      = trim((string) $this->request->getPost('cal'));
+        $siteId       = (int) $this->request->getPost('site_id');
+        $assetTag     = trim((string) $this->request->getPost('asset_tag'));
+        $result       = trim((string) $this->request->getPost('result'));
+        $notes        = trim((string) $this->request->getPost('notes'));
+        $dept         = trim((string) $this->request->getPost('department'));
+        $room         = trim((string) $this->request->getPost('room'));
+        $serial       = trim((string) $this->request->getPost('serial_number'));
+        $action       = trim((string) $this->request->getPost('action_performed'));
+        $pmFreq       = trim((string) $this->request->getPost('pm_frequency'));
+        $est          = trim((string) $this->request->getPost('est'));
+        $cal          = trim((string) $this->request->getPost('cal'));
+        $make         = trim((string) $this->request->getPost('make'));
+        $model        = trim((string) $this->request->getPost('model'));
+        $deviceType   = trim((string) $this->request->getPost('device_type'));
+        $groupId      = trim((string) $this->request->getPost('group_id'));
+        $originalTag  = trim((string) $this->request->getPost('original_asset_tag'));
+        $lookupTag    = $originalTag !== '' ? $originalTag : $assetTag;
 
         if ($assetTag === '' || $siteId === 0 || $result === '') {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Missing required fields',
-            ]);
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing required fields']);
         }
 
-        $db = \Config\Database::connect();
-        $em = new EquipmentModel();
+        $db        = \Config\Database::connect();
+        $seModel   = new \App\Models\SiteEquipmentModel();
+        $equipment = $this->findSiteEquipment($companyId, $siteId, $lookupTag);
 
-        // ── Find equipment ───────────────────────────────────────
-        $equipment = $em->where('company_id', $companyId)
-            ->where('site_id',    $siteId)
-            ->where('asset_tag',  $assetTag)
-            ->first();
-
-        if (!$equipment) {
-            return $this->response->setJSON([
-                'success' => false,
-                'message' => 'Equipment "' . $assetTag . '" not found in site #' . $siteId,
-            ]);
+        if (!$equipment && $assetTag !== $lookupTag) {
+            $equipment = $this->findSiteEquipment($companyId, $siteId, $assetTag);
         }
 
-        $equipmentId = (int) $equipment['id'];
+        $masterRef = $this->findMasterReference($companyId, $lookupTag, $model);
+        $now       = date('Y-m-d H:i:s');
 
-        // ── Update equipment metadata if provided ────────────────
-        $eqUpdate = [];
-        if ($dept   !== '') $eqUpdate['department']    = $dept;
-        if ($room   !== '') $eqUpdate['location']      = $room;
-        if ($serial !== '') $eqUpdate['serial_number'] = $serial;
-        if (!empty($eqUpdate)) {
-            $em->update($equipmentId, $eqUpdate);
+        if ($groupId === '') {
+            $groupId = 'INSP-' . date('Ymd') . '-' . strtoupper(substr(md5(uniqid((string) mt_rand(), true)), 0, 8));
         }
 
-        // ── Resolve group_id ─────────────────────────────────────
-        $existingGroupId = trim((string) $this->request->getPost('group_id'));
-        $groupId = $existingGroupId !== ''
-            ? $existingGroupId
-            : ('INSP-' . date('YmdHis'));
-
-        $now = date('Y-m-d H:i:s');
-
-        // ── Next due date ────────────────────────────────────────
         $nextDueDate = null;
         if ($pmFreq !== '') {
             preg_match('/^(\d+)/', $pmFreq, $m);
@@ -189,60 +336,99 @@ class SiteInspectionWorkflowController extends BaseController
             }
         }
 
-        // ── Build candidate data ─────────────────────────────────
+        // IMPORTANT:
+        // site_equipment.id is NOT valid for inspections.equipment_id
+        // inspections.equipment_id must reference equipment.id
+        $siteEquipmentId   = !empty($equipment['id']) ? (int) $equipment['id'] : null;
+        $masterEquipmentId = !empty($equipment['master_equipment_id'])
+            ? (int) $equipment['master_equipment_id']
+            : (!empty($masterRef['id']) ? (int) $masterRef['id'] : null);
+
         $candidate = [
-            'company_id'      => $companyId,
-            'site_id'         => $siteId,
-            'equipment_id'    => $equipmentId,
-            'group_id'        => $groupId,
-            'scheduled_at'    => $now,
-            'completed_at'    => $now,
-            'status'          => $result,
-            'result'          => $result,
-            // ↓ technicians.id — satisfies FK fk_inspections_technician
-            'technician_id'   => $technicianId,
-            'findings'        => '',
-            'notes'           => $notes,
-            'inspection_type' => $action,
+            'company_id'       => $companyId,
+            'site_id'          => $siteId,
+            'equipment_id'     => $masterEquipmentId, // FK -> equipment.id
+            'group_id'         => $groupId,
+            'asset_tag'        => $assetTag,
+            'make'             => $make !== '' ? $make : (($equipment['make'] ?? '') ?: ($masterRef['make'] ?? '')),
+            'model'            => $model !== '' ? $model : (($equipment['model'] ?? '') ?: ($masterRef['model'] ?? '')),
+            'device_type'      => $deviceType !== '' ? $deviceType : (($equipment['device_type'] ?? '') ?: ($masterRef['device_type'] ?? '')),
+            'serial_number'    => $serial !== '' ? $serial : (($equipment['serial_number'] ?? '') ?: ($masterRef['serial_number'] ?? '')),
+            'department'       => $dept !== '' ? $dept : (($equipment['department'] ?? '') ?: ($masterRef['department'] ?? '')),
+            'location'         => $room !== '' ? $room : (($equipment['location'] ?? '') ?: ($masterRef['location'] ?? '')),
+            'scheduled_at'     => $now,
+            'completed_at'     => $now,
+            'status'           => $result,
+            'result'           => $result,
+            'technician_id'    => $technicianId,
+            'findings'         => '',
+            'notes'            => $notes,
+            'inspection_type'  => $action,
             'action_performed' => $action,
-            'est'             => $est,
-            'cal'             => $cal,
-            'pm_frequency'    => $pmFreq,
-            'next_due_date'   => $nextDueDate,
-            'device_complete' => 'Yes',
-            'created_by'      => $userId > 0 ? $userId : null,
-            'created_at'      => $now,
-            'updated_at'      => $now,
+            'est'              => $est !== '' ? $est : (($equipment['est'] ?? '') ?: ($masterRef['est'] ?? 'No')),
+            'cal'              => $cal !== '' ? $cal : (($equipment['cal'] ?? '') ?: ($masterRef['cal'] ?? 'No')),
+            'pm_frequency'     => $pmFreq,
+            'next_due_date'    => $nextDueDate,
+            'device_complete'  => 'Yes',
+            'created_by'       => $userId > 0 ? $userId : null,
+            'created_at'       => $now,
+            'updated_at'       => $now,
         ];
 
-        // Strip keys not in actual DB columns
         $insData = $this->filterToColumns($candidate, 'inspections');
 
-        // ── Upsert ───────────────────────────────────────────────
-        $existing = $db->table('inspections')
-            ->where('equipment_id', $equipmentId)
-            ->where('group_id',     $groupId)
-            ->where('site_id',      $siteId)
-            ->where('deleted_at IS NULL', null, false)
-            ->get()->getRowArray();
+        // Duplicate check: match strictly by asset_tag within this group.
+        // Do NOT match by equipment_id (master_equipment_id) alone because
+        // multiple devices of the same model/type share the same master
+        // equipment record — matching on equipment_id would collapse all
+        // those separate devices into a single inspection row, causing the
+        // "only first device accumulates" bug.
+        $builder = $db->table('inspections')
+            ->where('company_id', $companyId)
+            ->where('site_id', $siteId)
+            ->where('group_id', $groupId)
+            ->where('deleted_at', null)
+            ->groupStart();
+
+        $builder->where('asset_tag', $lookupTag);
+        if ($assetTag !== $lookupTag) {
+            $builder->orWhere('asset_tag', $assetTag);
+        }
+
+        $builder->groupEnd();
+
+        $existing = $builder->orderBy('id', 'DESC')->get()->getRowArray();
 
         if ($existing) {
-            $upd = $insData;
-            unset($upd['created_at']);
-            $upd['updated_at'] = $now;
-            $db->table('inspections')->where('id', $existing['id'])->update($upd);
+            $update = $insData;
+            unset($update['created_at'], $update['created_by']);
+            $update['updated_at'] = $now;
+            $db->table('inspections')->where('id', (int) $existing['id'])->update($update);
         } else {
             $db->table('inspections')->insert($insData);
         }
 
-        // ── Sync equipment status ────────────────────────────────
-        $statusMap = [
-            'Pass'   => 'ready',
-            'Fail'   => 'need_attention',
-            'Repair' => 'need_attention',
-        ];
-        if (isset($statusMap[$result])) {
-            $em->update($equipmentId, ['status' => $statusMap[$result]]);
+        // update site working copy status using site_equipment.id
+        $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
+        if ($siteEquipmentId && isset($statusMap[$result])) {
+            $seModel->update($siteEquipmentId, ['status' => $statusMap[$result]]);
+        }
+
+        // work_orders.equipment_id also points to equipment.id
+        if ($masterEquipmentId) {
+            // work_orders.equipment_id now stores site_equipment.id
+            (new \App\Libraries\OperationalWorkOrderService())->syncFollowUpFromInspection([
+                'company_id'      => $companyId,
+                'site_id'         => $siteId,
+                'equipment_id'    => $siteEquipmentId ?: 0,
+                'group_id'        => $groupId,
+                'status'          => $result,
+                'inspection_type' => $action,
+                'notes'           => $notes,
+                'asset_tag'       => $assetTag,
+                'technician_id'   => $technicianId,
+                'created_by'      => $userId > 0 ? $userId : null,
+            ]);
         }
 
         return $this->response->setJSON([
@@ -260,29 +446,82 @@ class SiteInspectionWorkflowController extends BaseController
     {
         $serial    = trim((string) $this->request->getGet('serial_number'));
         $siteId    = (int) $this->request->getGet('site_id');
+        $groupId   = trim((string) $this->request->getGet('group_id'));
         $companyId = (int) session('company_id');
 
-        if ($serial === '') return $this->response->setJSON(['found' => false]);
+        if ($serial === '') {
+            return $this->response->setJSON(['found' => false]);
+        }
 
-        $em      = new EquipmentModel();
-        $builder = $em->where('company_id', $companyId)->where('serial_number', $serial);
-        if ($siteId > 0) $builder->where('site_id', $siteId);
+        $em = new SiteEquipmentModel();
+        $builder = $em->where('company_id', $companyId)->where('serial_number', $serial)->where('deleted_at', null);
+        if ($siteId > 0) {
+            $builder->where('site_id', $siteId);
+        }
         $eq = $builder->first();
+        if ($eq) {
+            return $this->response->setJSON([
+                'found'         => true,
+                'source'        => 'equipment',
+                'id'            => (int) $eq['id'],
+                'equipment_id'  => (int) $eq['id'],
+                'asset_tag'     => $eq['asset_tag'],
+                'make'          => $eq['make'] ?? '',
+                'model'         => $eq['model'] ?? '',
+                'device_type'   => $eq['device_type'] ?? '',
+                'serial_number' => $eq['serial_number'] ?? '',
+                'department'    => $eq['department'] ?? '',
+                'location'      => $eq['location'] ?? '',
+                'est'           => $eq['est'] ?? '0',
+                'cal'           => $eq['cal'] ?? '0',
+            ]);
+        }
 
-        if (!$eq) return $this->response->setJSON(['found' => false]);
+        $db = \Config\Database::connect();
+        $builder = $db->table('inspections i')
+            ->select([
+                'i.id AS inspection_id', 'i.group_id', 'i.equipment_id',
+                'COALESCE(i.asset_tag, e.asset_tag) AS asset_tag',
+                'COALESCE(i.make, e.make) AS make',
+                'COALESCE(i.model, e.model) AS model',
+                'COALESCE(i.device_type, e.device_type) AS device_type',
+                'COALESCE(i.serial_number, e.serial_number) AS serial_number',
+                'COALESCE(i.department, e.department) AS department',
+                'COALESCE(i.location, e.location) AS location',
+                'COALESCE(i.est, e.est) AS est',
+                'COALESCE(i.cal, e.cal) AS cal',
+            ])
+            ->join('site_equipment e', 'e.id = i.equipment_id', 'left')
+            ->where('i.company_id', $companyId)
+            ->where('i.deleted_at', null)
+            ->where('COALESCE(i.serial_number, e.serial_number)', $serial, false);
+        if ($siteId > 0) {
+            $builder->where('i.site_id', $siteId);
+        }
+        if ($groupId !== '') {
+            $builder->where('i.group_id', $groupId);
+        }
+        $row = $builder->orderBy('i.id', 'DESC')->get()->getRowArray();
+        if (!$row) {
+            return $this->response->setJSON(['found' => false]);
+        }
 
         return $this->response->setJSON([
             'found'         => true,
-            'id'            => (int) $eq['id'],
-            'asset_tag'     => $eq['asset_tag'],
-            'make'          => $eq['make']          ?? '',
-            'model'         => $eq['model']         ?? '',
-            'device_type'   => $eq['device_type']   ?? '',
-            'serial_number' => $eq['serial_number'] ?? '',
-            'department'    => $eq['department']    ?? '',
-            'location'      => $eq['location']      ?? '',
-            'est'           => $eq['est']            ?? '0',
-            'cal'           => $eq['cal']            ?? '0',
+            'source'        => 'inspection',
+            'id'            => (int) ($row['inspection_id'] ?? 0),
+            'inspection_id' => (int) ($row['inspection_id'] ?? 0),
+            'equipment_id'  => !empty($row['equipment_id']) ? (int) $row['equipment_id'] : null,
+            'group_id'      => $row['group_id'] ?? '',
+            'asset_tag'     => $row['asset_tag'] ?? '',
+            'make'          => $row['make'] ?? '',
+            'model'         => $row['model'] ?? '',
+            'device_type'   => $row['device_type'] ?? '',
+            'serial_number' => $row['serial_number'] ?? '',
+            'department'    => $row['department'] ?? '',
+            'location'      => $row['location'] ?? '',
+            'est'           => $row['est'] ?? '0',
+            'cal'           => $row['cal'] ?? '0',
         ]);
     }
 
@@ -296,7 +535,7 @@ class SiteInspectionWorkflowController extends BaseController
 
         if (strlen($keyword) < 2) return $this->response->setJSON([]);
 
-        $em      = new EquipmentModel();
+        $em      = new SiteEquipmentModel();
         $results = $em->where('company_id', $companyId)
             ->groupStart()
             ->like('model',       $keyword)
@@ -304,10 +543,22 @@ class SiteInspectionWorkflowController extends BaseController
             ->orLike('device_type', $keyword)
             ->groupEnd()
             ->select('id, make, model, device_type, serial_number, asset_tag, department, location, est, cal')
-            ->limit(20)
+            ->limit(50)
             ->findAll();
 
-        return $this->response->setJSON($results);
+        // De-duplicate by make+model — same as admin portal
+        // Prevents the same model appearing once per site/equipment record
+        $seen   = [];
+        $unique = [];
+        foreach ($results as $row) {
+            $key = strtolower(trim($row['make'] ?? '') . '|' . trim($row['model'] ?? ''));
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[]   = $row;
+            }
+        }
+
+        return $this->response->setJSON($unique);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -322,35 +573,34 @@ class SiteInspectionWorkflowController extends BaseController
             return $this->response->setJSON(['success' => false, 'message' => 'group_id required']);
         }
 
-        $db   = \Config\Database::connect();
+        $db = \Config\Database::connect();
         $rows = $db->table('inspections i')
             ->select([
-                'i.id            AS inspections_id',
-                'i.group_id',
-                'i.status        AS inspection_status',
-                'i.notes',
-                'i.inspection_type',
-                'i.scheduled_at',
-                'i.updated_at',
-                'e.asset_tag',
-                'e.model',
-                'e.make',
-                'e.device_type',
-                'e.serial_number',
-                'e.department',
-                'e.location      AS room',
-                'e.est',
-                'e.cal',
-                's.name          AS customer_site',
-                // join via technicians table to get user's full_name
-                'u.full_name     AS technician_name',
+                'i.id AS inspections_id', 'i.group_id',
+                'COALESCE(i.result, i.status) AS inspection_status',
+                'i.notes', 'COALESCE(i.action_performed, i.inspection_type) AS inspection_type',
+                'i.scheduled_at', 'i.updated_at',
+                'COALESCE(i.asset_tag, e.asset_tag) AS asset_tag',
+                'COALESCE(i.model, e.model) AS model',
+                'COALESCE(i.make, e.make) AS make',
+                'COALESCE(i.device_type, e.device_type) AS device_type',
+                'COALESCE(i.serial_number, e.serial_number) AS serial_number',
+                'COALESCE(i.department, e.department) AS department',
+                'COALESCE(i.location, e.location) AS room',
+                'COALESCE(i.est, e.est) AS est',
+                'COALESCE(i.cal, e.cal) AS cal',
+                's.name AS customer_site',
+                'COALESCE(u.full_name, u_direct.full_name) AS technician_name',
             ])
-            ->join('equipment e',   'e.id = i.equipment_id',   'left')
-            ->join('sites s',       's.id = i.site_id',        'left')
-            ->join('technicians t', 't.id = i.technician_id',  'left')
-            ->join('users u',       'u.id = t.user_id',        'left')
-            ->where('i.group_id',   $groupId)
+            ->join('site_equipment e', 'e.id = i.equipment_id', 'left')
+            ->join('sites s', 's.id = i.site_id', 'left')
+            ->join('technicians t', 't.id = i.technician_id', 'left')
+            ->join('users u', 'u.id = t.user_id', 'left')
+            ->join('users u_direct', 'u_direct.id = i.technician_id', 'left')
+            ->where('i.group_id', $groupId)
             ->where('i.company_id', $companyId)
+            ->where('i.deleted_at', null)
+            ->orderBy('i.id', 'DESC')
             ->get()->getResultArray();
 
         return $this->response->setJSON(['success' => true, 'data' => $rows]);
@@ -364,15 +614,29 @@ class SiteInspectionWorkflowController extends BaseController
         $companyId = (int) session('company_id');
         $id        = (int) $id;
 
-        $db  = \Config\Database::connect();
+        $db = \Config\Database::connect();
         $row = $db->table('inspections i')
-            ->select('i.*, e.asset_tag, e.model, e.make, e.device_type,
-                      e.serial_number, e.department, e.location, e.est, e.cal')
-            ->join('equipment e', 'e.id = i.equipment_id', 'left')
-            ->where('i.id', $id)->where('i.company_id', $companyId)
+            ->select([
+                'i.*',
+                'COALESCE(i.asset_tag, e.asset_tag) AS asset_tag',
+                'COALESCE(i.model, e.model) AS model',
+                'COALESCE(i.make, e.make) AS make',
+                'COALESCE(i.device_type, e.device_type) AS device_type',
+                'COALESCE(i.serial_number, e.serial_number) AS serial_number',
+                'COALESCE(i.department, e.department) AS department',
+                'COALESCE(i.location, e.location) AS location',
+                'COALESCE(i.est, e.est) AS est',
+                'COALESCE(i.cal, e.cal) AS cal',
+            ])
+            ->join('site_equipment e', 'e.id = i.equipment_id', 'left')
+            ->where('i.id', $id)
+            ->where('i.company_id', $companyId)
+            ->where('i.deleted_at', null)
             ->get()->getRowArray();
 
-        if (!$row) return $this->response->setJSON(['success' => false, 'message' => 'Not found']);
+        if (!$row) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Not found']);
+        }
         return $this->response->setJSON(['success' => true, 'data' => $row]);
     }
 
@@ -390,67 +654,58 @@ class SiteInspectionWorkflowController extends BaseController
         $db           = \Config\Database::connect();
 
         $existing = $db->table('inspections')
-            ->where('id', $inspectionId)->where('company_id', $companyId)
-            ->where('deleted_at IS NULL', null, false)
+            ->where('id', $inspectionId)
+            ->where('company_id', $companyId)
+            ->where('deleted_at', null)
             ->get()->getRowArray();
-
         if (!$existing) {
             return $this->response->setJSON(['success' => false, 'message' => 'Inspection not found']);
         }
 
-        $em          = new EquipmentModel();
-        $equipmentId = (int) $this->request->getPost('equipment_id');
-
-        if ($equipmentId > 0) {
-            $eqUpdate = [];
-            foreach (
-                [
-                    'make' => 'manufacturer',
-                    'model' => 'model_name',
-                    'device_type' => 'description',
-                    'serial_number' => 'serial_number',
-                    'asset_tag' => 'asset_tag',
-                    'department' => 'department',
-                    'location' => 'location',
-                ] as $col => $postKey
-            ) {
-                $val = trim((string) $this->request->getPost($postKey));
-                if ($val !== '') $eqUpdate[$col] = $val;
-            }
-            if (!empty($eqUpdate)) $em->update($equipmentId, $eqUpdate);
+        $technicianId = (int) $this->request->getPost('technician_id');
+        if ($technicianId <= 0) {
+            $technicianId = (int) ($existing['technician_id'] ?? 0) ?: (int) $this->resolveTechnicianId();
         }
-
-        // Resolve technician_id from post OR current user
-        $techIdPost   = (int) $this->request->getPost('technician_id');
-        $technicianId = $techIdPost > 0 ? $techIdPost : $this->resolveTechnicianId();
 
         $candidate = [
-            'pm_frequency'    => $this->request->getPost('pm_frequency'),
-            'inspection_type' => $this->request->getPost('inspection_type'),
+            'asset_tag'        => $this->request->getPost('asset_tag'),
+            'make'             => $this->request->getPost('make') ?? $this->request->getPost('manufacturer'),
+            'model'            => $this->request->getPost('model') ?? $this->request->getPost('model_name'),
+            'device_type'      => $this->request->getPost('device_type') ?? $this->request->getPost('description'),
+            'serial_number'    => $this->request->getPost('serial_number'),
+            'department'       => $this->request->getPost('department'),
+            'location'         => $this->request->getPost('location'),
+            'site_id'          => $this->request->getPost('site_id'),
+            'scheduled_at'     => $this->request->getPost('scheduled_at'),
+            'status'           => $this->request->getPost('status'),
+            'result'           => $this->request->getPost('status'),
+            'technician_id'    => $technicianId,
+            'next_due_date'    => $this->request->getPost('next_due_date'),
+            'notes'            => $this->request->getPost('notes'),
+            'inspection_type'  => $this->request->getPost('inspection_type'),
             'action_performed' => $this->request->getPost('inspection_type'),
-            'technician_id'   => $technicianId,
-            'scheduled_at'    => $this->request->getPost('scheduled_at'),
-            'notes'           => $this->request->getPost('notes'),
-            'status'          => $this->request->getPost('status'),
-            'result'          => $this->request->getPost('status'),
-            'device_complete' => $this->request->getPost('device_complete'),
-            'updated_at'      => date('Y-m-d H:i:s'),
+            'pm_frequency'     => $this->request->getPost('pm_frequency'),
+            'device_complete'  => $this->request->getPost('device_complete'),
+            'est'              => $this->request->getPost('est'),
+            'cal'              => $this->request->getPost('cal'),
+            'updated_at'       => date('Y-m-d H:i:s'),
         ];
 
-        $updateData = $this->filterToColumns($candidate, 'inspections');
-        $db->table('inspections')->where('id', $inspectionId)->update($updateData);
-
-        $result    = $this->request->getPost('status');
-        $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
-        if ($equipmentId > 0 && isset($statusMap[$result])) {
-            $em->update($equipmentId, ['status' => $statusMap[$result]]);
+        $data = [];
+        foreach ($candidate as $field => $val) {
+            if ($val !== null) {
+                $data[$field] = $val;
+            }
         }
 
-        return $this->response->setJSON([
-            'success'   => true,
-            'message'   => 'Updated successfully',
-            'csrf_hash' => csrf_hash(),
-        ]);
+        if (empty($data)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'No fields to update']);
+        }
+
+        $updateData = $this->filterToColumns($data, 'inspections');
+        $db->table('inspections')->where('id', $inspectionId)->update($updateData);
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Updated successfully', 'csrf_hash' => csrf_hash()]);
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -535,7 +790,7 @@ class SiteInspectionWorkflowController extends BaseController
         }
 
         $db  = \Config\Database::connect();
-        $em  = new EquipmentModel();
+        $em  = new SiteEquipmentModel();
         $now = date('Y-m-d H:i:s');
 
         foreach ($items as $item) {
@@ -546,10 +801,7 @@ class SiteInspectionWorkflowController extends BaseController
             $action      = trim((string) ($item['inspection_type'] ?? ''));
 
             if ($equipmentId === 0 && !empty($item['asset_tag'])) {
-                $eq = $em->where('company_id', $companyId)
-                    ->where('site_id',    $siteId)
-                    ->where('asset_tag',  $item['asset_tag'])
-                    ->first();
+                $eq = $em->findByAssetTag($companyId, $siteId, $item['asset_tag']);
                 if ($eq) $equipmentId = (int) $eq['id'];
             }
 
@@ -560,14 +812,21 @@ class SiteInspectionWorkflowController extends BaseController
                 if ($months > 0) $nextDueDate = date('Y-m-d', strtotime("+{$months} months"));
             }
 
-            // Technician from item (must be technicians.id) or current user's technician row
             $itemTechId = !empty($item['technician_id']) ? (int) $item['technician_id'] : $technicianId;
 
+            $snapshotEq = $equipmentId > 0 ? ($em->find($equipmentId) ?: []) : [];
             $candidate = [
                 'company_id'      => $companyId,
                 'site_id'         => $siteId,
                 'equipment_id'    => $equipmentId > 0 ? $equipmentId : null,
                 'group_id'        => $groupId,
+                'asset_tag'       => trim((string) ($item['asset_tag'] ?? ($snapshotEq['asset_tag'] ?? ''))),
+                'make'            => trim((string) ($item['make'] ?? ($snapshotEq['make'] ?? ''))),
+                'model'           => trim((string) ($item['model'] ?? ($snapshotEq['model'] ?? ''))),
+                'device_type'     => trim((string) ($item['device_type'] ?? ($snapshotEq['device_type'] ?? ''))),
+                'serial_number'   => trim((string) ($item['serial_number'] ?? ($snapshotEq['serial_number'] ?? ''))),
+                'department'      => trim((string) ($item['department'] ?? ($snapshotEq['department'] ?? ''))),
+                'location'        => trim((string) ($item['location'] ?? ($snapshotEq['location'] ?? ''))),
                 'scheduled_at'    => !empty($item['scheduled_at']) ? $item['scheduled_at'] : $now,
                 'completed_at'    => $now,
                 'status'          => $status,
@@ -577,8 +836,8 @@ class SiteInspectionWorkflowController extends BaseController
                 'notes'           => $item['notes']  ?? '',
                 'inspection_type' => $action,
                 'action_performed' => $action,
-                'est'             => $item['est'] ?? '',
-                'cal'             => $item['cal'] ?? '',
+                'est'             => $item['est'] ?? ($snapshotEq['est'] ?? ''),
+                'cal'             => $item['cal'] ?? ($snapshotEq['cal'] ?? ''),
                 'pm_frequency'    => $pmFreq,
                 'next_due_date'   => $nextDueDate,
                 'device_complete' => $item['device_complete'] ?? 'Yes',
@@ -589,29 +848,47 @@ class SiteInspectionWorkflowController extends BaseController
 
             $insData = $this->filterToColumns($candidate, 'inspections');
 
-            if ($equipmentId > 0) {
-                $existing = $db->table('inspections')
-                    ->where('equipment_id', $equipmentId)
-                    ->where('group_id',     $groupId)
-                    ->where('site_id',      $siteId)
-                    ->where('deleted_at IS NULL', null, false)
-                    ->get()->getRowArray();
+            // Match only by asset_tag — using equipment_id would merge
+            // separate devices of the same model into one inspection row.
+            $existingBuilder = $db->table('inspections')
+                ->where('group_id', $groupId)
+                ->where('site_id', $siteId)
+                ->where('deleted_at', null);
+            if (!empty($candidate['asset_tag'])) {
+                $existingBuilder->where('asset_tag', $candidate['asset_tag']);
+            } elseif ($equipmentId > 0) {
+                $existingBuilder->where('equipment_id', $equipmentId);
+            }
+            $existing = $existingBuilder->get()->getRowArray();
 
-                if ($existing) {
-                    $upd = $insData;
-                    unset($upd['created_at']);
-                    $upd['updated_at'] = $now;
-                    $db->table('inspections')->where('id', $existing['id'])->update($upd);
-                } else {
-                    $db->table('inspections')->insert($insData);
-                }
-
-                $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
-                if (isset($statusMap[$status])) {
-                    $em->update($equipmentId, ['status' => $statusMap[$status]]);
-                }
+            if ($existing) {
+                $upd = $insData;
+                unset($upd['created_at']);
+                $upd['updated_at'] = $now;
+                $db->table('inspections')->where('id', $existing['id'])->update($upd);
             } else {
                 $db->table('inspections')->insert($insData);
+            }
+
+            $statusMap = ['Pass' => 'ready', 'Fail' => 'need_attention', 'Repair' => 'need_attention'];
+            if ($equipmentId > 0 && isset($statusMap[$status])) {
+                $em->update($equipmentId, ['status' => $statusMap[$status]]);
+            }
+
+            if ($equipmentId > 0) {
+                (new OperationalWorkOrderService())->syncFollowUpFromInspection([
+                    'company_id'      => $companyId,
+                    'site_id'         => $siteId,
+                    'equipment_id'    => $equipmentId,
+                    'group_id'        => $groupId,
+                    'status'          => $status,
+                    'inspection_type' => $action,
+                    'notes'           => trim((string) ($item['notes'] ?? '')),
+                    'asset_tag'       => trim((string) ($item['asset_tag'] ?? '')),
+                    'technician_id'   => $itemTechId,
+                    'created_by'      => $userId > 0 ? $userId : null,
+                    'start_date'      => !empty($item['scheduled_at']) ? $item['scheduled_at'] : date('Y-m-d'),
+                ]);
             }
         }
 
@@ -620,121 +897,201 @@ class SiteInspectionWorkflowController extends BaseController
     // ─────────────────────────────────────────────────────────────────
     // POST technician/site-inspection/add-device
     // ─────────────────────────────────────────────────────────────────
+    // public function addDevice()
+    // {
+    //     if (!$this->request->is('post')) {
+    //         return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
+    //     }
+
+    //     $companyId  = (int) session('company_id');
+    //     $siteId     = (int) $this->request->getPost('site_id');
+    //     $assetTag   = trim((string) $this->request->getPost('asset_tag'));
+    //     $model      = trim((string) $this->request->getPost('model'));
+    //     $serial     = trim((string) $this->request->getPost('serial_number'));
+    //     $make       = trim((string) $this->request->getPost('make'));
+    //     $deviceType = trim((string) $this->request->getPost('device_type'));
+    //     $dept       = trim((string) $this->request->getPost('department'));
+    //     $location   = trim((string) $this->request->getPost('location'));
+    //     $est        = trim((string) $this->request->getPost('est')) ?: 'No';
+    //     $cal        = trim((string) $this->request->getPost('cal')) ?: 'No';
+
+    //     if ($siteId === 0 || $companyId === 0) {
+    //         return $this->response->setJSON(['success' => false, 'message' => 'Site ID or Company ID missing.']);
+    //     }
+    //     if ($assetTag === '') {
+    //         return $this->response->setJSON(['success' => false, 'message' => 'Asset # is required.']);
+    //     }
+
+    //     $existingAsset = $this->findSiteEquipment($companyId, $siteId, $assetTag);
+    //     if ($existingAsset) {
+    //         return $this->response->setJSON([
+    //             'success'          => true,
+    //             'message'          => 'Asset already exists in site inventory.',
+    //             'equipment_id'     => (int) $existingAsset['id'],
+    //             'asset_tag'        => $existingAsset['asset_tag'],
+    //             'make'             => $existingAsset['make'] ?? '',
+    //             'model'            => $existingAsset['model'] ?? '',
+    //             'device_type'      => $existingAsset['device_type'] ?? '',
+    //             'serial_number'    => $existingAsset['serial_number'] ?? '',
+    //             'department'       => $existingAsset['department'] ?? $dept,
+    //             'location'         => $existingAsset['location'] ?? $location,
+    //             'est'              => $existingAsset['est'] ?? $est,
+    //             'cal'              => $existingAsset['cal'] ?? $cal,
+    //             'start_inspection' => true,
+    //             'reused'           => true,
+    //             'csrf_hash'        => csrf_hash(),
+    //         ]);
+    //     }
+
+    //     $masterRef = $this->findMasterReference($companyId, $assetTag, $model);
+    //     return $this->response->setJSON([
+    //         'success'          => true,
+    //         'message'          => 'Device ready for inspection.',
+    //         'asset_tag'        => $assetTag,
+    //         'make'             => $make !== '' ? $make : ($masterRef['make'] ?? ''),
+    //         'model'            => $model !== '' ? $model : ($masterRef['model'] ?? ''),
+    //         'device_type'      => $deviceType !== '' ? $deviceType : ($masterRef['device_type'] ?? ''),
+    //         'serial_number'    => $serial,
+    //         'department'       => $dept,
+    //         'location'         => $location,
+    //         'est'              => $est,
+    //         'cal'              => $cal,
+    //         'start_inspection' => true,
+    //         'reused'           => false,
+    //         'inventory_added'  => false,
+    //         'csrf_hash'        => csrf_hash(),
+    //     ]);
+    // }
+
     public function addDevice()
     {
         if (!$this->request->is('post')) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Invalid request method']);
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Invalid request method'
+            ]);
         }
 
         $companyId = (int) session('company_id');
         $siteId    = (int) $this->request->getPost('site_id');
 
         if ($siteId === 0 || $companyId === 0) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Site ID or Company ID missing.']);
-        }
-
-        $assetTag   = trim((string) $this->request->getPost('asset_tag'));
-        $model      = trim((string) $this->request->getPost('model'));
-        $serial     = trim((string) $this->request->getPost('serial_number'));
-        $make       = trim((string) $this->request->getPost('make'));
-        $deviceType = trim((string) $this->request->getPost('device_type'));
-        $description = trim((string) $this->request->getPost('description'));
-        $dept       = trim((string) $this->request->getPost('department'));
-        $location   = trim((string) $this->request->getPost('location'));
-        $technician = trim((string) $this->request->getPost('technician'));
-        $est        = trim((string) $this->request->getPost('est')) ?: 'No';
-        $cal        = trim((string) $this->request->getPost('cal')) ?: 'No';
-        $groupId    = trim((string) $this->request->getPost('group_id'));
-
-        if ($assetTag === '') {
-            return $this->response->setJSON(['success' => false, 'message' => 'Asset # is required.']);
-        }
-
-        $em = new EquipmentModel();
-        $db = \Config\Database::connect();
-
-        // ── Duplicate: asset tag already in this site ────────────────
-        $existingAsset = $em->where('company_id', $companyId)
-            ->where('site_id',   $siteId)
-            ->where('asset_tag', $assetTag)
-            ->where('deleted_at', null)
-            ->first();
-        if ($existingAsset) {
             return $this->response->setJSON([
-                'success'          => false,
-                'message'          => 'Asset # "' . $assetTag . '" already exists in this site\'s inventory.',
-                'start_inspection' => false,
+                'success' => false,
+                'message' => 'Site ID or Company ID missing.'
             ]);
         }
 
-        // ── Duplicate: serial number already in this site (if provided) ──
-        if ($serial !== '') {
-            $existingSerial = $em->where('company_id', $companyId)
-                ->where('site_id', $siteId)
-                ->where('serial_number', $serial)
-                ->where('deleted_at', null)
-                ->first();
-            if ($existingSerial) {
-                return $this->response->setJSON([
-                    'success'          => false,
-                    'message'          => 'Serial number "' . $serial . '" already exists in this site\'s inventory (Asset #' . $existingSerial['asset_tag'] . ').',
-                    'start_inspection' => false,
-                ]);
-            }
+        $assetTag    = trim((string) $this->request->getPost('asset_tag'));
+        $model       = trim((string) $this->request->getPost('model'));
+        $serial      = trim((string) $this->request->getPost('serial_number'));
+        $make        = trim((string) $this->request->getPost('make'));
+        $deviceType  = trim((string) $this->request->getPost('device_type'));
+        $description = trim((string) $this->request->getPost('description'));
+        $dept        = trim((string) $this->request->getPost('department'));
+        $location    = trim((string) $this->request->getPost('location'));
+        $technician  = trim((string) $this->request->getPost('technician'));
+        $est         = trim((string) $this->request->getPost('est')) ?: 'No';
+        $cal         = trim((string) $this->request->getPost('cal')) ?: 'No';
+        $groupId     = trim((string) $this->request->getPost('group_id'));
+
+        if ($assetTag === '') {
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Asset # is required.'
+            ]);
         }
 
-        // ── Master equipment DB is READ-ONLY — look up metadata only ──
-        // If the user selected a model from the master DB, we pull the
-        // make/device_type from there but we do NOT write back to it.
-        if (empty($make) || empty($deviceType)) {
+        $em = new SiteEquipmentModel();
+        $db = \Config\Database::connect();
+
+        // 1) Reuse existing site_equipment if already in site inventory
+        $existingAsset = $em->findByAssetTag($companyId, $siteId, $assetTag);
+
+        if ($existingAsset) {
+            return $this->response->setJSON([
+                'success'          => true,
+                'message'          => 'Asset already exists in site inventory.',
+                'equipment_id'     => (int) $existingAsset['id'],
+                'id'               => (int) $existingAsset['id'],
+                'asset_tag'        => $existingAsset['asset_tag'] ?? $assetTag,
+                'make'             => $existingAsset['make'] ?? $make,
+                'model'            => $existingAsset['model'] ?? $model,
+                'device_type'      => $existingAsset['device_type'] ?? $deviceType,
+                'serial_number'    => $existingAsset['serial_number'] ?? $serial,
+                'department'       => $existingAsset['department'] ?? $dept,
+                'location'         => $existingAsset['location'] ?? $location,
+                'description'      => $description,
+                'start_inspection' => true,
+                'reused'           => true,
+                'csrf_hash'        => csrf_hash(),
+            ]);
+        }
+
+        // 2) Read-only lookup from master equipment DB to fill in missing make/device_type
+        if ((empty($make) || empty($deviceType)) && !empty($model)) {
             $masterRef = $db->query(
-                "SELECT make, device_type FROM equipment
-                 WHERE company_id = ? AND model = ? AND site_id = 1
-                 LIMIT 1",
+                "SELECT make, device_type, est, cal
+                FROM equipment
+                WHERE company_id = ? AND model = ?
+                ORDER BY id ASC
+                LIMIT 1",
                 [$companyId, $model]
             )->getRow();
+
             if ($masterRef) {
-                if (empty($make))       $make       = $masterRef->make;
-                if (empty($deviceType)) $deviceType = $masterRef->device_type;
+                if ($make === '')       $make       = (string) $masterRef->make;
+                if ($deviceType === '') $deviceType = (string) $masterRef->device_type;
+                if ($est === 'No' && $masterRef->est) $est = $masterRef->est ? 'Yes' : 'No';
+                if ($cal === 'No' && $masterRef->cal) $cal = $masterRef->cal ? 'Yes' : 'No';
             }
         }
 
-        // ── Insert ONLY into site inventory ─────────────────────────
-        $candidate = [
-            'company_id'    => $companyId,
-            'site_id'       => $siteId,
-            'asset_tag'     => $assetTag,
-            'model'         => $model,
-            'make'          => $make,
-            'serial_number' => $serial,
-            'device_type'   => $deviceType,
-            'department'    => $dept,
-            'location'      => $location,
-            'est'           => $est,
-            'cal'           => $cal,
-            'status'        => 'Not Inspected',
-            'created_at'    => date('Y-m-d H:i:s'),
-            'updated_at'    => date('Y-m-d H:i:s'),
+        // 3) Insert new device into site_equipment (per-site working copy)
+        //    Link to master catalogue if asset_tag exists there
+        $masterEquip = (new EquipmentModel())
+            ->where('company_id', $companyId)
+            ->where('asset_tag', $assetTag)
+            ->where('deleted_at', null)
+            ->first();
+
+        $newEquipData = [
+            'company_id'          => $companyId,
+            'site_id'             => $siteId,
+            'master_equipment_id' => $masterEquip ? (int) $masterEquip['id'] : null,
+            'asset_tag'           => $assetTag,
+            'make'                => $make,
+            'model'               => $model,
+            'serial_number'       => $serial,
+            'device_type'         => $deviceType,
+            'department'          => $dept,
+            'location'            => $location,
+            'est'                 => ($est === 'Yes' || $est === '1') ? 1 : 0,
+            'cal'                 => ($cal === 'Yes' || $cal === '1') ? 1 : 0,
+            'status'              => 'ready',
         ];
 
-        $insertData = $this->filterToColumns($candidate, 'equipment');
-
-        $em->insert($insertData);
-        $newId = $em->getInsertID();
-
-        if (!$newId) {
-            return $this->response->setJSON(['success' => false, 'message' => 'Failed to save device to site inventory.']);
-        }
+        $newEquipId = $em->safeInsert($newEquipData);
 
         return $this->response->setJSON([
             'success'          => true,
-            'message'          => 'Device added successfully.',
-            'equipment_id'     => $newId,
+            'message'          => 'Device added to site inventory and ready to inspect.',
+            'equipment_id'     => (int) $newEquipId,
+            'id'               => (int) $newEquipId,
             'asset_tag'        => $assetTag,
+            'make'             => $make,
+            'model'            => $model,
+            'device_type'      => $deviceType,
+            'serial_number'    => $serial,
+            'department'       => $dept,
+            'location'         => $location,
+            'description'      => $description,
             'start_inspection' => true,
+            'reused'           => false,
             'csrf_hash'        => csrf_hash(),
-        ]);
+        ]);       
     }
+
     /**
      * Return the department and room from the most recently saved equipment
      * record for a given site. Server-side persistent autofill for Add Device modal.
@@ -742,22 +1099,29 @@ class SiteInspectionWorkflowController extends BaseController
     public function getLastDeviceForSite()
     {
         $siteId    = (int) $this->request->getGet('site_id');
+        $groupId   = trim((string) $this->request->getGet('group_id'));
         $companyId = (int) session('company_id');
 
         if ($siteId === 0) {
             return $this->response->setJSON(['department' => '', 'location' => '']);
         }
 
-        $equipmentModel = new \App\Models\EquipmentModel();
-        $eq = $equipmentModel
-            ->where('company_id', $companyId)
-            ->where('site_id', $siteId)
-            ->orderBy('id', 'DESC')
-            ->first();
+        $latest = $this->latestInspectionLocation($companyId, $siteId, $groupId);
+        if (!$latest && $groupId !== '') {
+            $latest = $this->latestInspectionLocation($companyId, $siteId, '');
+        }
+        if (!$latest) {
+            $latest = (new SiteEquipmentModel())
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->first() ?: [];
+        }
 
         return $this->response->setJSON([
-            'department' => $eq['department'] ?? '',
-            'location'   => $eq['location']   ?? '',
+            'department' => $latest['department'] ?? '',
+            'location'   => $latest['location'] ?? '',
         ]);
     }
 

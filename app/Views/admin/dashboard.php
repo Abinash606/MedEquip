@@ -3,9 +3,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 topbar">
     <h3 class="fw-bold mb-0">Operational Overview</h3>
-    <div class="search" style="width:40%;">
-        <i class="bi bi-search"></i>
-        <input type="search" class="form-control" placeholder="Search for customers, assets, parts...">
+    <div class="search position-relative" style="width:40%;">
+        <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:1;color:#6c757d;pointer-events:none;"></i>
+        <input type="search" id="dashboardSearchInput" class="form-control ps-4" placeholder="Search customers, assets, sites, inspections..." autocomplete="off">
+        <div id="dashboardSearchResults" class="position-absolute w-100 mt-1 shadow-lg rounded" style="z-index:9999;display:none;background:#0E1630;border:1px solid rgba(255,255,255,.15);max-height:360px;overflow-y:auto;"></div>
     </div>
     <button class="btn btn-primary shadow-sm btn-new" data-bs-toggle="modal" data-bs-target="#newWorkOrderModal">
         <i class="fa-solid fa-plus me-2"></i> New Request
@@ -293,5 +294,92 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var inp     = document.getElementById('dashboardSearchInput');
+    var box     = document.getElementById('dashboardSearchResults');
+    var timer   = null;
+    var SEARCH_URL = '<?= site_url('admin/dashboard/search') ?>';
+
+    var iconMap = {
+        'Customer'  : 'fa-users',
+        'Site'      : 'fa-sitemap',
+        'Equipment' : 'fa-boxes-stacked',
+        'Inspection': 'fa-clipboard-list',
+    };
+
+    function renderResults(results) {
+        if (!results.length) {
+            box.innerHTML = '<div class="p-3 text-muted small text-center">No results found.</div>';
+            box.style.display = 'block';
+            return;
+        }
+        var html = '';
+        results.forEach(function(r, idx) {
+            html += '<a href="' + r.url + '" data-result-idx="' + idx + '" class="d-flex align-items-center gap-3 px-3 py-2 text-decoration-none" ' +
+                'style="color:#E9EDFF;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s;" ' +
+                'onmouseover="this.style.background=\'rgba(124,58,237,.18)\'" ' +
+                'onmouseout="this.style.background=\'transparent\'">' +
+                '<span style="width:28px;text-align:center;opacity:.7;">' +
+                    '<i class="fa-solid ' + (iconMap[r.type] || 'fa-file') + '"></i>' +
+                '</span>' +
+                '<span class="flex-grow-1 overflow-hidden">' +
+                    '<span class="d-block fw-semibold" style="font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + r.label + '</span>' +
+                    (r.subtitle ? '<span class="d-block text-muted" style="font-size:.78rem;">' + r.subtitle + '</span>' : '') +
+                '</span>' +
+                '<span class="badge ms-2" style="background:rgba(124,58,237,.4);font-size:.7rem;">' + r.type + '</span>' +
+            '</a>';
+        });
+        box.innerHTML = html;
+        box.style.display = 'block';
+
+        // Intercept clicks: store nav intent in sessionStorage so the site details
+        // page can open the right tab + inspection without polluting the URL.
+        box._resultData = results;
+        box.querySelectorAll('a[data-result-idx]').forEach(function(a) {
+            a.addEventListener('click', function(e) {
+                var idx = parseInt(a.getAttribute('data-result-idx'), 10);
+                var r = box._resultData[idx];
+                if (r && r.nav) {
+                    e.preventDefault();
+                    sessionStorage.setItem('siteNavIntent', JSON.stringify(r.nav));
+                    window.location.href = r.url;
+                }
+            });
+        });
+    }
+
+    function doSearch(q) {
+        if (q.length < 2) { box.style.display = 'none'; return; }
+        fetch(SEARCH_URL + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) { renderResults(data.results || []); })
+        .catch(function() { box.style.display = 'none'; });
+    }
+
+    if (inp) {
+        inp.addEventListener('input', function() {
+            clearTimeout(timer);
+            var q = inp.value.trim();
+            if (q.length < 2) { box.style.display = 'none'; return; }
+            timer = setTimeout(function() { doSearch(q); }, 280);
+        });
+
+        inp.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') { box.style.display = 'none'; inp.value = ''; }
+        });
+
+        // Close on outside click
+        document.addEventListener('click', function(e) {
+            if (!inp.contains(e.target) && !box.contains(e.target)) {
+                box.style.display = 'none';
+            }
+        });
+    }
+})();
+</script>
 
 <?= $this->endSection() ?>

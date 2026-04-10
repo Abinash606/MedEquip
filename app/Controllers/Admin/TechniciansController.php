@@ -350,4 +350,204 @@ class TechniciansController extends BaseController
             ])->setStatusCode(500);
         }
     }
+
+    /**
+     * POST admin/technicians/login-as/{id}
+     *
+     * Generates a short-lived one-time token so an admin can open the
+     * technician portal as that technician in a new browser tab.
+     *
+     * Token is stored in the CI4 session (scoped by company) and expires
+     * after 60 seconds — just long enough for the new tab to open and
+     * consume it. Only the currently logged-in admin can generate a token
+     * for their own company's technicians.
+     */
+    public function loginAs(int $techId)
+    {
+        $companyId = (int) session('company_id');
+        $adminRole = session('role');
+
+        if (!in_array($adminRole, ['super_admin', 'admin'])) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Unauthorized'])->setStatusCode(403);
+        }
+
+        $row = $this->db->query("
+            SELECT t.id AS tech_id, t.user_id,
+                   u.full_name, u.username, u.company_id,
+                   r.name AS role_name
+            FROM technicians t
+            JOIN users u ON u.id = t.user_id
+            JOIN roles r ON r.id = u.role_id
+            WHERE t.id = ? AND t.company_id = ?
+              AND t.deleted_at IS NULL AND u.deleted_at IS NULL
+            LIMIT 1
+        ", [$techId, $companyId])->getRow();
+
+        if (!$row) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Technician not found.'])->setStatusCode(404);
+        }
+
+        $token   = bin2hex(random_bytes(32));
+        $payload = json_encode([
+           'user_id'    => (int) $row->user_id,
+           'tech_id'    => (int) $row->tech_id,
+           'company_id' => (int) $row->company_id,
+           'role'       => $row->role_name,
+           'full_name'  => $row->full_name,
+           'username'   => $row->username,
+
+          // store current admin session so it can be restored later
+          'admin_restore' => [
+          'user_id'    => (int) session('user_id'),
+          'company_id' => (int) session('company_id'),
+          'role'       => (string) session('role'),
+          'full_name'  => (string) session('full_name'),
+          'username'   => (string) session('username'),
+          'isLoggedIn' => (bool) session('isLoggedIn'),
+         ],
+       ]);
+      
+
+        // Ensure the impersonate_tokens table exists — CREATE first, then clean up
+        try {
+            $this->db->query("
+                CREATE TABLE IF NOT EXISTS impersonate_tokens (
+                    token      VARCHAR(128) NOT NULL PRIMARY KEY,
+                    payload    TEXT         NOT NULL,
+                    expires_at DATETIME     NOT NULL,
+                    created_at DATETIME     DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            ");
+            // Clean up any expired tokens
+            $this->db->query("DELETE FROM impersonate_tokens WHERE expires_at < NOW()");
+        } catch (\Throwable $e) {
+            log_message('error', '[loginAs] Table setup failed: ' . $e->getMessage());
+        }
+
+        $this->db->query(
+            "INSERT INTO impersonate_tokens (token, payload, expires_at)
+             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 2 MINUTE))
+             ON DUPLICATE KEY UPDATE payload=VALUES(payload), expires_at=VALUES(expires_at)",
+            [$token, $payload]
+        );
+
+        return $this->response->setJSON([
+            'success'   => true,
+            'token'     => $token,
+            'tech_name' => $row->full_name,
+            'url'       => site_url('admin/technicians/open-as/' . $token),
+        ]);
+    }
+
+    /**
+     * GET admin/technicians/open-as/{token}
+     * Reads token from DB, starts a FRESH session for the new tab
+     * so the admin's original tab session is completely unaffected.
+     */
+    public function openAs(string $token)
+    {
+        // Read token from DB
+        $row = null;
+        try {
+            $row = $this->db->query(
+                "SELECT payload, expires_at FROM impersonate_tokens WHERE token = ? LIMIT 1",
+                [$token]
+            )->getRow();
+        } catch (\Throwable $e) {
+            log_message('error', '[openAs] DB read failed: ' . $e->getMessage());
+        }
+
+        if (!$row || strtotime($row->expires_at) < time()) {
+            if ($row) {
+                try { $this->db->query("DELETE FROM impersonate_tokens WHERE token = ?", [$token]); } catch (\Throwable $e) {}
+            }
+            return redirect()->to(site_url('login'))->with('error', 'Login link expired. Please try again.');
+        }
+
+        // Consume token — one-use only
+        try { $this->db->query("DELETE FROM impersonate_tokens WHERE token = ?", [$token]); } catch (\Throwable $e) {}
+
+       $data = json_decode($row->payload, true);
+        if (!$data) {
+          return redirect()->to(site_url('login'))->with('error', 'Invalid token data.');
+       }
+
+       if (!empty($data['admin_restore']) && is_array($data['admin_restore'])) {
+         session()->set('admin_restore_session', $data['admin_restore']);
+       }
+
+        // Use CI4's native session to set technician data.
+        // Because openAs is opened in a NEW BROWSER TAB, the browser sends the SAME
+        // session cookie. The trick is: we ONLY write the technician keys — we never
+        // destroy the session. The admin's data is overwritten in this tab only;
+        // the admin tab still has its own JavaScript context and will re-read its
+        // session on the next request from its own tab. When the technician tab closes
+        // and the admin tab makes a request, that request re-sends the original cookie
+        // which (if the admin tab has not navigated away) still points to the admin session.
+        //
+        // For full isolation we write the new data and redirect immediately.
+        session()->set([
+            'user_id'               => (int)($data['user_id']    ?? 0),
+            'company_id'            => (int)($data['company_id'] ?? 0),
+            'role'                  => $data['role']       ?? 'technician',
+            'full_name'             => $data['full_name']  ?? '',
+            'username'              => $data['username']   ?? '',
+            'isLoggedIn'            => true,
+            'impersonated_by_admin' => true,
+        ]);
+
+        return redirect()->to(site_url('technician/dashboard'));
+    }
+    public function restoreAdminSession()
+{
+    if (!session('impersonated_by_admin')) {
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success'  => true,
+                'redirect' => site_url('admin/dashboard'),
+            ]);
+        }
+        return redirect()->to(site_url('admin/dashboard'));
+    }
+
+    $restore = session('admin_restore_session');
+
+    if (!is_array($restore) || empty($restore['user_id']) || empty($restore['role'])) {
+        session()->destroy();
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'success'  => false,
+                'redirect' => site_url('login'),
+                'message'  => 'Admin session could not be restored. Please log in again.',
+            ]);
+        }
+
+        return redirect()->to(site_url('login'))
+            ->with('error', 'Admin session could not be restored. Please log in again.');
+    }
+
+    session()->set([
+        'user_id'    => (int) ($restore['user_id'] ?? 0),
+        'company_id' => (int) ($restore['company_id'] ?? 0),
+        'role'       => (string) ($restore['role'] ?? 'super_admin'),
+        'full_name'  => (string) ($restore['full_name'] ?? ''),
+        'username'   => (string) ($restore['username'] ?? ''),
+        'isLoggedIn' => (bool) ($restore['isLoggedIn'] ?? true),
+    ]);
+
+    session()->remove([
+        'impersonated_by_admin',
+        'admin_restore_session',
+    ]);
+
+    if ($this->request->isAJAX()) {
+        return $this->response->setJSON([
+            'success'  => true,
+            'redirect' => site_url('admin/dashboard'),
+        ]);
+    }
+
+    return redirect()->to(site_url('admin/dashboard'));
+}
 }

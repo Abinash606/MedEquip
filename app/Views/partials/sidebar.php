@@ -19,7 +19,7 @@
         <a href="<?= base_url('technicians') ?>" class="nav-link <?= url_is('technicians*') ? 'active' : '' ?>"><i class="fa-solid fa-users-cog"></i> <span class="sidebar-text">Technicians</span></a>
 
         <div class="section-header sidebar-text">Admin & Analytics</div>
-        <a href="<?= base_url('financials') ?>" class="nav-link <?= url_is('financials*') ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i> <span class="sidebar-text">Financials</span></a>
+        <a href="<?= base_url('financials') ?>" class="nav-link <?= url_is('financials*') ? 'active' : '' ?>"><i class="fa-solid fa-chart-line"></i> <span class="sidebar-text">Operational Summary</span></a>
         <a href="<?= base_url('compliance') ?>" class="nav-link <?= url_is('compliance*') ? 'active' : '' ?>"><i class="fa-solid fa-shield-check"></i> <span class="sidebar-text">Compliance</span></a>
         <a href="<?= base_url('dataops') ?>" class="nav-link <?= url_is('dataops*') ? 'active' : '' ?>"><i class="fa-solid fa-database"></i> <span class="sidebar-text">Data Ops</span></a>
         <a href="<?= base_url('settings') ?>" class="nav-link <?= url_is('settings*') ? 'active' : '' ?>"><i class="fa-solid fa-gears"></i> <span class="sidebar-text">Settings</span></a>

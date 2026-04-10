@@ -95,7 +95,7 @@ class SitesController extends BaseController
 
         $siteModel       = new \App\Models\SiteModel();
         $customerModel   = new \App\Models\CustomerModel();
-        $equipmentModel  = new \App\Models\EquipmentModel();
+        $equipmentModel  = new \App\Models\SiteEquipmentModel();
         $inspectionModel = new \App\Models\InspectionModel();
         $workOrderModel  = new \App\Models\WorkOrderModel();
         $technicianModel = new \App\Models\TechnicianModel();
@@ -123,51 +123,53 @@ class SitesController extends BaseController
             ->where('company_id', $companyId)
             ->findAll();
 
-        // ── All inspections with joins ────────────────────────────
-        // Join technicians → users to get full_name (FK: technician_id → technicians.id)
+        // ── All inspections with snapshot fields preferred ───────────────────
         $allInspections = $inspectionModel
-            ->select('inspections.*,
-                      users.full_name        AS technician_name,
-                      equipment.make         AS equipment_make,
-                      equipment.model        AS equipment_model,
-                      equipment.device_type,
-                      equipment.serial_number,
-                      equipment.asset_tag,
-                      equipment.department,
-                      equipment.location,
-                      equipment.est,
-                      equipment.cal')
-            ->join('technicians t', 't.id   = inspections.technician_id',      'left')
-            ->join('users',         'users.id = t.user_id',                    'left')
-            ->join('equipment',     'equipment.id = inspections.equipment_id', 'left')
+            ->select([
+                'inspections.*',
+                'COALESCE(inspections.make, site_equipment.make) AS equipment_make',
+                'COALESCE(inspections.model, site_equipment.model) AS equipment_model',
+                'COALESCE(inspections.device_type, site_equipment.device_type) AS device_type',
+                'COALESCE(inspections.serial_number, site_equipment.serial_number) AS serial_number',
+                'COALESCE(inspections.asset_tag, site_equipment.asset_tag) AS asset_tag',
+                'COALESCE(inspections.department, site_equipment.department) AS department',
+                'COALESCE(inspections.location, site_equipment.location) AS location',
+                'COALESCE(inspections.est, site_equipment.est) AS est',
+                'COALESCE(inspections.cal, site_equipment.cal) AS cal',
+                'COALESCE(users.full_name, users_direct.full_name) AS technician_name',
+            ])
+            ->join('technicians t', 't.id = inspections.technician_id', 'left')
+            ->join('users', 'users.id = t.user_id', 'left')
+            ->join('users AS users_direct', 'users_direct.id = inspections.technician_id', 'left')
+            ->join('site_equipment', 'site_equipment.id = inspections.equipment_id', 'left')
             ->where('inspections.site_id',    $id)
             ->where('inspections.company_id', $companyId)
+            ->where('inspections.deleted_at', null)
             ->orderBy('inspections.group_id DESC, inspections.id DESC')
             ->findAll();
 
-        // ── One row per group (for dashboard list) ────────────────
         $inspections = [];
         $seenGroups  = [];
         foreach ($allInspections as $insp) {
-            if (!in_array($insp['group_id'], $seenGroups)) {
+            if (!in_array($insp['group_id'], $seenGroups, true)) {
                 $inspections[] = $insp;
                 $seenGroups[]  = $insp['group_id'];
             }
         }
 
-        // ── inspectionList — shape for the partial's dashboard tab ─
         $inspectionList = array_map(function ($insp) {
             return [
                 'group_id'        => $insp['group_id'],
                 'scheduled_at'    => $insp['scheduled_at']    ?? $insp['created_at'] ?? date('Y-m-d H:i:s'),
                 'inspection_type' => $insp['inspection_type'] ?? '',
+                'title'           => $insp['title'] ?? '',
                 'technician_name' => $insp['technician_name'] ?? 'N/A',
                 'next_due_date'   => $insp['next_due_date']   ?? null,
+                'status'          => $insp['status']          ?? '',
+                'completed_at'    => $insp['completed_at']    ?? null,
             ];
         }, $inspections);
 
-        // ── inspectedItems — ALL completed records ────────────────
-        // Each row carries its group_id so the JS can filter by group.
         $inspectedItems    = [];
         $equipmentGroupMap = [];
         foreach ($inspections as $insp) {
@@ -177,8 +179,7 @@ class SitesController extends BaseController
         }
         foreach ($allInspections as $record) {
             $statusLower = strtolower($record['status'] ?? '');
-            $isDone = !empty($record['completed_at'])
-                || in_array($statusLower, ['pass', 'fail', 'repair', 'completed']);
+            $isDone = !empty($record['completed_at']) || in_array($statusLower, ['pass', 'fail', 'repair', 'completed'], true);
             if (!$isDone) continue;
 
             $resolvedGroupId = !empty($record['group_id'])
@@ -205,39 +206,41 @@ class SitesController extends BaseController
             ];
         }
 
-        // ── notInspected — ALL non-archived equipment ─────────────
-        //
-        // IMPORTANT: We do NOT filter by "has ever been inspected".
-        // The admin does this but it causes equipment to vanish from
-        // Not Inspected permanently after the first inspection.
-        //
-        // Instead we pass ALL equipment here. The JS function
-        // filterNotInspectedByGroup(groupId) dynamically hides rows
-        // that already appear in the currently-open group's inspected
-        // items. For a NEW inspection session, everything shows.
-        $notInspected = array_values(array_filter($equipment, function ($eq) {
+        // Build two lookup maps: by master equipment_id AND by asset_tag.
+        // Site-only equipment (no master_equipment_id) only matches by asset_tag.
+        $globallyInspectedIds      = [];
+        $globallyInspectedAssetTags = [];
+        foreach ($allInspections as $record) {
+            $doneStatuses = ['pass', 'fail', 'repair', 'completed'];
+            if (!in_array(strtolower($record['status'] ?? ''), $doneStatuses, true)) continue;
+            if (!empty($record['equipment_id'])) {
+                $globallyInspectedIds[$record['equipment_id']] = true;
+            }
+            if (!empty($record['asset_tag'])) {
+                $globallyInspectedAssetTags[strtolower(trim($record['asset_tag']))] = true;
+            }
+        }
+
+        $notInspected = array_values(array_filter($equipment, function ($eq) use ($globallyInspectedIds, $globallyInspectedAssetTags) {
             $st = strtolower($eq['status'] ?? '');
-            return $st !== 'out_of_service' && $st !== 'archived';
+            if ($st === 'out_of_service' || $st === 'archived') return false;
+            if (isset($globallyInspectedIds[$eq['id']])) return false;
+            if (isset($globallyInspectedAssetTags[strtolower(trim($eq['asset_tag'] ?? ''))])) return false;
+            return true;
         }));
 
-        // ── archivedItems ─────────────────────────────────────────
         $archivedItems = array_values(array_filter($equipment, function ($eq) {
             $st = strtolower($eq['status'] ?? '');
             return $st === 'out_of_service' || $st === 'archived';
         }));
 
-        // ── inspection_status flag for All Inventory tab ──────────
-        $globallyInspectedIds = [];
-        foreach ($allInspections as $record) {
-            if (in_array(strtolower($record['status'] ?? ''), ['pass', 'fail', 'repair', 'completed'])) {
-                $globallyInspectedIds[$record['equipment_id']] = true;
-            }
-        }
         foreach ($equipment as &$eq) {
             $st = strtolower($eq['status'] ?? '');
+            $isInspected = isset($globallyInspectedIds[$eq['id']])
+                || isset($globallyInspectedAssetTags[strtolower(trim($eq['asset_tag'] ?? ''))]);
             if ($st === 'out_of_service' || $st === 'archived') {
                 $eq['inspection_status'] = 'Archived';
-            } elseif (isset($globallyInspectedIds[$eq['id']])) {
+            } elseif ($isInspected) {
                 $eq['inspection_status'] = 'Inspected';
             } else {
                 $eq['inspection_status'] = 'Not Inspected';
@@ -247,15 +250,26 @@ class SitesController extends BaseController
 
         // ── Work orders ───────────────────────────────────────────
         $workOrders = $workOrderModel
-            ->select('work_orders.*, work_orders.group_id,
-                      equipment.asset_tag, equipment.serial_number,
-                      tech_user.full_name AS assigned_to_name')
-            ->join('equipment',         'equipment.id = work_orders.equipment_id',   'left')
-            ->join('technicians',       'technicians.id = work_orders.assigned_to',  'left')
-            ->join('users AS tech_user', 'tech_user.id = technicians.user_id',        'left')
-            ->where('work_orders.site_id',    $id)
-            ->where('work_orders.company_id', $companyId)
-            ->findAll();
+        ->select("
+            work_orders.*,
+            work_orders.group_id,
+            se.asset_tag,
+            se.serial_number,
+            se.make,
+            se.model,
+            tech_user.full_name AS assigned_to_name
+        ")
+        ->join(
+            'site_equipment se',
+            'se.id = work_orders.equipment_id AND se.deleted_at IS NULL',
+            'left'
+        )
+        ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')
+        ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
+        ->where('work_orders.site_id', $id)
+        ->where('work_orders.company_id', $companyId)
+        ->where('work_orders.deleted_at', null)
+        ->findAll();
 
         // ── Technicians list ──────────────────────────────────────
         $technicians = $technicianModel
@@ -310,7 +324,31 @@ class SitesController extends BaseController
             'updated_at'   => date('Y-m-d H:i:s'),
         ];
 
-        $db->table('sites')->insert($data);
+        // Check for duplicate site name within same company
+        $existing = $db->table('sites')
+            ->where('company_id', $companyId)
+            ->where('name', $data['name'])
+            ->where('deleted_at IS NULL', null, false)
+            ->get()->getRowArray();
+        if ($existing) {
+            $msg = 'A site with this name already exists. Please use a unique site name.';
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => $msg]);
+            }
+            return redirect()->back()->withInput()->with('error', $msg);
+        }
+
+        try {
+            $db->table('sites')->insert($data);
+        } catch (\Throwable $e) {
+            $msg = stripos($e->getMessage(), 'Duplicate') !== false
+                ? 'A site with this name already exists. Please use a unique site name.'
+                : 'Failed to save site. Please try again.';
+            if ($this->request->isAJAX()) {
+                return $this->response->setJSON(['success' => false, 'message' => $msg]);
+            }
+            return redirect()->back()->withInput()->with('error', $msg);
+        }
 
         if ($this->request->isAJAX()) {
             return $this->response->setJSON(['success' => true]);
@@ -327,7 +365,7 @@ class SitesController extends BaseController
         $db        = Database::connect();
         $companyId = session()->get('company_id');
 
-        $eq = $db->table('equipment')
+        $eq = $db->table('site_equipment')
             ->where('id', $id)
             ->where('company_id', $companyId)
             ->where('deleted_at IS NULL', null, false)
@@ -339,6 +377,53 @@ class SitesController extends BaseController
         }
 
         return $this->response->setJSON(['status' => 'success', 'data' => $eq]);
+    }
+
+    /**
+     * GET technician/equipment/dropdown-options
+     * Returns distinct makes, models, device_types for autocomplete in the edit modal.
+     */
+    public function equipmentDropdownOptions()
+    {
+        $companyId = (int) session('company_id');
+        $db        = Database::connect();
+
+        // Union master equipment catalogue with site_equipment so that
+        // devices added directly to a site (without a master record) also
+        // appear in the autocomplete suggestions.
+        $makes = array_column($db->query(
+            "SELECT DISTINCT make FROM (
+                SELECT make FROM equipment WHERE make IS NOT NULL AND make != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT make FROM site_equipment WHERE make IS NOT NULL AND make != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY make",
+            [$companyId, $companyId]
+        )->getResultArray(), 'make');
+
+        $models = array_column($db->query(
+            "SELECT DISTINCT model FROM (
+                SELECT model FROM equipment WHERE model IS NOT NULL AND model != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT model FROM site_equipment WHERE model IS NOT NULL AND model != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY model",
+            [$companyId, $companyId]
+        )->getResultArray(), 'model');
+
+        $deviceTypes = array_column($db->query(
+            "SELECT DISTINCT device_type FROM (
+                SELECT device_type FROM equipment WHERE device_type IS NOT NULL AND device_type != '' AND company_id = ? AND deleted_at IS NULL
+                UNION
+                SELECT device_type FROM site_equipment WHERE device_type IS NOT NULL AND device_type != '' AND company_id = ? AND deleted_at IS NULL
+            ) AS combined ORDER BY device_type",
+            [$companyId, $companyId]
+        )->getResultArray(), 'device_type');
+
+        return $this->response->setJSON([
+            'success'      => true,
+            'makes'        => $makes,
+            'models'       => $models,
+            'device_types' => $deviceTypes,
+        ]);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -355,7 +440,7 @@ class SitesController extends BaseController
         $assetTag = trim((string) $this->request->getPost('asset_tag'));
 
         // ── Duplicate asset tag check ─────────────────────────────────
-        $duplicate = $db->table('equipment')
+        $duplicate = $db->table('site_equipment')
             ->where('company_id', $companyId)
             ->where('asset_tag',  $assetTag)
             ->where('deleted_at IS NULL', null, false)
@@ -398,7 +483,7 @@ class SitesController extends BaseController
         ];
 
         try {
-            $db->table('equipment')->insert($data);
+            $db->table('site_equipment')->insert($data);
             $newId      = $db->insertID();
             $data['id'] = $newId;
 
@@ -434,7 +519,7 @@ class SitesController extends BaseController
             || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false;
 
         // ── Step 1: Verify ownership ──────────────────────────────────
-        $exists = $db->table('equipment')
+        $exists = $db->table('site_equipment')
             ->where('id', $id)
             ->where('company_id', $companyId)
             ->where('deleted_at IS NULL', null, false)
@@ -454,7 +539,7 @@ class SitesController extends BaseController
         $assetTag = trim((string) $this->request->getPost('asset_tag'));
 
         // ── Step 3: Duplicate check (exclude current record) ─────────
-        $duplicate = $db->table('equipment')
+        $duplicate = $db->table('site_equipment')
             ->where('company_id', $companyId)
             ->where('asset_tag',  $assetTag)
             ->where('id !=',      $id)
@@ -497,7 +582,7 @@ class SitesController extends BaseController
 
         // ── Step 5: Update with try/catch for any race condition ──────
         try {
-            $db->table('equipment')->where('id', $id)->update($data);
+            $db->table('site_equipment')->where('id', $id)->update($data);
 
             if ($isAjax) {
                 return $this->response->setJSON(['success' => true]);
@@ -530,7 +615,7 @@ class SitesController extends BaseController
         $db        = Database::connect();
         $companyId = session()->get('company_id');
 
-        $db->table('equipment')
+        $db->table('site_equipment')
             ->where('id', $id)
             ->where('company_id', $companyId)
             ->update(['deleted_at' => date('Y-m-d H:i:s')]);
@@ -545,91 +630,267 @@ class SitesController extends BaseController
     public function workOrderCreate()
     {
         $db        = Database::connect();
-        $companyId = session()->get('company_id');
+        $companyId = (int) session()->get('company_id');
+        $siteId    = (int) $this->request->getPost('site_id');
+        $title     = trim((string) $this->request->getPost('title'));
+        $groupId   = trim((string) $this->request->getPost('group_id'));
 
-        // ── FIX: save group_id so the WO is linked to the inspection ──
-        $groupId = trim((string) $this->request->getPost('group_id'));
+        if ($siteId <= 0 || $title === '') {
+            $msg = 'Site and title are required.';
+            return $this->woWantsJson()
+                ? $this->response->setJSON(['success' => false, 'message' => $msg, 'csrf_hash' => csrf_hash()])
+                : redirect()->back()->with('error', $msg);
+        }
+
+        $postedEquipId  = (int) $this->request->getPost('equipment_id');
+        $postedAssetTag = trim((string) $this->request->getPost('asset_tag'));
+
+        // Resolve site_equipment.id — nullable, no master equipment lookups needed
+        if ($postedEquipId <= 0 && $postedAssetTag !== '') {
+            $seRow = $db->table('site_equipment')
+                ->select('id')
+                ->where('company_id', $companyId)
+                ->where('site_id',    $siteId)
+                ->where('asset_tag',  $postedAssetTag)
+                ->where('deleted_at', null)
+                ->get()->getRowArray();
+            if ($seRow) $postedEquipId = (int) $seRow['id'];
+        }
+
+        // Confirm it's a valid site_equipment row (or null — both are acceptable)
+        $resolvedEquipId = null;
+        if ($postedEquipId > 0) {
+            $se = $db->table('site_equipment')->select('id')
+                ->where('id', $postedEquipId)->where('company_id', $companyId)
+                ->where('deleted_at', null)->get()->getRowArray();
+            if ($se) $resolvedEquipId = (int) $se['id'];
+        }
 
         $data = [
-            'site_id'      => $this->request->getPost('site_id'),
-            'equipment_id' => $this->request->getPost('equipment_id') ?: null,
-            'title'        => $this->request->getPost('title'),
-            'description'  => $this->request->getPost('description'),
-            'status'       => $this->request->getPost('status')      ?: 'open',
-            'priority'     => $this->request->getPost('priority')    ?: 'medium',
-            'assigned_to'  => $this->request->getPost('assigned_to') ?: null,
-            'start_date'   => $this->request->getPost('start_date')  ?: null,
-            'end_date'     => $this->request->getPost('end_date')    ?: null,
-            'group_id'     => $groupId !== '' ? $groupId : null, // ← NEW
+            'site_id'      => $siteId,
+            'equipment_id' => $resolvedEquipId, // site_equipment.id or null
+            'title'        => $title,
+            'description'  => trim((string) $this->request->getPost('description')),
+            'status'       => $this->woNormalizeStatus($this->request->getPost('status')),
+            'priority'     => $this->woNormalizePriority($this->request->getPost('priority')),
+            'assigned_to'  => ($tmp = (int) $this->request->getPost('assigned_to')) > 0 ? $tmp : null,
+            'start_date'   => $this->request->getPost('start_date') ?: null,
+            'end_date'     => $this->request->getPost('end_date') ?: null,
+            'group_id'     => $groupId !== '' ? $groupId : null,
             'company_id'   => $companyId,
             'created_at'   => date('Y-m-d H:i:s'),
             'updated_at'   => date('Y-m-d H:i:s'),
         ];
 
-        $db->table('work_orders')->insert($data);
-        $newId = $db->insertID();
+        $existing = null;
+        if ($groupId !== '') {
+            $b = $db->table('work_orders')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('group_id', $groupId)
+                ->where('deleted_at', null);
+            if ($resolvedEquipId) $b->where('equipment_id', $resolvedEquipId);
+            $existing = $b->get()->getRowArray();
+        }
 
-        if ($this->request->isAJAX()) {
+        if ($existing) {
+            $update = $data;
+            unset($update['created_at']);
+            $db->table('work_orders')->where('id', (int) $existing['id'])->update($update);
+            $id = (int) $existing['id'];
+        } else {
+            $db->table('work_orders')->insert($data);
+            $id = (int) $db->insertID();
+        }
+
+        $row = $this->fetchWorkOrderRow($companyId, $id);
+
+        if ($this->woWantsJson()) {
             return $this->response->setJSON([
-                'success'       => true,
-                'work_order_id' => $newId,
-                'csrf_hash'     => csrf_hash(), // ← refresh CSRF for next call
+                'success'          => true,
+                'message'          => $existing ? 'Work order updated successfully' : 'Work order created successfully',
+                'work_order_id'    => $id,
+                'title'            => $row['title'] ?? '',
+                'priority'         => $row['priority'] ?? '',
+                'status'           => $row['status'] ?? '',
+                'assigned_to_name' => $row['assigned_to_name'] ?? 'N/A',
+                'assigned_to'      => $row['assigned_to'] ?? null,
+                'start_date'       => $row['start_date'] ?? '',
+                'end_date'         => $row['end_date'] ?? '',
+                'description'      => $row['description'] ?? '',
+                'asset_tag'        => $row['asset_tag'] ?? '',
+                'serial_number'    => $row['serial_number'] ?? '',
+                'equipment_id'     => $row['equipment_id'] ?? null,
+                'site_equipment_id'=> $row['site_equipment_id'] ?? null,
+                'group_id'         => $row['group_id'] ?? '',
+                'csrf_hash'        => csrf_hash(),
             ]);
         }
-        return redirect()->back()->with('success', 'Work order created.');
+
+        return redirect()->back()->with('success', $existing ? 'Work order updated.' : 'Work order created.');
+    }
+
+    /**
+     * GET technician/work-orders/findByGroup
+     * Returns the auto-created WO for a given group_id + asset_tag so
+     * the Fail+WO modal can UPDATE it instead of INSERTing a duplicate.
+     */
+    public function workOrderFindByGroup()
+    {
+        $companyId = (int) session()->get('company_id');
+        $groupId   = trim((string) $this->request->getGet('group_id'));
+        $assetTag  = trim((string) $this->request->getGet('asset_tag'));
+        $siteId    = (int) $this->request->getGet('site_id');
+
+        if ($groupId === '' || $assetTag === '') {
+            return $this->response->setJSON(['success' => false]);
+        }
+
+        $db = Database::connect();
+
+        // Try to find WO by group + asset_tag via site_equipment join
+        $wo = $db->query(
+            "SELECT wo.id, wo.title, wo.description, wo.status, wo.priority, wo.assigned_to, wo.start_date, wo.end_date
+             FROM work_orders wo
+             LEFT JOIN site_equipment se ON se.id = wo.equipment_id AND se.deleted_at IS NULL
+             WHERE wo.company_id = ? AND wo.group_id = ? AND wo.deleted_at IS NULL
+               AND (se.asset_tag = ? OR wo.site_id = ?)
+             ORDER BY wo.id DESC LIMIT 1",
+            [$companyId, $groupId, $assetTag, $siteId]
+        )->getRowArray();
+
+        if (!$wo) {
+            $wo = $db->table('work_orders')
+                ->where('company_id', $companyId)
+                ->where('group_id', $groupId)
+                ->where('site_id', $siteId)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->get()->getRowArray();
+        }
+
+        if (!$wo) {
+            return $this->response->setJSON(['success' => false]);
+        }
+
+        return $this->response->setJSON([
+            'success'       => true,
+            'work_order_id' => $wo['id'],
+            'title'         => $wo['title'] ?? '',
+            'description'   => $wo['description'] ?? '',
+            'status'        => $wo['status'] ?? 'open',
+            'priority'      => $wo['priority'] ?? 'normal',
+            'assigned_to'   => $wo['assigned_to'] ?? null,
+            'start_date'    => $wo['start_date'] ?? '',
+            'end_date'      => $wo['end_date'] ?? '',
+        ]);
+    }
+
+    public function workOrderShow($id)
+    {
+        $companyId = (int) session()->get('company_id');
+        $row = $this->fetchWorkOrderRow($companyId, (int) $id);
+
+        return $this->response->setJSON([
+            'success' => (bool) $row,
+            'data'    => $row,
+            'message' => $row ? '' : 'Work order not found.',
+        ]);
     }
 
     // ══════════════════════════════════════════════════════════════
     // WORK ORDERS — update   POST technician/work-orders/update/:id
     // ══════════════════════════════════════════════════════════════
-    public function workOrderUpdate($id)
+   public function workOrderUpdate($id)
     {
         $db        = Database::connect();
-        $companyId = session()->get('company_id');
+        $companyId = (int) session()->get('company_id');
 
-        $exists = $db->table('work_orders')
-            ->where('id', $id)
-            ->where('company_id', $companyId)
-            ->where('deleted_at IS NULL', null, false)
-            ->countAllResults();
-
-        if (!$exists) {
-            if ($this->request->isAJAX()) {
+        $existingRow = $this->fetchWorkOrderRow($companyId, (int) $id);
+        if (!$existingRow) {
+            if ($this->woWantsJson()) {
                 return $this->response->setJSON([
                     'success' => false,
                     'message' => 'Work order not found.',
+                    'csrf_hash' => csrf_hash(),
                 ]);
             }
             return redirect()->back()->with('error', 'Work order not found.');
         }
 
-        $groupId = trim((string) $this->request->getPost('group_id'));
+        $siteId = (int) ($this->request->getPost('site_id') ?: $existingRow['site_id']);
+        $postedEquipmentId = $this->request->getPost('equipment_id');
+
+        $postedAssetTagUpd = trim((string) $this->request->getPost('asset_tag'));
+        // Resolve site_equipment.id — keep existing if nothing valid posted
+        $equipmentId = !empty($existingRow['equipment_id']) ? (int) $existingRow['equipment_id'] : null;
+        $lookupId    = (int) $postedEquipmentId;
+
+        if ($lookupId <= 0 && $postedAssetTagUpd !== '') {
+            $r = $db->table('site_equipment')->select('id')
+                ->where('company_id', $companyId)->where('site_id', $siteId)
+                ->where('asset_tag', $postedAssetTagUpd)->where('deleted_at', null)
+                ->get()->getRowArray();
+            if ($r) $lookupId = (int) $r['id'];
+        }
+        if ($lookupId > 0) {
+            $se = $db->table('site_equipment')->select('id')
+                ->where('id', $lookupId)->where('company_id', $companyId)
+                ->where('deleted_at', null)->get()->getRowArray();
+            if ($se) $equipmentId = (int) $se['id'];
+        }
 
         $data = [
-            'equipment_id' => $this->request->getPost('equipment_id') ?: null,
-            'title'        => $this->request->getPost('title'),
-            'description'  => $this->request->getPost('description'),
-            'status'       => $this->request->getPost('status')      ?: 'open',
-            'priority'     => $this->request->getPost('priority')    ?: 'medium',
-            'assigned_to'  => $this->request->getPost('assigned_to') ?: null,
-            'start_date'   => $this->request->getPost('start_date')  ?: null,
-            'end_date'     => $this->request->getPost('end_date')    ?: null,
+            'equipment_id' => $equipmentId,
+            'title'        => trim((string) $this->request->getPost('title')),
+            'description'  => trim((string) $this->request->getPost('description')),
+            'status'       => $this->woNormalizeStatus($this->request->getPost('status')),
+            'priority'     => $this->woNormalizePriority($this->request->getPost('priority')),
+            'assigned_to'  => ($tmp = (int) $this->request->getPost('assigned_to')) > 0 ? $tmp : null,
+            'start_date'   => $this->request->getPost('start_date') ?: null,
+            'end_date'     => $this->request->getPost('end_date') ?: null,
             'updated_at'   => date('Y-m-d H:i:s'),
         ];
 
-        // Only update group_id if provided (don't overwrite existing link)
+        $groupId = trim((string) $this->request->getPost('group_id'));
         if ($groupId !== '') {
             $data['group_id'] = $groupId;
         }
 
-        $db->table('work_orders')->where('id', $id)->update($data);
+        $db->table('work_orders')->where('id', (int) $id)->update($data);
 
-        if ($this->request->isAJAX()) {
+        // If serial_number was submitted, update it on the linked site_equipment row
+        $postedSerial = trim((string) $this->request->getPost('serial_number'));
+        if ($postedSerial !== '' && $equipmentId) {
+            $db->table('site_equipment')
+                ->where('id', $equipmentId)->where('company_id', $companyId)
+                ->update(['serial_number' => $postedSerial, 'updated_at' => date('Y-m-d H:i:s')]);
+        }
+
+        $row = $this->fetchWorkOrderRow($companyId, (int) $id);
+
+        if ($this->woWantsJson()) {
             return $this->response->setJSON([
-                'success'   => true,
-                'csrf_hash' => csrf_hash(),
+                'success'          => true,
+                'message'          => 'Work order updated successfully',
+                'work_order_id'    => (int) $id,
+                'title'            => $row['title'] ?? '',
+                'priority'         => $row['priority'] ?? '',
+                'status'           => $row['status'] ?? '',
+                'assigned_to_name' => $row['assigned_to_name'] ?? 'N/A',
+                'assigned_to'      => $row['assigned_to'] ?? null,
+                'start_date'       => $row['start_date'] ?? '',
+                'end_date'         => $row['end_date'] ?? '',
+                'description'      => $row['description'] ?? '',
+                'asset_tag'        => $row['asset_tag'] ?? '',
+                'serial_number'    => $row['serial_number'] ?? '',
+                'equipment_id'     => $row['equipment_id'] ?? null,
+                'site_equipment_id'=> $row['site_equipment_id'] ?? null,
+                'group_id'         => $row['group_id'] ?? '',
+                'csrf_hash'        => csrf_hash(),
             ]);
         }
+
         return redirect()->back()->with('success', 'Work order updated.');
     }
     // ══════════════════════════════════════════════════════════════
@@ -639,12 +900,42 @@ class SitesController extends BaseController
     public function workOrderDelete($id)
     {
         $db        = Database::connect();
-        $companyId = session()->get('company_id');
+        $companyId = (int) session()->get('company_id');
+
+        $exists = $db->table('work_orders')
+            ->where('id', (int) $id)
+            ->where('company_id', $companyId)
+            ->where('deleted_at', null)
+            ->get()
+            ->getRowArray();
+
+        if (!$exists) {
+            if ($this->woWantsJson()) {
+                return $this->response->setJSON([
+                    'success' => false,
+                    'message' => 'Work order not found.',
+                    'csrf_hash' => csrf_hash(),
+                ]);
+            }
+            return redirect()->back()->with('error', 'Work order not found.');
+        }
 
         $db->table('work_orders')
-            ->where('id', $id)
+            ->where('id', (int) $id)
             ->where('company_id', $companyId)
-            ->update(['deleted_at' => date('Y-m-d H:i:s')]);
+            ->update([
+                'deleted_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+
+        if ($this->woWantsJson()) {
+            return $this->response->setJSON([
+                'success'       => true,
+                'message'       => 'Work order deleted successfully',
+                'work_order_id' => (int) $id,
+                'csrf_hash'     => csrf_hash(),
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Work order deleted.');
     }
@@ -688,4 +979,272 @@ class SitesController extends BaseController
 
         return array_column($customers, 'id');
     }
+
+    private function woWantsJson(): bool
+    {
+        return $this->request->isAJAX()
+            || stripos($this->request->getHeaderLine('Accept'), 'application/json') !== false
+            || stripos($this->request->getHeaderLine('Content-Type'), 'application/json') !== false;
+    }
+
+    private function woNormalizeStatus(?string $status): string
+    {
+        $key = strtolower(trim((string) $status));
+        $key = str_replace(['-', ' '], '_', $key);
+
+        return match ($key) {
+            'completed' => 'completed',
+            'cancelled', 'canceled' => 'cancelled',
+            'in_progress', 'inprogress' => 'in_progress',
+            default => 'open',
+        };
+    }
+
+    private function woNormalizePriority(?string $priority): string
+    {
+        $key = strtolower(trim((string) $priority));
+
+        return match ($key) {
+            'low' => 'low',
+            'high', 'critical' => 'high',
+            default => 'normal',
+        };
+    }
+
+   private function extractAssetTagFromText(?string $text): string
+    {
+        $text = (string) $text;
+
+        if (preg_match('/^Asset tag:\s*(.+)$/mi', $text, $m)) {
+            return trim($m[1]);
+        }
+
+        return '';
+    }
+
+    private function resolveWorkOrderEquipmentReference(
+        int $companyId,
+        int $siteId,
+        $postedEquipmentId,
+        string $fallbackAssetTag = ''
+    ): ?array {
+        $postedEquipmentId = (int) $postedEquipmentId;
+        $db = Database::connect();
+
+        if ($postedEquipmentId > 0) {
+            // 1) direct site_equipment.id
+            $siteEq = $db->table('site_equipment')
+                ->select('id, asset_tag, serial_number, make, model, device_type')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('id', $postedEquipmentId)
+                ->where('deleted_at', null)
+                ->get()
+                ->getRowArray();
+
+            if ($siteEq) {
+                return [
+                    'site_equipment_id' => (int) $siteEq['id'],
+                    'equipment_id'      => (int) $siteEq['id'],
+                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
+                    'serial_number'     => $siteEq['serial_number'] ?? '',
+                    'make'              => $siteEq['make'] ?? '',
+                    'model'             => $siteEq['model'] ?? '',
+                    'device_type'       => $siteEq['device_type'] ?? '',
+                ];
+            }
+
+            // 2) legacy master_equipment_id
+            $siteEq = $db->table('site_equipment')
+                ->select('id, asset_tag, serial_number, make, model, device_type')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('master_equipment_id', $postedEquipmentId)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->get()
+                ->getRowArray();
+
+            if ($siteEq) {
+                return [
+                    'site_equipment_id' => (int) $siteEq['id'],
+                    'equipment_id'      => (int) $siteEq['id'],
+                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
+                    'serial_number'     => $siteEq['serial_number'] ?? '',
+                    'make'              => $siteEq['make'] ?? '',
+                    'model'             => $siteEq['model'] ?? '',
+                    'device_type'       => $siteEq['device_type'] ?? '',
+                ];
+            }
+        }
+
+        if ($fallbackAssetTag !== '') {
+            $siteEq = $db->table('site_equipment')
+                ->select('id, asset_tag, serial_number, make, model, device_type')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('asset_tag', $fallbackAssetTag)
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->get()
+                ->getRowArray();
+
+            if ($siteEq) {
+                return [
+                    'site_equipment_id' => (int) $siteEq['id'],
+                    'equipment_id'      => (int) $siteEq['id'],
+                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
+                    'serial_number'     => $siteEq['serial_number'] ?? '',
+                    'make'              => $siteEq['make'] ?? '',
+                    'model'             => $siteEq['model'] ?? '',
+                    'device_type'       => $siteEq['device_type'] ?? '',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function fetchWorkOrderRow(int $companyId, int $id): ?array
+    {
+        $db = Database::connect();
+
+        $row = $db->table('work_orders')
+            ->select("
+                work_orders.*,
+                tech_user.full_name AS assigned_to_name
+            ")
+            ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')
+            ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
+            ->where('work_orders.company_id', $companyId)
+            ->where('work_orders.id', $id)
+            ->where('work_orders.deleted_at', null)
+            ->get()
+            ->getRowArray();
+
+        if (!$row) {
+            return null;
+        }
+
+        $siteId = (int) ($row['site_id'] ?? 0);
+        $eqRef  = null;
+
+        if (!empty($row['equipment_id'])) {
+            $eqRef = $this->resolveWorkOrderEquipmentReference($companyId, $siteId, (int) $row['equipment_id']);
+        }
+
+        if (!$eqRef && !empty($row['group_id'])) {
+            $insp = $db->table('inspections')
+                ->select('asset_tag')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('group_id', $row['group_id'])
+                ->where('deleted_at', null)
+                ->orderBy('id', 'DESC')
+                ->get()
+                ->getRowArray();
+
+            if (!empty($insp['asset_tag'])) {
+                $eqRef = $this->resolveWorkOrderEquipmentReference($companyId, $siteId, 0, trim((string) $insp['asset_tag']));
+            }
+        }
+
+        if (!$eqRef) {
+            $descAsset = $this->extractAssetTagFromText($row['description'] ?? '');
+            if ($descAsset !== '') {
+                $eqRef = $this->resolveWorkOrderEquipmentReference($companyId, $siteId, 0, $descAsset);
+            }
+        }
+
+        $row['site_equipment_id'] = $eqRef['site_equipment_id'] ?? null;
+        $row['asset_tag']         = $eqRef['asset_tag'] ?? '';
+        $row['serial_number']     = $eqRef['serial_number'] ?? '';
+        $row['make']              = $eqRef['make'] ?? '';
+        $row['model']             = $eqRef['model'] ?? '';
+        $row['device_type']       = $eqRef['device_type'] ?? '';
+
+        return $row;
+    }
+
+
 }
+    /**
+     * AJAX: equipment list for a site as JSON
+     * GET technician/sites/equipment-data/:id
+     */
+    public function equipmentData($id)
+    {
+        $companyId = session()->get('company_id');
+        $equipmentModel = new \App\Models\SiteEquipmentModel();
+
+        $equipment = $equipmentModel
+            ->where('site_id', $id)
+            ->where('company_id', $companyId)
+            ->findAll();
+
+        $statusMap = [
+            'ready' => 'Ready', 'need_attention' => 'Need Attention',
+            'repair' => 'Repair', 'out_of_service' => 'Out of Service',
+        ];
+        $rows = [];
+        foreach ($equipment as $eq) {
+            $s = trim($eq['status'] ?? '');
+            $rows[] = [
+                'id'            => $eq['id'],
+                'asset_tag'     => $eq['asset_tag'] ?? '',
+                'make'          => $eq['make'] ?? 'N/A',
+                'model'         => $eq['model'] ?? 'N/A',
+                'serial_number' => $eq['serial_number'] ?? 'N/A',
+                'device_type'   => $eq['device_type'] ?? 'N/A',
+                'location'      => $eq['location'] ?? 'N/A',
+                'department'    => $eq['department'] ?? 'N/A',
+                'status'        => $s,
+                'status_label'  => $statusMap[$s] ?? ($s ?: 'No Status'),
+            ];
+        }
+        return $this->response->setJSON(['success' => true, 'data' => $rows]);
+    }
+
+    /**
+     * AJAX: work orders list for a site as JSON
+     * GET technician/sites/work-orders-data/:id
+     */
+    public function workOrdersData($id)
+    {
+        $companyId = session()->get('company_id');
+        $db = Database::connect();
+
+        $rows = $db->table('work_orders wo')
+            ->select("wo.*, se.asset_tag, se.serial_number, se.make, se.model,
+                      tech_user.full_name AS assigned_to_name")
+            ->join('site_equipment se', 'se.id = wo.equipment_id AND se.deleted_at IS NULL', 'left')
+            ->join('technicians', 'technicians.id = wo.assigned_to', 'left')
+            ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
+            ->where('wo.site_id', $id)
+            ->where('wo.company_id', $companyId)
+            ->where('wo.deleted_at', null)
+            ->orderBy('wo.id', 'DESC')
+            ->get()->getResultArray();
+
+        $out = [];
+        foreach ($rows as $wo) {
+            $out[] = [
+                'id'               => $wo['id'],
+                'title'            => $wo['title'],
+                'asset_tag'        => $wo['asset_tag'] ?? 'N/A',
+                'serial_number'    => $wo['serial_number'] ?? '',
+                'status'           => $wo['status'],
+                'priority'         => $wo['priority'],
+                'assigned_to'      => $wo['assigned_to'] ?? null,
+                'assigned_to_name' => $wo['assigned_to_name'] ?? 'N/A',
+                'start_date'       => $wo['start_date'] ?? '',
+                'end_date'         => $wo['end_date'] ?? '',
+                'description'      => $wo['description'] ?? '',
+                'equipment_id'     => $wo['equipment_id'] ?? null,
+                'group_id'         => $wo['group_id'] ?? '',
+            ];
+        }
+        return $this->response->setJSON(['success' => true, 'data' => $out]);
+    }
+
+

@@ -528,6 +528,46 @@
         filter: invert(1); /* makes icon white */
         cursor: pointer;
             }
+
+        /* Scheduling / Gantt styles */
+        .schedule-view { display: none; }
+        .schedule-view.active { display: block; }
+        .gantt-container {}
+        .gantt-row {
+            display: flex; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+        .gantt-label {
+            width: 140px; font-size: 0.9rem; font-weight: 500; flex-shrink: 0;
+        }
+        .gantt-timeline {
+            flex-grow: 1; height: 36px;
+            background: rgba(255,255,255,.06) !important;
+            border: 1px solid rgba(255,255,255,.06);
+            border-radius: 6px; position: relative;
+        }
+        .gantt-bar {
+            position: absolute; height: 100%; border-radius: 6px;
+            font-size: 0.75rem; color: white;
+            display: flex; align-items: center;
+            padding-left: 8px; white-space: nowrap; overflow: hidden;
+            cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+        .gantt-bar.bg-primary {
+            background: linear-gradient(90deg, rgba(34,211,238,.92), rgba(124,58,237,.70)) !important;
+        }
+        .gantt-bar.bg-danger {
+            background: linear-gradient(90deg, rgba(239,68,68,.95), rgba(249,115,22,.72)) !important;
+        }
+        .gantt-bar.bg-warning {
+            background: linear-gradient(90deg, rgba(245,158,11,.95), rgba(249,115,22,.80)) !important;
+        }
+        .gantt-bar.bg-success {
+            background: linear-gradient(90deg, rgba(34,197,94,.95), rgba(34,211,238,.65)) !important;
+        }
+        .gantt-bar.bg-info {
+            background: linear-gradient(90deg, rgba(6,182,212,.95), rgba(59,130,246,.72)) !important;
+        }
     </style>
 </head>
 
@@ -544,6 +584,10 @@
             <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>"
                 href="<?= site_url('technician/dashboard') ?>">
                 <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+            <a class="nav-link<?= url_is('technician/scheduling*') ? ' active' : '' ?>"
+                href="<?= site_url('technician/scheduling') ?>">
+                <i class="fa-solid fa-calendar-check"></i><span>Scheduling</span>
             </a>
             <a class="nav-link<?= url_is('technician/customers*') ? ' active' : '' ?>"
                 href="<?= site_url('technician/customers') ?>">
@@ -587,12 +631,133 @@
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
     <?= $this->include('partials/customer-scripts') ?>
 
+    <?php if (session()->get('impersonated_by_admin')): ?>
+    <div style="
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 99999;
+        background: linear-gradient(90deg, #b45309, #d97706);
+        color: #fff;
+        text-align: center;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: .03em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.4);
+    " id="impersonation-banner">
+        <i class="fa-solid fa-user-secret"></i>
+        Viewing as Technician: <strong><?= esc(session('full_name')) ?></strong>
+        &nbsp;—&nbsp; Admin view. Changes made here are real.
+        <button type="button" onclick="backToAdminFromTechnicianTab()" style="
+    background: rgba(255,255,255,.25);
+    border: 1px solid rgba(255,255,255,.5);
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-left: 8px;
+">Back to admin</button>
+
+<button type="button" onclick="closeTechnicianTabAndRestoreAdmin()" style="
+    background: rgba(255,255,255,.25);
+    border: 1px solid rgba(255,255,255,.5);
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-left: 8px;
+">✕ Close Tab</button>
+    </div>
+    <div style="height: 40px;"></div><!-- push content below banner -->
+    <?php endif; ?>
+
     <div class="main-content" id="mainContent">
         <?= $this->renderSection('content') ?>
     </div>
 
     <?= $this->include('partials/customer-modals') ?>
 
+<script>
+    let __adminRestoreCalled = false;
+
+    function callRestoreAdminSession(callback) {
+        if (__adminRestoreCalled) {
+            if (typeof callback === 'function') callback();
+            return;
+        }
+
+        __adminRestoreCalled = true;
+
+        fetch('<?= site_url('impersonation/restore') ?>', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (typeof callback === 'function') callback(res);
+        })
+        .catch(() => {
+            if (typeof callback === 'function') {
+                callback({
+                    success: false,
+                    redirect: '<?= site_url('login') ?>'
+                });
+            }
+        });
+    }
+
+    function backToAdminFromTechnicianTab() {
+        callRestoreAdminSession(function(res) {
+            const redirectUrl = (res && res.redirect)
+                ? res.redirect
+                : '<?= site_url('admin/dashboard') ?>';
+
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.location.href = redirectUrl;
+                    window.opener.focus();
+                    window.close();
+                    return;
+                } catch (e) {}
+            }
+
+            window.location.href = redirectUrl;
+        });
+    }
+
+    function closeTechnicianTabAndRestoreAdmin() {
+        callRestoreAdminSession(function(res) {
+            const redirectUrl = (res && res.redirect)
+                ? res.redirect
+                : '<?= site_url('admin/dashboard') ?>';
+
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.location.href = redirectUrl;
+                    window.opener.focus();
+                } catch (e) {}
+            }
+
+            window.close();
+
+            setTimeout(function() {
+                if (!window.closed) {
+                    window.location.href = redirectUrl;
+                }
+            }, 300);
+        });
+    }
+</script>
     <script>
         // Mobile sidebar toggle
         document.addEventListener('DOMContentLoaded', function() {

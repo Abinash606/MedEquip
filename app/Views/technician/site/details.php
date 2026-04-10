@@ -770,7 +770,7 @@
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="techEquipmentTableBody">
                             <?php foreach ($equipment as $eq): ?>
                                 <tr>
                                     <td><?= esc($eq['asset_tag']) ?></td>
@@ -815,7 +815,7 @@
                                                 <i class="fa fa-edit"></i> Edit
                                             </button>
                                             <a href="<?= site_url('technician/equipment/delete/' . $eq['id']) ?>"
-                                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this equipment?')">
+                                                class="btn btn-sm btn-danger" onclick="techDeleteEquipConfirm(this)">
                                                 <i class="fa fa-trash"></i> Delete
                                             </a>
                                         </div>
@@ -858,7 +858,7 @@
                                 <th class="text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="techWorkOrdersTableBody">
                             <?php foreach ($workOrders as $wo): ?>
                                 <tr>
                                     <td>WO-<?= esc($wo['id']) ?></td>
@@ -879,6 +879,7 @@
                                         <div class="action-btns">
                                             <button class="btn btn-sm btn-primary edit-workorder-btn" data-id="<?= $wo['id'] ?>"
                                                 data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
+                                                data-site_equipment_id="<?= $wo['site_equipment_id'] ?? '' ?>"
                                                 data-serial_number="<?= esc($wo['serial_number'] ?? '', 'attr') ?>"
                                                 data-title="<?= esc($wo['title'], 'attr') ?>"
                                                 data-description="<?= esc($wo['description'] ?? '', 'attr') ?>"
@@ -889,10 +890,16 @@
                                                 data-end_date="<?= $wo['end_date'] ?? '' ?>">
                                                 <i class="fa fa-edit"></i> Edit
                                             </button>
-                                            <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
+                                            <button type="button"
+                                                class="btn btn-sm btn-danger delete-workorder-btn"
+                                                data-id="<?= $wo['id'] ?>">
+                                                <i class="fa fa-trash"></i> Delete
+                                            </button>
+
+                                            <!-- <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
                                                 class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
                                                 <i class="fa fa-trash"></i> Delete
-                                            </a>
+                                            </a> -->
                                         </div>
 
                                     </td>
@@ -930,14 +937,32 @@
                                     class="text-danger">*</span></label><input type="text" class="form-control"
                                 id="equipment-serial-number" name="serial_number" required></div>
                         <div class="col-md-6"><label class="form-label">Make <span
-                                    class="text-danger">*</span></label><input type="text" class="form-control"
-                                id="equipment-make" name="make" placeholder="e.g. Philips, GE" required></div>
+                                    class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control equipment-suggest" id="equipment-make"
+                                    name="make" placeholder="e.g. Philips, GE" required autocomplete="off">
+                                <ul class="list-group position-absolute w-100 shadow" id="make-list-dropdown"
+                                    style="z-index:9999;max-height:180px;overflow-y:auto;display:none;"></ul>
+                            </div>
+                        </div>
                         <div class="col-md-6"><label class="form-label">Model <span
-                                    class="text-danger">*</span></label><input type="text" class="form-control"
-                                id="equipment-model" name="model" required></div>
+                                    class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control equipment-suggest" id="equipment-model"
+                                    name="model" required autocomplete="off">
+                                <ul class="list-group position-absolute w-100 shadow" id="model-list-dropdown"
+                                    style="z-index:9999;max-height:180px;overflow-y:auto;display:none;"></ul>
+                            </div>
+                        </div>
                         <div class="col-md-6"><label class="form-label">Device Type <span
-                                    class="text-danger">*</span></label><input type="text" class="form-control"
-                                id="equipment-device-type" name="device_type" placeholder="e.g. MRI, CT" required></div>
+                                    class="text-danger">*</span></label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control equipment-suggest" id="equipment-device-type"
+                                    name="device_type" placeholder="e.g. MRI, CT" required autocomplete="off">
+                                <ul class="list-group position-absolute w-100 shadow" id="device-type-list-dropdown"
+                                    style="z-index:9999;max-height:180px;overflow-y:auto;display:none;"></ul>
+                            </div>
+                        </div>
                         <div class="col-md-6"><label class="form-label">Department</label><input type="text"
                                 class="form-control" id="equipment-department" name="department"></div>
                         <div class="col-md-6"><label class="form-label">Room / Location</label><input type="text"
@@ -1378,8 +1403,12 @@
                             <select class="form-select" id="workorder-equipment" name="equipment_id">
                                 <option value="">-- Select Equipment --</option>
                                 <?php foreach ($equipment as $eq): ?>
-                                    <option value="<?= $eq['id'] ?>"><?= esc($eq['asset_tag']) ?> — <?= esc($eq['make']) ?>
-                                        <?= esc($eq['model']) ?></option>
+                                    <option
+                                        value="<?= (int) $eq['id'] ?>"
+                                        data-master-equipment-id="<?= (int) ($eq['master_equipment_id'] ?? 0) ?>"
+                                        data-asset-tag="<?= esc(strtolower(trim($eq['asset_tag'] ?? '')), 'attr') ?>">
+                                        <?= esc($eq['asset_tag']) ?> — <?= esc($eq['make']) ?> <?= esc($eq['model']) ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -1549,28 +1578,89 @@
                 method: 'GET',
                 dataType: 'json',
                 success: function(res) {
-                    if (res.status === 'success') {
-                        const d = res.data;
-                        $('#equipment-id').val(d.id);
-                        $('#equipment-asset-tag').val(d.asset_tag);
-                        $('#equipment-serial-number').val(d.serial_number);
-                        $('#equipment-make').val(d.make);
-                        $('#equipment-model').val(d.model);
-                        $('#equipment-device-type').val(d.device_type);
-                        $('#equipment-department').val(d.department);
-                        $('#equipment-location').val(d.location);
-                        $('#equipment-status').val(d.status);
-                        $('#equipment-pm-kit').val(d.pm_kit);
-                        $('#equipment-fast-notes').val(d.fast_notes);
-                        $('#equipment-installation-date').val(d.installation_date);
-                        $('#equipment-warranty-expires').val(d.warranty_expires);
-                        $('#addEquipmentModal').modal('show');
-                    }
+                    if (res.status !== 'success') { alert('Failed to load equipment data.'); return; }
+                    const d = res.data;
+                    // Populate all fields immediately — do NOT defer make/model/device_type
+                    // into the dropdown AJAX callback which can race and blank them out.
+                    $('#equipment-id').val(d.id);
+                    $('#equipment-asset-tag').val(d.asset_tag);
+                    $('#equipment-serial-number').val(d.serial_number);
+                    $('#equipment-department').val(d.department);
+                    $('#equipment-location').val(d.location);
+                    $('#equipment-status').val(d.status);
+                    $('#equipment-pm-kit').val(d.pm_kit);
+                    $('#equipment-fast-notes').val(d.fast_notes);
+                    $('#equipment-installation-date').val(d.installation_date);
+                    $('#equipment-warranty-expires').val(d.warranty_expires);
+                    // Set make/model/device_type directly
+                    $('#equipment-make').val(d.make || '');
+                    $('#equipment-model').val(d.model || '');
+                    $('#equipment-device-type').val(d.device_type || '');
+                    $('#addEquipmentModal').modal('show');
+                    // Load suggestion lists in background (does NOT overwrite set values)
+                    loadTechEquipmentDropdownOptions(d.make || '', d.model || '', d.device_type || '');
                 },
-                error: function() {
-                    alert('Failed to load equipment data.');
+                error: function() { alert('Failed to load equipment data.'); }
+            });
+        });
+
+        // Load distinct makes/models/device types from DB for autocomplete suggestions.
+        // Values are set directly before this is called in Edit mode, so we must
+        // NOT overwrite them here — only populate the suggestion lists.
+        function loadTechEquipmentDropdownOptions(selMake, selModel, selDeviceType) {
+            $.ajax({
+                url: BASE_TEC + '/equipment/dropdown-options',
+                method: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    if (!res.success) return;
+                    techEquipLists.make = res.makes || [];
+                    techEquipLists.model = res.models || [];
+                    techEquipLists['device-type'] = res.device_types || [];
+                    // Only set values in Add mode (empty args = Add mode).
+                    // In Edit mode, values were already set directly before this call.
+                    if (selMake)       { if (!$('#equipment-make').val())        $('#equipment-make').val(selMake); }
+                    if (selModel)      { if (!$('#equipment-model').val())       $('#equipment-model').val(selModel); }
+                    if (selDeviceType) { if (!$('#equipment-device-type').val()) $('#equipment-device-type').val(selDeviceType); }
                 }
             });
+        }
+
+        // Also load on page load for the Add form
+        var techEquipLists = { make: [], model: [], 'device-type': [] };
+        loadTechEquipmentDropdownOptions('', '', '');
+
+        // Autocomplete suggestion logic for Make/Model/Device Type
+        function showTechSuggestions($input, items) {
+            var id = $input.attr('id');
+            var listId = id === 'equipment-make' ? 'make-list-dropdown'
+                       : id === 'equipment-model' ? 'model-list-dropdown'
+                       : 'device-type-list-dropdown';
+            var $list = $('#' + listId);
+            var val = $input.val().toLowerCase().trim();
+            var filtered = val ? items.filter(function(i) { return i.toLowerCase().includes(val); }) : items;
+            if (!filtered.length) { $list.hide(); return; }
+            $list.html(filtered.slice(0, 10).map(function(i) {
+                return '<li class="list-group-item list-group-item-action py-1 px-2" style="cursor:pointer;font-size:.9rem;">' + $('<span>').text(i).html() + '</li>';
+            }).join('')).show();
+            $list.off('click').on('click', 'li', function() {
+                $input.val($(this).text()); $list.hide();
+            });
+        }
+
+        $(document).on('focus keyup', '#equipment-make', function() {
+            showTechSuggestions($(this), techEquipLists.make);
+        });
+        $(document).on('focus keyup', '#equipment-model', function() {
+            showTechSuggestions($(this), techEquipLists.model);
+        });
+        $(document).on('focus keyup', '#equipment-device-type', function() {
+            showTechSuggestions($(this), techEquipLists['device-type']);
+        });
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.equipment-suggest').length) {
+                $('#make-list-dropdown, #model-list-dropdown, #device-type-list-dropdown').hide();
+            }
         });
 
         $('#addEquipmentModal').on('hidden.bs.modal', function() {
@@ -1677,7 +1767,10 @@
             $('#wizBtnComplete').toggle(n === 3 && inspectionQueue.length > 0);
         }
 
-        function resetWizard() {
+        function resetWizard(keepLocation) {
+            // Save dept/room before clearing so we can restore for next device
+            var savedDept = $('#wiz-s3-department').val();
+            var savedLoc  = $('#wiz-s3-location').val();
             wizardAssetFound = false;
             wizardMatchedEquip = null;
             $('#wiz-serial-number,#wiz-search-model,#wiz-s2-manufacturer,#wiz-s2-model,#wiz-s2-description,#wiz-s2-serial')
@@ -1688,6 +1781,11 @@
             $('#wiz-s3-inspdate').val('<?= date('Y-m-d') ?>');
             $('#wiz-s3-status').val('Pass');
             $('#wiz-s3-devicecomplete').val('Yes');
+            // Restore dept/room for next device when moving through same inspection batch
+            if (keepLocation) {
+                $('#wiz-s3-department').val(savedDept);
+                $('#wiz-s3-location').val(savedLoc);
+            }
             showStep(1);
         }
 
@@ -1742,7 +1840,7 @@
         $('#wizStep1Next').on('click', function() {
             const serial = $.trim($('#wiz-serial-number').val());
             if (!serial) {
-                alert('Please enter a serial number.');
+                Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a serial number.' });
                 return;
             }
             $(this).prop('disabled', true).text('Searching…');
@@ -1775,7 +1873,7 @@
                 },
                 error: function() {
                     $('#wizStep1Next').prop('disabled', false).text('Next');
-                    alert('Search failed.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Search failed. Please try again.' });
                 }
             });
         });
@@ -1876,24 +1974,24 @@
 
         $('#wizBtnPass').on('click', function() {
             addToQueue('Pass');
-            alert('Added to queue as Pass.');
+            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Pass.', timer: 1500, showConfirmButton: false });
         });
         $('#wizBtnFail').on('click', function() {
             addToQueue('Fail');
-            alert('Added to queue as Fail.');
+            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Fail.', timer: 1500, showConfirmButton: false });
         });
         $('#wizBtnRepair').on('click', function() {
             addToQueue('Repair');
-            alert('Added to queue as Repair.');
+            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Repair.', timer: 1500, showConfirmButton: false });
         });
         $('#wizBtnNextDevice').on('click', function() {
-            resetWizard();
+            resetWizard(true); // keepLocation=true: carry dept/room to next device
             updateQueueDisplay();
         });
 
         $('#wizBtnComplete').on('click', function() {
             if (!inspectionQueue.length) {
-                alert('No inspections in queue.');
+                Swal.fire({ icon: 'info', title: 'Queue Empty', text: 'No inspections in queue.' });
                 return;
             }
             $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
@@ -1915,7 +2013,7 @@
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
-                    alert('Failed to save inspections.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save inspections. Please try again.' });
                     $('#wizBtnComplete').prop('disabled', false).html(
                         '<i class="fa fa-check-double me-1"></i>Complete Inspections');
                 }
@@ -1934,7 +2032,7 @@
                 dataType: 'json',
                 success: function(res) {
                     if (!res.success) {
-                        alert('Error: ' + res.message);
+                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'An error occurred.' });
                         return;
                     }
                     const tbody = $('#inspection-details-body').empty();
@@ -1969,7 +2067,7 @@
                     $('#viewInspectionModal').modal('show');
                 },
                 error: function() {
-                    alert('Failed to fetch inspection details.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch inspection details.' });
                 }
             });
         });
@@ -1988,7 +2086,7 @@
                 dataType: 'json',
                 success: function(res) {
                     if (!res.success) {
-                        alert('Failed to load inspection.');
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load inspection.' });
                         return;
                     }
                     const d = res.data;
@@ -2022,7 +2120,7 @@
                     editGoToStep(1);
                 },
                 error: function() {
-                    alert('Failed to load inspection data.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load inspection data.' });
                 }
             });
         });
@@ -2120,15 +2218,15 @@
                 },
                 success: function(res) {
                     if (res.success) {
-                        alert('Inspection updated successfully!');
+                        Swal.fire({ icon: 'success', title: 'Updated', text: 'Inspection updated successfully!', timer: 1800, showConfirmButton: false });
                         $('#editInspectionWizardModal').modal('hide');
                         location.reload();
                     } else {
-                        alert('Error: ' + res.message);
+                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'An error occurred.' });
                     }
                 },
                 error: function() {
-                    alert('Failed to update inspection.');
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update inspection.' });
                 }
             });
         });
@@ -2138,22 +2236,96 @@
         });
 
         // ── Work Orders — Edit (unchanged) ────────────────────────────────
+        function setTechWorkOrderEquipment(siteEquipmentId, masterEquipmentId, assetTag) {
+            const $select = $('#workorder-equipment');
+            let matched = false;
+            const normalizedAsset = String(assetTag || '').trim().toLowerCase();
+
+            if (siteEquipmentId && $select.find('option[value="' + siteEquipmentId + '"]').length) {
+                $select.val(String(siteEquipmentId));
+                matched = true;
+            }
+
+            if (!matched && masterEquipmentId) {
+                $select.find('option').each(function() {
+                    const masterId = String($(this).data('master-equipment-id') || '');
+                    if (masterId === String(masterEquipmentId)) {
+                        $select.val(String($(this).val()));
+                        matched = true;
+                        return false;
+                    }
+                });
+            }
+
+            if (!matched && normalizedAsset !== '') {
+                $select.find('option').each(function() {
+                    const optAsset = String($(this).data('asset-tag') || '').trim().toLowerCase();
+                    if (optAsset === normalizedAsset) {
+                        $select.val(String($(this).val()));
+                        matched = true;
+                        return false;
+                    }
+                });
+            }
+
+            if (!matched) {
+                $select.val('');
+            }
+        }
+
         $(document).on('click', '.edit-workorder-btn', function() {
             const id = $(this).data('id');
+
             $('#workorder-id').val(id);
-            $('#workorder-title').val($(this).data('title'));
-            $('#workorder-equipment').val($(this).data('equipment_id'));
-            $('#workorder-status').val($(this).data('status'));
-            $('#workorder-priority').val($(this).data('priority'));
-            $('#workorder-assigned-to').val($(this).data('assigned_to'));
-            $('#workorder-start-date').val($(this).data('start_date'));
-            $('#workorder-end-date').val($(this).data('end_date'));
-            $('#workorder-description').val($(this).data('description'));
             $('#workOrderModalLabel').text('Edit Work Order');
             $('#workOrderSubmitBtn').text('Update Work Order');
             $('#workOrderForm').attr('action', BASE_TEC + '/work-orders/update/' + id);
-            $('#addWorkOrderModal').modal('show');
+
+            $.getJSON(BASE_TEC + '/work-orders/show/' + id, function(res) {
+                if (!(res && res.success && res.data)) return;
+
+                const d = res.data;
+                $('#workorder-title').val(d.title || '');
+                $('#workorder-description').val(d.description || '');
+                $('#workorder-status').val(d.status || 'open').trigger('change');
+                $('#workorder-priority').val(d.priority || 'normal').trigger('change');
+                $('#workorder-assigned-to').val(d.assigned_to || '').trigger('change');
+                $('#workorder-start-date').val(d.start_date || '');
+                $('#workorder-end-date').val(d.end_date || '');
+
+                setTechWorkOrderEquipment(
+                    d.site_equipment_id || '',
+                    d.equipment_id || '',
+                    d.asset_tag || ''
+                );
+
+                if (d.serial_number) {
+                    $('#workorder-sn').val(d.serial_number);
+                }
+
+                $('#addWorkOrderModal').modal('show');
+            }).fail(function() {
+                $('#addWorkOrderModal').modal('show');
+            });
         });
+
+        $(document).on('click', '.delete-workorder-btn', function() {
+            const id = $(this).data('id');
+            Swal.fire({
+                title: 'Delete work order?',
+                text: 'This work order will be soft deleted.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, delete it'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    window.location.href = BASE_TEC + '/work-orders/delete/' + id;
+                }
+            });
+        });
+
         $('#addWorkOrderModal').on('hidden.bs.modal', function() {
             $('#workOrderForm')[0].reset();
             $('#workorder-id').val('');
@@ -2163,6 +2335,196 @@
         });
 
     });
+</script>
+
+<script>
+/* ── Navigation intent from dashboard search ──────────────────────────
+   When the technician clicks an Inspection or Equipment result in the
+   dashboard search box, the click handler stores a JSON intent in
+   sessionStorage under 'siteNavIntent'.  We read it here (once) and
+   open the correct tab — and, for inspections, open the matching group.
+   Falls back to URL params for legacy / direct links.
+-------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function () {
+    var intentJson = sessionStorage.getItem('siteNavIntent');
+    var intent = null;
+    if (intentJson) {
+        sessionStorage.removeItem('siteNavIntent');
+        try { intent = JSON.parse(intentJson); } catch(e) {}
+    }
+    if (!intent) {
+        var params  = new URLSearchParams(window.location.search);
+        var openTab = (params.get('open_tab') || '').trim();
+        if (openTab) {
+            intent = {
+                open_tab:         openTab,
+                group_id:         params.get('group_id')         || '',
+                inspection_title: params.get('inspection_title') || 'Inspection',
+            };
+        }
+    }
+    if (!intent) return;
+
+    var openTab = (intent.open_tab || '').trim();
+    var equipTabBtn  = document.getElementById('equipment-tab');
+    var inspTabBtn   = document.getElementById('inspections-tab');
+    var woTabBtn     = document.getElementById('work-orders-tab');
+
+    if (openTab === 'equipment' && equipTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(equipTabBtn).show();
+    } else if (openTab === 'inspections' && inspTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(inspTabBtn).show();
+
+        var groupId   = intent.group_id         || '';
+        var inspTitle = intent.inspection_title || 'Inspection';
+        if (groupId) {
+            setTimeout(function () {
+                if (typeof window.viewInspection === 'function') {
+                    // Open immediately with placeholder, then fetch real DB data
+                    window.viewInspection(groupId, inspTitle || groupId, groupId, '—');
+
+                    // Fetch real title + technician from DB and patch the header
+                    var REPORT_DATA_URL = '<?= site_url('technician/inspections/reportData') ?>';
+                    fetch(REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId), {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (!data.success || !data.latest) return;
+                        var latest = data.latest;
+
+                        // Real title from DB
+                        var realTitle = (latest.title || latest.inspection_type || groupId).trim();
+                        var titleEl = document.getElementById('insp-title');
+                        if (titleEl) titleEl.textContent = realTitle;
+                        window._savedInspTitle = realTitle;
+
+                        // Real inspection # (always the group_id)
+                        var idLabel = document.getElementById('insp-id-label');
+                        if (idLabel) idLabel.textContent = groupId;
+
+                        // Real technician name
+                        var techEl = document.getElementById('insp-technician');
+                        if (techEl) techEl.textContent = latest.technician_name || '—';
+                    })
+                    .catch(function() { /* non-fatal */ });
+
+                } else if (typeof window.viewInspectionGroup === 'function') {
+                    window.viewInspectionGroup(groupId);
+                }
+            }, 500);
+        }
+    } else if (openTab === 'workorders' && woTabBtn) {
+        bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
+    }
+});
+
+    // ── AJAX tab refresh for Equipment and Work Orders tabs ─────────────────
+    var TECH_SITE_ID  = <?= (int)$site['id'] ?>;
+    var TECH_EQ_URL   = '<?= site_url('technician/sites/equipment-data/') ?>' + TECH_SITE_ID;
+    var TECH_WO_URL   = '<?= site_url('technician/sites/work-orders-data/') ?>' + TECH_SITE_ID;
+
+    function techEscHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\'\'/g,"&#39;");
+    }
+    function techReInitDT(sel) {
+        try {
+            if ($.fn.DataTable && $.fn.DataTable.isDataTable(sel)) $(sel).DataTable().destroy();
+            if ($.fn.DataTable) $(sel).DataTable({ pageLength: 25, responsive: true });
+        } catch(e){}
+    }
+
+    function techRefreshEquipmentTable() {
+        $.getJSON(TECH_EQ_URL, function(res) {
+            if (!res || !res.success) return;
+            var tbody = document.getElementById('techEquipmentTableBody');
+            if (!tbody) return;
+            var statusClsMap = {
+                'ready':'status-ready','need_attention':'status-need-attention',
+                'repair':'status-repair','out_of_service':''
+            };
+            var editBase   = '<?= site_url('technician/equipment/delete/') ?>';
+            var html = '';
+            res.data.forEach(function(eq) {
+                var sCls = statusClsMap[eq.status] !== undefined ? statusClsMap[eq.status] : 'status-pending';
+                var sStyle = eq.status === 'out_of_service' ? ' style="background:#fee2e2;color:#991b1b;"' : '';
+                html += '<tr>'
+                    + '<td>' + techEscHtml(eq.asset_tag) + '</td>'
+                    + '<td>' + techEscHtml(eq.make) + '</td>'
+                    + '<td>' + techEscHtml(eq.model) + '</td>'
+                    + '<td>' + techEscHtml(eq.serial_number) + '</td>'
+                    + '<td>' + techEscHtml(eq.device_type) + '</td>'
+                    + '<td>' + techEscHtml(eq.location) + '</td>'
+                    + '<td>' + techEscHtml(eq.department) + '</td>'
+                    + '<td><span class="status-badge ' + sCls + '"' + sStyle + '>' + techEscHtml(eq.status_label) + '</span></td>'
+                    + '<td class="text-center"><div class="action-btns">'
+                    +   '<button class="btn btn-sm btn-primary edit-equipment-btn"'
+                    +     ' data-id="' + eq.id + '" data-asset_tag="' + techEscHtml(eq.asset_tag) + '"'
+                    +     ' data-make="' + techEscHtml(eq.make) + '" data-model="' + techEscHtml(eq.model) + '"'
+                    +     ' data-serial_number="' + techEscHtml(eq.serial_number) + '" data-device_type="' + techEscHtml(eq.device_type) + '"'
+                    +     ' data-location="' + techEscHtml(eq.location) + '" data-department="' + techEscHtml(eq.department) + '"'
+                    +     ' data-status="' + techEscHtml(eq.status) + '"><i class="fa fa-edit"></i> Edit</button> '
+                    +   '<a href="' + editBase + eq.id + '" class="btn btn-sm btn-danger" onclick="techDeleteEquipConfirm(this)"><i class="fa fa-trash"></i> Delete</a>'
+                    + '</div></td></tr>';
+            });
+            tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No equipment found.</td></tr>';
+            techReInitDT('#equipment-datatable');
+        });
+    }
+
+    function techRefreshWorkOrdersTable() {
+        $.getJSON(TECH_WO_URL, function(res) {
+            if (!res || !res.success) return;
+            var tbody = document.getElementById('techWorkOrdersTableBody');
+            if (!tbody) return;
+            var sClsMap = {'completed':'status-completed','in_progress':'status-in-progress','cancelled':'status-need-attention'};
+            var html = '';
+            res.data.forEach(function(wo) {
+                var sCls = 'status-badge ' + (sClsMap[wo.status] || 'status-open');
+                var sLbl = wo.status.replace(/_/g,' ').replace(/\b\w/g,function(l){return l.toUpperCase();});
+                var sd = wo.start_date ? new Date(wo.start_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
+                var ed = wo.end_date   ? new Date(wo.end_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
+                html += '<tr>'
+                    + '<td>WO-' + wo.id + '</td>'
+                    + '<td>' + techEscHtml(wo.title) + '</td>'
+                    + '<td>' + techEscHtml(wo.asset_tag) + '</td>'
+                    + '<td><span class="' + sCls + '">' + techEscHtml(sLbl) + '</span></td>'
+                    + '<td>' + techEscHtml(wo.priority) + '</td>'
+                    + '<td>' + techEscHtml(wo.assigned_to_name) + '</td>'
+                    + '<td>' + sd + '</td>'
+                    + '<td>' + ed + '</td>'
+                    + '<td class="text-center"><div class="action-btns">'
+                    +   '<button class="btn btn-sm btn-info edit-workorder-btn"'
+                    +     ' data-id="' + wo.id + '" data-equipment_id="' + (wo.equipment_id||'') + '"'
+                    +     ' data-title="' + techEscHtml(wo.title) + '" data-description="' + techEscHtml(wo.description) + '"'
+                    +     ' data-status="' + techEscHtml(wo.status) + '" data-priority="' + techEscHtml(wo.priority) + '"'
+                    +     ' data-assigned_to="' + (wo.assigned_to||'') + '"'
+                    +     ' data-start_date="' + (wo.start_date||'') + '" data-end_date="' + (wo.end_date||'') + '">'
+                    +   '<i class="fa fa-edit"></i> Edit</button> '
+                    +   '<button type="button" class="btn btn-sm btn-danger delete-workorder-btn" data-id="' + wo.id + '"><i class="fa fa-trash"></i> Delete</button>'
+                    + '</div></td></tr>';
+            });
+            tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No work orders found.</td></tr>';
+            techReInitDT('#work-orders-datatable');
+        });
+    }
+
+    window.techDeleteEquipConfirm = function(btn) {
+        var href = btn.getAttribute('href') || '';
+        Swal.fire({
+            title: 'Delete Equipment?', text: 'This will remove the equipment from this site.',
+            icon: 'warning', showCancelButton: true,
+            confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Yes, delete'
+        }).then(function(r) { if (r.isConfirmed) window.location.href = href; });
+    };
+
+    // ── Bind tab click listeners ──────────────────────────────────────────────
+    var _techEquipBtn = document.getElementById('equipment-tab');
+    if (_techEquipBtn) _techEquipBtn.addEventListener('shown.bs.tab', function() { techRefreshEquipmentTable(); });
+
+    var _techWOBtn = document.getElementById('work-orders-tab');
+    if (_techWOBtn) _techWOBtn.addEventListener('shown.bs.tab', function() { techRefreshWorkOrdersTable(); });
+
 </script>
 
 <?= $this->endSection() ?>

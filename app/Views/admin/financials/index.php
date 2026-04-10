@@ -1,35 +1,39 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 <div class="d-flex justify-content-between align-items-center mb-4 topbar">
-    <h3 class="fw-bold mb-0">Financial Performance</h3>
-    <div class="text-muted small">Based on <?= esc($totalInspections) ?> inspections × $<?= esc($revenuePerInspection) ?>/inspection rate</div>
+    <h3 class="fw-bold mb-0">Operational Summary</h3>
+    <div class="text-muted small">Operational estimate only. This screen is not an invoice, accounting, or QuickBooks module.</div>
 </div>
 
 <div class="content">
+
+<div class="alert alert-warning border-0 shadow-sm mb-4" role="alert">
+    <strong>Scope note:</strong> This screen is limited to operational estimates based on inspections and work orders. It is intentionally not an invoice engine, labor code screen, rate card module, or QuickBooks integration.
+</div>
 
 <!-- KPI Summary Cards -->
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="glass-card p-3">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Est. Revenue</div>
-            <h2 class="fw-bold mb-0 text-success">$<?= number_format($totalRevenue) ?></h2>
+            <div class="text-muted small text-uppercase fw-bold mb-1">Estimated Service Value</div>
+            <h2 class="fw-bold mb-0 text-success">$<?= number_format($estimatedServiceValue) ?></h2>
             <div class="small text-muted mt-1"><?= esc($totalInspections) ?> inspections completed</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="glass-card p-3">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Est. Costs</div>
-            <h2 class="fw-bold mb-0 text-danger">$<?= number_format($totalCosts) ?></h2>
-            <div class="small text-muted mt-1"><?= esc($totalWorkOrders) ?> work orders @ $<?= esc($costPerWorkOrder) ?></div>
+            <div class="text-muted small text-uppercase fw-bold mb-1">Estimated Service Load</div>
+            <h2 class="fw-bold mb-0 text-danger">$<?= number_format($estimatedServiceLoad) ?></h2>
+            <div class="small text-muted mt-1"><?= esc($totalWorkOrders) ?> work orders used for service load estimation</div>
         </div>
     </div>
     <div class="col-md-3">
         <div class="glass-card p-3">
-            <div class="text-muted small text-uppercase fw-bold mb-1">Est. Profit</div>
-            <h2 class="fw-bold mb-0 <?= $totalProfit >= 0 ? 'text-success' : 'text-danger' ?>">
-                $<?= number_format(abs($totalProfit)) ?>
+            <div class="text-muted small text-uppercase fw-bold mb-1">Estimated Net Capacity</div>
+            <h2 class="fw-bold mb-0 <?= $estimatedNetCapacity >= 0 ? 'text-success' : 'text-danger' ?>">
+                $<?= number_format(abs($estimatedNetCapacity)) ?>
             </h2>
-            <div class="small text-muted mt-1">Margin: <?= esc($margin) ?>%</div>
+            <div class="small text-muted mt-1">Operational margin: <?= esc($operationalMargin) ?>%</div>
         </div>
     </div>
     <div class="col-md-3">
@@ -44,19 +48,19 @@
 </div>
 
 <div class="row g-4 mb-4">
-    <!-- Revenue vs Costs Chart -->
+    <!-- Service Value vs Service Load Chart -->
     <div class="col-lg-6">
         <div class="glass-card p-3">
-            <h5 class="fw-bold mb-3">Revenue vs Costs</h5>
+            <h5 class="fw-bold mb-3">Service Value vs Service Load</h5>
             <?php
-            $total = $totalRevenue + $totalCosts;
-            $revPct = $total > 0 ? round(($totalRevenue / $total) * 100) : 70;
+            $total = $estimatedServiceValue + $estimatedServiceLoad;
+            $revPct = $total > 0 ? round(($estimatedServiceValue / $total) * 100) : 70;
             $costPct = 100 - $revPct;
             ?>
             <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="small text-muted">Revenue</span>
-                    <span class="small fw-bold text-success">$<?= number_format($totalRevenue) ?></span>
+                    <span class="small text-muted">Service Value</span>
+                    <span class="small fw-bold text-success">$<?= number_format($estimatedServiceValue) ?></span>
                 </div>
                 <div class="progress" style="height:20px;border-radius:10px;">
                     <div class="progress-bar bg-success" style="width:<?= $revPct ?>%;border-radius:10px 0 0 10px;">
@@ -66,8 +70,8 @@
             </div>
             <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                    <span class="small text-muted">Costs</span>
-                    <span class="small fw-bold text-danger">$<?= number_format($totalCosts) ?></span>
+                    <span class="small text-muted">Service Load</span>
+                    <span class="small fw-bold text-danger">$<?= number_format($estimatedServiceLoad) ?></span>
                 </div>
                 <div class="progress" style="height:20px;border-radius:10px;">
                     <div class="progress-bar bg-danger" style="width:<?= $costPct ?>%;border-radius:10px 0 0 10px;">
@@ -77,9 +81,9 @@
             </div>
             <div class="pt-3 border-top mt-3">
                 <div class="d-flex justify-content-between">
-                    <span class="small text-muted">Net Profit</span>
-                    <span class="fw-bold <?= $totalProfit >= 0 ? 'text-success' : 'text-danger' ?>">
-                        $<?= number_format(abs($totalProfit)) ?> (<?= $margin ?>% margin)
+                    <span class="small text-muted">Estimated Net Capacity</span>
+                    <span class="fw-bold <?= $estimatedNetCapacity >= 0 ? 'text-success' : 'text-danger' ?>">
+                        $<?= number_format(abs($estimatedNetCapacity)) ?> (<?= $operationalMargin ?>% margin)
                     </span>
                 </div>
             </div>
@@ -104,7 +108,7 @@
 
 <!-- Per-Customer Profitability Table -->
 <div class="glass-card p-3">
-    <h5 class="fw-bold mb-3">Profitability by Customer</h5>
+    <h5 class="fw-bold mb-3">Operational Mix by Customer</h5>
     <div class="table-responsive">
         <table class="table service-table align-middle" id="finTable" style="width:100%">
             <thead>
@@ -114,16 +118,16 @@
                     <th class="text-center">Equipment</th>
                     <th class="text-center">Inspections</th>
                     <th class="text-center">Work Orders</th>
-                    <th class="text-end">Est. Revenue</th>
-                    <th class="text-end">Est. Costs</th>
-                    <th class="text-end">Margin</th>
+                    <th class="text-end">Estimated Service Value</th>
+                    <th class="text-end">Estimated Service Load</th>
+                    <th class="text-end">Operational Margin</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (!empty($customerStats)): ?>
                     <?php foreach ($customerStats as $cs):
-                        $rev  = $cs['inspection_count'] * $revenuePerInspection;
-                        $cost = $cs['wo_count'] * $costPerWorkOrder;
+                        $rev  = $cs['inspection_count'] * $serviceValuePerInspection;
+                        $cost = $cs['wo_count'] * $serviceLoadPerWorkOrder;
                         $prof = $rev - $cost;
                         $mgn  = $rev > 0 ? round(($prof / $rev) * 100) : 0;
                     ?>
@@ -149,7 +153,7 @@
         </table>
     </div>
     <div class="text-muted small mt-2 fst-italic">
-        * Revenue estimated at $<?= esc($revenuePerInspection) ?>/inspection, Costs at $<?= esc($costPerWorkOrder) ?>/work order.
+        * Operational estimate only. Values are derived from internal dashboard assumptions and are not invoice totals or accounting exports.
     </div>
 </div>
 

@@ -5,8 +5,10 @@ namespace App\Controllers\Technician;
 use App\Controllers\BaseController;
 use App\Models\InspectionModel;
 use App\Models\EquipmentModel;
+use App\Models\SiteEquipmentModel;
 use App\Models\SiteModel;
 use App\Models\TechnicianModel;
+use App\Libraries\OperationalWorkOrderService;
 use Dompdf\Dompdf;
 
 class InspectionController extends BaseController
@@ -68,8 +70,8 @@ class InspectionController extends BaseController
         $assetTag  = trim((string) $this->request->getGet('asset_tag'));
         $siteId    = (int) $this->request->getGet('site_id');
         if ($assetTag === '' || $siteId === 0) return $this->response->setJSON(['found' => false]);
-        $equipmentModel = new EquipmentModel();
-        $eq = $equipmentModel->where('company_id', $companyId)->where('site_id', $siteId)->where('asset_tag', $assetTag)->first();
+        $equipmentModel = new SiteEquipmentModel();
+        $eq = $equipmentModel->findByAssetTag($companyId, $siteId, $assetTag);
         if (!$eq) return $this->response->setJSON(['found' => false]);
         return $this->response->setJSON([
             'found' => true,
@@ -113,8 +115,8 @@ class InspectionController extends BaseController
         $companyId = (int) session('company_id');
         $siteId    = (int) $this->request->getGet('site_id');
         if ($siteId === 0) return $this->response->setJSON(['success' => false, 'equipment' => []]);
-        $equipmentModel = new EquipmentModel();
-        $equipment = $equipmentModel->where('company_id', $companyId)->where('site_id', $siteId)->findAll();
+        $equipmentModel = new SiteEquipmentModel();
+        $equipment = $equipmentModel->forSite($companyId, $siteId);
         return $this->response->setJSON(['success' => true, 'equipment' => $equipment]);
     }
 
@@ -127,7 +129,7 @@ class InspectionController extends BaseController
         $builder = $db->table('inspections i');
         $builder->select('i.*, e.make, e.model, e.serial_number, e.device_type,
                           e.asset_tag, e.department, e.location, u.full_name as technician_name');
-        $builder->join('equipment e',   'e.id = i.equipment_id',  'left');
+        $builder->join('site_equipment e', 'e.id = i.equipment_id', 'left');
         $builder->join('technicians t', 't.id = i.technician_id', 'left');
         $builder->join('users u',       'u.id = t.user_id',       'left');
         $builder->where('i.company_id', $companyId)->where('i.group_id', $groupId)->orderBy('i.created_at', 'ASC');
@@ -142,7 +144,7 @@ class InspectionController extends BaseController
         $db = \Config\Database::connect();
         $builder = $db->table('work_orders wo');
         $builder->select('wo.*, e.asset_tag, e.serial_number, u.full_name as assigned_to_name');
-        $builder->join('equipment e', 'e.id = wo.equipment_id', 'left');
+        $builder->join('site_equipment e', 'e.id = wo.equipment_id', 'left');
         $builder->join('technicians t', 't.id = wo.assigned_to', 'left');
         $builder->join('users u', 'u.id = t.user_id', 'left');
         $builder->where('wo.company_id', $companyId);
@@ -291,6 +293,19 @@ class InspectionController extends BaseController
         $statusMap = ['Pass' => 'Ready', 'Fail' => 'Needs Attention', 'Repair' => 'Repair'];
         if (isset($statusMap[$result])) $equipmentModel->update($equipmentId, ['status' => $statusMap[$result]]);
 
+        (new OperationalWorkOrderService())->syncFollowUpFromInspection([
+            'company_id'      => $companyId,
+            'site_id'         => $siteId,
+            'equipment_id'    => $equipmentId,
+            'group_id'        => $groupId,
+            'status'          => $result,
+            'inspection_type' => $action,
+            'notes'           => $notes,
+            'asset_tag'       => $assetTag,
+            'technician_id'   => $technicianId,
+            'created_by'      => $userId > 0 ? $userId : null,
+        ]);
+
         return $this->response->setJSON([
             'success' => true,
             'message' => 'Inspection recorded successfully',
@@ -369,17 +384,25 @@ class InspectionController extends BaseController
         $rows   = $inspectionModel->getReportRowsByGroup($companyId, $groupId);
         $latest = !empty($rows) ? $rows[0] : null;
 
-        // previewMode = true → inner content only (no <html>/<body> wrapper)
-        $html = $this->buildReportHtml($latest, $rows ?? [], $groupId, true);
-
-        return $this->response->setJSON([
-            'success'  => true,
-            'group_id' => $groupId,
-            'html'     => $html,
+        // Use the same shared view as admin — supports ?inline=1 for dark theme
+        $html = view('admin/inspections/report_pdf', [
+            'latest'  => $latest,
+            'rows'    => $rows,
+            'groupId' => $groupId,
         ]);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/html; charset=utf-8')
+            ->setBody($html);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // ── Public proxy so other controllers (Customer) can render reports ──────
+    public function buildReportHtmlPublic(?array $latest, array $rows, string $groupId): string
+    {
+        return $this->buildReportHtml($latest, $rows, $groupId, false);
+    }
+
     // buildReportHtml — admin-matching "Needs Attention / Passed" layout
     // previewMode = true  → inner content only (injected into modal)
     // previewMode = false → full standalone page (for PDF / print)
@@ -547,7 +570,17 @@ class InspectionController extends BaseController
             SELECT
                 i.id,
                 i.group_id,
-                i.status           AS result,
+                -- Group-level status: 'open' if ANY device in the group has no pass/fail/repair result,
+                -- otherwise use the representative row's status for display in Closed view.
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1 FROM inspections sub
+                        WHERE sub.group_id = i.group_id
+                          AND sub.company_id = i.company_id
+                          AND (sub.status IS NULL OR sub.status = '' OR sub.status NOT IN ('Pass','Fail','Repair','pass','fail','repair','completed'))
+                    ) THEN 'In Progress'
+                    ELSE i.status
+                END                AS result,
                 i.notes,
                 i.inspection_type  AS action_performed,
                 i.completed_at     AS inspection_date,
@@ -555,18 +588,18 @@ class InspectionController extends BaseController
                 i.est,
                 i.cal,
                 i.pm_frequency,
-                e.asset_tag,
-                e.make,
-                e.model,
-                e.device_type,
-                e.serial_number,
-                e.department,
-                e.location         AS room,
+                COALESCE(e.asset_tag, i.asset_tag) AS asset_tag,
+                COALESCE(e.make, i.make)            AS make,
+                COALESCE(e.model, i.model)          AS model,
+                COALESCE(e.device_type, i.device_type) AS device_type,
+                COALESCE(e.serial_number, i.serial_number) AS serial_number,
+                COALESCE(e.department, i.department) AS department,
+                COALESCE(e.location, i.location)    AS room,
                 s.name             AS site_name,
                 c.name             AS customer_name,
                 u.full_name        AS technician_name
             FROM inspections i
-            LEFT JOIN equipment e  ON e.id = i.equipment_id
+            LEFT JOIN site_equipment e ON e.id = i.equipment_id
             LEFT JOIN sites s      ON s.id = i.site_id
             LEFT JOIN customers c  ON c.id = s.customer_id
             LEFT JOIN technicians t ON t.id = i.technician_id
