@@ -10,16 +10,17 @@ class CustomerModel extends Model
     protected $primaryKey = 'id';
     protected $allowedFields = [
         'company_id', 'name', 'billing_address', 'billing_city', 'billing_state',
-        'billing_zip', 'contact_name', 'email', 'phone', 'fax', 'website', 
-        'logo_path', 'created_by', 'created_at', 'updated_at', 'deleted_at',
+        'billing_zip', 'contact_name', 'email', 'phone', 'fax', 'website',
+        'logo_path', 'internal_labor_rate_notes',   // ← ADDED
+        'created_by', 'created_at', 'updated_at', 'deleted_at',
     ];
-    protected $useTimestamps = true;
+    protected $useTimestamps  = true;
     protected $useSoftDeletes = true;
-    protected $returnType = 'array'; // Important: return as array
-    protected $dateFormat = 'datetime';
-    protected $createdField  = 'created_at';
-    protected $updatedField  = 'updated_at';
-    protected $deletedField  = 'deleted_at';
+    protected $returnType     = 'array';
+    protected $dateFormat     = 'datetime';
+    protected $createdField   = 'created_at';
+    protected $updatedField   = 'updated_at';
+    protected $deletedField   = 'deleted_at';
 
     // Save or update customer credentials
     public function saveCredentials($customerId, $credentials)
@@ -27,24 +28,22 @@ class CustomerModel extends Model
         foreach ($credentials as $cred) {
             $this->db->table('credentials')->insert([
                 'customer_id' => $customerId,
-                'username' => $cred['username'],
-                'email' => $cred['email'],
-                'password' => password_hash($cred['password'], PASSWORD_DEFAULT),
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s'),
+                'username'    => $cred['username'],
+                'email'       => $cred['email'],
+                'password'    => password_hash($cred['password'], PASSWORD_DEFAULT),
+                'created_at'  => date('Y-m-d H:i:s'),
+                'updated_at'  => date('Y-m-d H:i:s'),
             ]);
         }
     }
 
-    // Get all credentials for a customer - returns array of arrays
+    // Get all credentials for a customer
     public function getCredentialsByCustomerId($customerId)
     {
-        $result = $this->db->table('credentials')
+        return $this->db->table('credentials')
             ->where('customer_id', $customerId)
             ->get()
-            ->getResultArray(); // Important: getResultArray() instead of getResult()
-        
-        return $result;
+            ->getResultArray();
     }
 
     // Delete existing credentials for a customer

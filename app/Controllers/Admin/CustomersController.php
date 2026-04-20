@@ -228,7 +228,12 @@ class CustomersController extends BaseController
             }
         }
 
-        return redirect()->to('admin/customers')->with('success', 'Customer created successfully');
+        // Redirect to Sites page with new customer pre-selected:
+        // 1. Set customer filter so Sites table is filtered to this customer
+        // 2. Set flashdata so Add Site modal opens automatically with customer pre-selected
+        session()->set('admin_site_customer_filter', (int) $customerId);
+        session()->setFlashdata('auto_open_site_modal_customer', (int) $customerId);
+        return redirect()->to('admin/sites')->with('success', 'Customer created successfully. Add a site for this customer below.');
     }
 
     // Function to save the password reset token in the credentials table
@@ -429,6 +434,8 @@ class CustomersController extends BaseController
             'billing_zip'     => $this->request->getPost('billing_zip'),
             'fax'             => $this->request->getPost('fax'),
             'website'         => $this->request->getPost('website'),
+            'internal_labor_rate_notes'  => $this->request->getPost('internal_labor_rate_notes') ?: null, // ← ADDED
+
             'logo_path'       => $logoPath,
         ];
 

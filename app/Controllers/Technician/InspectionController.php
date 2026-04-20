@@ -34,27 +34,36 @@ class InspectionController extends BaseController
         // Summary stats (scoped to this technician)
         $techFilter = $technicianId ? " AND i.technician_id = $technicianId" : '';
 
-        $totalInspections = (int)($db->query(
-            "SELECT COUNT(DISTINCT i.group_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
-            [$companyId]
-        )->getRow()->cnt ?? 0);
+        // Parameterised queries scoped to technician only (never fall back to company-wide)
+        if ($technicianId) {
+            $totalInspections = (int)($db->query(
+                'SELECT COUNT(DISTINCT i.group_id) AS cnt FROM inspections i WHERE i.company_id = ? AND i.technician_id = ?',
+                [$companyId, $technicianId]
+            )->getRow()->cnt ?? 0);
 
-        $sitesCount = (int)($db->query(
-            "SELECT COUNT(DISTINCT i.site_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
-            [$companyId]
-        )->getRow()->cnt ?? 0);
+            $sitesCount = (int)($db->query(
+                'SELECT COUNT(DISTINCT i.site_id) AS cnt FROM inspections i WHERE i.company_id = ? AND i.technician_id = ?',
+                [$companyId, $technicianId]
+            )->getRow()->cnt ?? 0);
 
-        $customersCount = (int)($db->query(
-            "SELECT COUNT(DISTINCT s.customer_id) AS cnt FROM inspections i
-             LEFT JOIN sites s ON s.id = i.site_id
-             WHERE i.company_id = ?" . $techFilter,
-            [$companyId]
-        )->getRow()->cnt ?? 0);
+            $customersCount = (int)($db->query(
+                'SELECT COUNT(DISTINCT s.customer_id) AS cnt FROM inspections i
+                 LEFT JOIN sites s ON s.id = i.site_id
+                 WHERE i.company_id = ? AND i.technician_id = ?',
+                [$companyId, $technicianId]
+            )->getRow()->cnt ?? 0);
 
-        $equipmentCount = (int)($db->query(
-            "SELECT COUNT(DISTINCT i.equipment_id) AS cnt FROM inspections i WHERE i.company_id = ?" . $techFilter,
-            [$companyId]
-        )->getRow()->cnt ?? 0);
+            $equipmentCount = (int)($db->query(
+                'SELECT COUNT(DISTINCT i.equipment_id) AS cnt FROM inspections i WHERE i.company_id = ? AND i.technician_id = ?',
+                [$companyId, $technicianId]
+            )->getRow()->cnt ?? 0);
+        } else {
+            // Technician record not found: return 0 to avoid showing company-wide figures
+            $totalInspections = 0;
+            $sitesCount       = 0;
+            $customersCount   = 0;
+            $equipmentCount   = 0;
+        }
 
         return view('technician/inspection/index', [
             'inspectionsCount' => $totalInspections,
@@ -570,6 +579,7 @@ class InspectionController extends BaseController
             SELECT
                 i.id,
                 i.group_id,
+                i.site_id,
                 -- Group-level status: 'open' if ANY device in the group has no pass/fail/repair result,
                 -- otherwise use the representative row's status for display in Closed view.
                 CASE

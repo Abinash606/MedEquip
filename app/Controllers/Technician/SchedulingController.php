@@ -33,17 +33,48 @@ class SchedulingController extends BaseController
         ", [$companyId, $techId])->getResultArray() : [];
 
         // Inspections assigned to this technician (one row per group)
+        // Pass / Fail / Repair remain visible as their own statuses until the
+        // inspection is actually marked Closed/Complete.
         $inspections = $techId ? $db->query("
-            SELECT i.group_id, i.inspection_type, i.status,
-                   i.scheduled_at, i.completed_at, i.next_due_date,
-                   s.id AS site_id, s.name AS site_name, c.name AS customer_name,
-                   COUNT(i.id) AS device_count
+            SELECT
+                i.group_id,
+                COALESCE(MAX(NULLIF(i.inspection_type, '')), 'Inspection') AS inspection_type,
+                MAX(CASE
+                    WHEN LOWER(TRIM(COALESCE(i.status, ''))) IN ('closed/complete','closed_complete','closed','complete','completed')
+                    THEN 1 ELSE 0 END) AS is_completed,
+                CASE
+                    WHEN MAX(CASE
+                        WHEN LOWER(TRIM(COALESCE(i.status, ''))) IN ('closed/complete','closed_complete','closed','complete','completed')
+                        THEN 1 ELSE 0 END) = 1
+                    THEN 'Closed/Complete'
+                    WHEN MAX(CASE
+                        WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'repair'
+                          OR LOWER(TRIM(COALESCE(i.status, ''))) = 'repair'
+                        THEN 1 ELSE 0 END) = 1
+                    THEN 'Repair'
+                    WHEN MAX(CASE
+                        WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'fail'
+                          OR LOWER(TRIM(COALESCE(i.status, ''))) = 'fail'
+                        THEN 1 ELSE 0 END) = 1
+                    THEN 'Fail'
+                    WHEN MAX(CASE
+                        WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'pass'
+                          OR LOWER(TRIM(COALESCE(i.status, ''))) = 'pass'
+                        THEN 1 ELSE 0 END) = 1
+                    THEN 'Pass'
+                    ELSE 'In Progress'
+                END AS status,
+                MIN(i.scheduled_at) AS scheduled_at,
+                MAX(i.completed_at) AS completed_at,
+                MAX(i.next_due_date) AS next_due_date,
+                s.id AS site_id, MAX(s.name) AS site_name, MAX(c.name) AS customer_name,
+                COUNT(i.id) AS device_count
             FROM inspections i
             LEFT JOIN sites s     ON s.id = i.site_id
             LEFT JOIN customers c ON c.id = s.customer_id
-            WHERE i.company_id = ? AND i.technician_id = ? AND i.group_id IS NOT NULL
-            GROUP BY i.group_id
-            ORDER BY COALESCE(i.scheduled_at, i.created_at) DESC
+            WHERE i.company_id = ? AND i.technician_id = ? AND i.group_id IS NOT NULL AND i.deleted_at IS NULL
+            GROUP BY i.group_id, s.id
+            ORDER BY COALESCE(MIN(i.scheduled_at), MAX(i.created_at)) DESC
             LIMIT 60
         ", [$companyId, $techId])->getResultArray() : [];
 
@@ -73,13 +104,20 @@ class SchedulingController extends BaseController
         $events = [];
 
         if ($techId) {
+            $showCompleted = $this->request->getGet('show_completed') === '1';
             // Work orders — RED
-            $wos = $db->query("
-                SELECT wo.id, wo.title, wo.status, wo.priority, wo.start_date, wo.end_date, s.name AS site_name
+            $woSql = "
+                SELECT wo.id, wo.title, wo.status, wo.priority, wo.start_date, wo.end_date, wo.created_at,
+                       s.name AS site_name, c.name AS customer_name
                 FROM work_orders wo
                 LEFT JOIN sites s ON s.id = wo.site_id
+                LEFT JOIN customers c ON c.id = s.customer_id
                 WHERE wo.company_id = ? AND wo.assigned_to = ? AND wo.deleted_at IS NULL
-            ", [$companyId, $techId])->getResultArray();
+            ";
+            if (!$showCompleted) {
+                $woSql .= " AND LOWER(TRIM(COALESCE(wo.status, ''))) NOT IN ('closed','completed','complete','done','resolved')";
+            }
+            $wos = $db->query($woSql, [$companyId, $techId])->getResultArray();
 
             foreach ($wos as $wo) {
                 $start = !empty($wo['start_date']) ? $wo['start_date'] : substr($wo['created_at'] ?? date('Y-m-d'), 0, 10);
@@ -89,38 +127,111 @@ class SchedulingController extends BaseController
                     'title' => ($wo['title'] ?? 'Work Order') . ($wo['site_name'] ? ' · ' . $wo['site_name'] : ''),
                     'start' => $start,
                     'end'   => $end,
-                    'color' => '#ef4444',
+                    'color' => '#3b82f6',
                     'extendedProps' => [
                         'event_type' => 'work_order',
                         'status'     => $wo['status'],
                         'priority'   => $wo['priority'],
                         'site_name'  => $wo['site_name'] ?? '—',
+                        'customer_name' => $wo['customer_name'] ?? '—',
                     ],
                 ];
             }
 
             // Inspections — GREEN
-            $insps = $db->query("
-                SELECT i.group_id, i.inspection_type, i.status, i.scheduled_at, s.name AS site_name
+            $inspSql = "
+                SELECT
+                    i.group_id,
+                    COALESCE(MAX(NULLIF(i.inspection_type, '')), 'Inspection') AS inspection_type,
+                    MAX(CASE
+                        WHEN LOWER(TRIM(COALESCE(i.status, ''))) IN ('closed/complete','closed_complete','closed','complete','completed')
+                        THEN 1 ELSE 0 END) AS is_completed,
+                    CASE
+                        WHEN MAX(CASE
+                            WHEN LOWER(TRIM(COALESCE(i.status, ''))) IN ('closed/complete','closed_complete','closed','complete','completed')
+                            THEN 1 ELSE 0 END) = 1
+                        THEN 'Closed/Complete'
+                        WHEN MAX(CASE
+                            WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'repair'
+                              OR LOWER(TRIM(COALESCE(i.status, ''))) = 'repair'
+                            THEN 1 ELSE 0 END) = 1
+                        THEN 'Repair'
+                        WHEN MAX(CASE
+                            WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'fail'
+                              OR LOWER(TRIM(COALESCE(i.status, ''))) = 'fail'
+                            THEN 1 ELSE 0 END) = 1
+                        THEN 'Fail'
+                        WHEN MAX(CASE
+                            WHEN LOWER(TRIM(COALESCE(i.result, ''))) = 'pass'
+                              OR LOWER(TRIM(COALESCE(i.status, ''))) = 'pass'
+                            THEN 1 ELSE 0 END) = 1
+                        THEN 'Pass'
+                        ELSE 'In Progress'
+                    END AS status,
+                    MIN(i.scheduled_at) AS scheduled_at,
+                    MAX(s.name) AS site_name,
+                    MAX(c.name) AS customer_name
                 FROM inspections i
                 LEFT JOIN sites s ON s.id = i.site_id
-                WHERE i.company_id = ? AND i.technician_id = ? AND i.group_id IS NOT NULL
+                LEFT JOIN customers c ON c.id = s.customer_id
+                WHERE i.company_id = ? AND i.technician_id = ? AND i.group_id IS NOT NULL AND i.deleted_at IS NULL
                 GROUP BY i.group_id
-            ", [$companyId, $techId])->getResultArray();
+            ";
+            if (!$showCompleted) {
+                $inspSql .= " HAVING is_completed = 0";
+            }
+            $insps = $db->query($inspSql, [$companyId, $techId])->getResultArray();
 
+            $today = date('Y-m-d');
             foreach ($insps as $insp) {
                 $start = !empty($insp['scheduled_at']) ? substr($insp['scheduled_at'], 0, 10) : date('Y-m-d');
+                $statusLow = strtolower($insp['status'] ?? '');
+                if (in_array($statusLow, ['closed/complete','closed','complete','completed'])) {
+                    $color = '#6b7280';
+                } elseif (in_array($statusLow, ['fail','repair'])) {
+                    $color = '#ef4444';
+                } elseif ($start < $today) {
+                    $color = '#f97316';
+                } else {
+                    $color = '#10b981';
+                }
                 $events[] = [
                     'id'    => 'insp-' . $insp['group_id'],
-                    'title' => ($insp['inspection_type'] ?? 'Inspection') . ($insp['site_name'] ? ' · ' . $insp['site_name'] : ''),
+                    'title' => ($insp['inspection_type'] ?? 'Inspection') . ($insp['site_name'] ? ' - ' . $insp['site_name'] : ''),
                     'start' => $start,
-                    'color' => '#10b981',
+                    'color' => $color,
+                    'editable' => false,
                     'extendedProps' => [
-                        'event_type' => 'inspection',
-                        'status'     => $insp['status'],
-                        'site_name'  => $insp['site_name'] ?? '—',
+                        'event_type'    => 'inspection',
+                        'group_id'      => $insp['group_id'],
+                        'status'        => $insp['status'],
+                        'site_name'     => $insp['site_name'] ?? '',
+                        'customer_name' => $insp['customer_name'] ?? '',
+                        'next_due_date' => $insp['next_due_date'] ?? '',
                     ],
                 ];
+                // Next-due-date purple event showing customer name
+                if (!empty($insp['next_due_date']) && $insp['next_due_date'] > $today) {
+                    $dueLabel = ($insp['customer_name'] ?? 'Customer') . ' - Next Due';
+                    if (!empty($insp['site_name'])) $dueLabel .= ' (' . $insp['site_name'] . ')';
+                    $daysUntilDue = (int)((strtotime($insp['next_due_date']) - time()) / 86400);
+                    $dueColor = $daysUntilDue <= 30 ? '#f97316' : '#8b5cf6';
+                    $events[] = [
+                        'id'    => 'due-' . $insp['group_id'],
+                        'title' => $dueLabel,
+                        'start' => substr($insp['next_due_date'], 0, 10),
+                        'color' => $dueColor,
+                        'editable' => false,
+                        'extendedProps' => [
+                            'event_type'    => 'next_due',
+                            'group_id'      => $insp['group_id'],
+                            'status'        => 'Scheduled',
+                            'site_name'     => $insp['site_name'] ?? '',
+                            'customer_name' => $insp['customer_name'] ?? '',
+                            'days_until_due' => $daysUntilDue,
+                        ],
+                    ];
+                }
             }
         }
 

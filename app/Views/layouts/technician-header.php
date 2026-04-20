@@ -1,10 +1,25 @@
+<?php
+$uriSegments = service('uri')->getSegments();
+$skipSegments = ['admin', 'technician', 'customer'];
+$pageTitle = trim((string) ($title ?? ''));
+
+if ($pageTitle === '') {
+    $usableSegments = array_values(array_filter($uriSegments, static function ($segment) use ($skipSegments) {
+        $segment = trim((string) $segment);
+        return $segment !== '' && !in_array(strtolower($segment), $skipSegments, true) && !ctype_digit($segment);
+    }));
+
+    $derived = end($usableSegments) ?: 'Dashboard';
+    $pageTitle = ucwords(str_replace(['-', '_'], ' ', (string) $derived));
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AssetIQ | Technician Portal</title>
+    <title><?= esc($pageTitle) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link
@@ -299,10 +314,15 @@
             color: #EF4444 !important;
             border-color: #EF4444 !important;
         }
-
+        .btn-outline-danger:hover{
+            color:#fff!important;
+        }
         .btn-outline-warning {
             color: #F59E0B !important;
             border-color: #F59E0B !important;
+        }
+        .btn-outline-warning:hover{
+            color:#fff!important;
         }
 
         /* Badges */
@@ -593,9 +613,26 @@
                 href="<?= site_url('technician/customers') ?>">
                 <i class="fa-solid fa-users"></i><span>Customers</span>
             </a>
+            <?php
+            $__tdb  = \Config\Database::connect();
+            $__tcid = (int) session('company_id');
+            $__tsites = (int) $__tdb->query('SELECT COUNT(*) AS n FROM sites WHERE company_id=? AND deleted_at IS NULL', [$__tcid])->getRow()->n;
+            // Scope WO count to this technician so it matches the dashboard 'Open Requests' card
+            $__techRowH = $__tdb->query('SELECT id FROM technicians WHERE user_id=? AND company_id=? AND deleted_at IS NULL LIMIT 1', [(int)session('user_id'), $__tcid])->getRow();
+            $__techIdH  = $__techRowH ? (int)$__techRowH->id : 0;
+            if ($__techIdH) {
+                $__two = (int) $__tdb->query("SELECT COUNT(*) AS n FROM work_orders WHERE company_id=? AND assigned_to=? AND deleted_at IS NULL AND status NOT IN ('closed','completed')", [$__tcid, $__techIdH])->getRow()->n;
+            } else {
+                $__two = (int) $__tdb->query("SELECT COUNT(*) AS n FROM work_orders WHERE company_id=? AND deleted_at IS NULL AND status NOT IN ('closed','completed')", [$__tcid])->getRow()->n;
+            }
+            ?>
             <a class="nav-link<?= url_is('technician/sites*') ? ' active' : '' ?>"
                 href="<?= site_url('technician/sites') ?>">
-                <i class="fa-solid fa-sitemap"></i><span>Sites</span>
+                <i class="fa-solid fa-sitemap"></i><span>Sites <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__tsites ?></span></span>
+            </a>
+            <a class="nav-link<?= url_is('technician/work-orders*') ? ' active' : '' ?>"
+                href="<?= site_url('technician/work-orders') ?>">
+                <i class="fa-solid fa-wrench"></i><span>Work Orders <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__two ?></span></span>
             </a>
             <a class="nav-link<?= url_is('technician/inspections*') ? ' active' : '' ?>"
                 href="<?= site_url('technician/inspections') ?>">

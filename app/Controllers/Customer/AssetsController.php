@@ -11,9 +11,9 @@ class AssetsController extends BaseController
     public function index()
     {
         $siteModel  = new SiteModel();
-        $equipModel = new EquipmentModel();
         $companyId  = $this->session->get('company_id');
         $customerId = $this->session->get('customer_id');
+        $db         = \Config\Database::connect();
 
         // Filter sites by the logged-in customer's ID
         $siteQuery = $siteModel->where('company_id', $companyId)->where('deleted_at', null);
@@ -23,13 +23,24 @@ class AssetsController extends BaseController
         $sites   = $siteQuery->findAll();
         $siteIds = array_column($sites, 'id');
 
+        // FIX: query site_equipment (actual per-site assets) not equipment (master catalog)
+        // The equipment table holds master catalog records (company-wide, 942 rows).
+        // site_equipment holds the real assets assigned to specific sites (288 rows).
         $equipment = [];
         if (!empty($siteIds)) {
-            $equipment = $equipModel
-                ->whereIn('site_id', $siteIds)
-                ->where('deleted_at', null)
-                ->orderBy('created_at', 'DESC')
-                ->findAll();
+            $placeholders = implode(',', array_fill(0, count($siteIds), '?'));
+            $params = array_merge([$companyId], $siteIds);
+            $equipment = $db->query(
+                "SELECT se.id, se.site_id, se.asset_tag, se.make, se.model,
+                        se.serial_number, se.device_type, se.department, se.location,
+                        se.status, se.est, se.cal, se.created_at
+                 FROM site_equipment se
+                 WHERE se.company_id = ?
+                   AND se.site_id IN ($placeholders)
+                   AND se.deleted_at IS NULL
+                 ORDER BY se.created_at DESC",
+                $params
+            )->getResultArray();
         }
 
         $data['sites']     = $sites;
@@ -217,42 +228,69 @@ class AssetsController extends BaseController
             if ($site) $siteId = (int)$site->id;
         }
 
-        // Get customer email from customers table
+        // Get admin email (primary recipient) and customer email (confirmation)
+        $adminEmail    = null;
         $customerEmail = null;
+
+        // Admin: super-admin user for this company
+        $admin = $db->query(
+            'SELECT email FROM users WHERE company_id = ? AND role_id = 1 AND deleted_at IS NULL ORDER BY id ASC LIMIT 1',
+            [$companyId]
+        )->getRow();
+        if ($admin && !empty($admin->email)) $adminEmail = $admin->email;
+
+        // Customer confirmation email
         if ($customerId) {
-            $cust = $db->query("SELECT email FROM customers WHERE id = ? LIMIT 1", [$customerId])->getRow();
-            if ($cust && !empty($cust->email)) $customerEmail = $cust->email;
-        }
-        // Fallback: admin user email
-        if (!$customerEmail) {
-            $admin = $db->query(
-                "SELECT email FROM users WHERE company_id = ? AND role_id = 1 AND deleted_at IS NULL ORDER BY id ASC LIMIT 1",
-                [$companyId]
-            )->getRow();
-            if ($admin && !empty($admin->email)) $customerEmail = $admin->email;
+            $cred = $db->query('SELECT email FROM credentials WHERE customer_id = ? LIMIT 1', [$customerId])->getRow();
+            if ($cred && !empty($cred->email)) $customerEmail = $cred->email;
+            if (!$customerEmail) {
+                $custRec = $db->query('SELECT email FROM customers WHERE id = ? LIMIT 1', [$customerId])->getRow();
+                if ($custRec && !empty($custRec->email)) $customerEmail = $custRec->email;
+            }
         }
 
-        // Send email to customer email address
+        // Build shared email body
+        $subject = '[' . strtoupper($priority) . '] Equipment Issue Reported: ' . ($assetTag ?: 'Unknown Asset');
+        $td      = 'padding:8px;border:1px solid #e5e7eb;';
+        $th      = $td . 'font-weight:bold;background:#f9fafb;';
+        $body    = '<h2 style="color:#dc2626;">Equipment Issue Report</h2>';
+        $body   .= '<table style="border-collapse:collapse;width:100%;font-size:14px;">';
+        $body   .= '<tr><td style="' . $th . '">Reported By</td><td style="' . $td . '">' . htmlspecialchars($username) . '</td></tr>';
+        $body   .= '<tr><td style="' . $th . '">Priority</td><td style="' . $td . 'color:#dc2626;font-weight:bold;">' . htmlspecialchars(strtoupper($priority)) . '</td></tr>';
+        $body   .= '<tr><td style="' . $th . '">Asset Tag</td><td style="' . $td . '">' . htmlspecialchars($assetTag) . '</td></tr>';
+        $body   .= '<tr><td style="' . $th . '">Device Type</td><td style="' . $td . '">' . htmlspecialchars($deviceType) . '</td></tr>';
+        $body   .= '<tr><td style="' . $th . '">Make / Model</td><td style="' . $td . '">' . htmlspecialchars($make . ' ' . $model) . '</td></tr>';
+        $body   .= '<tr><td style="' . $th . '">Serial Number</td><td style="' . $td . '">' . htmlspecialchars($serialNumber) . '</td></tr>';
+        $body   .= '</table>';
+        $body   .= '<h3 style="margin-top:20px;">Issue Description</h3>';
+        $body   .= '<p style="background:#fef3c7;padding:12px;border-left:4px solid #f59e0b;">' . nl2br(htmlspecialchars($issueDescription)) . '</p>';
+        $body   .= '<p style="color:#6b7280;font-size:12px;margin-top:16px;">A work order has been automatically created in AssetIQ.</p>';
+
+        // Send notification to ADMIN
+        if ($adminEmail) {
+            try {
+                $em = \Config\Services::email();
+                $em->setTo($adminEmail);
+                $em->setSubject('[ACTION REQUIRED] ' . $subject);
+                $em->setMessage('<p style="background:#fee2e2;padding:12px;border:1px solid #dc2626;border-radius:6px;"><strong>A customer has reported an equipment issue. A new work order has been created and requires attention.</strong></p>' . $body);
+                $em->setMailType('html');
+                $em->send();
+            } catch (\Exception $e) {
+                log_message('error', 'Report Issue admin email failed: ' . $e->getMessage());
+            }
+        }
+
+        // Send confirmation to CUSTOMER
         if ($customerEmail) {
             try {
-                $email = \Config\Services::email();
-                $email->setTo($customerEmail);
-                $email->setSubject('[' . strtoupper($priority) . '] Equipment Issue Reported: ' . ($assetTag ?: 'Unknown'));
-                $body  = "<h3>Equipment Issue Report</h3>";
-                $body .= "<p><strong>Reported by:</strong> " . htmlspecialchars($username) . "</p>";
-                $body .= "<p><strong>Priority:</strong> " . htmlspecialchars(ucfirst($priority)) . "</p><hr>";
-                $body .= "<h4>Equipment Details</h4>";
-                $body .= "<p><strong>Asset Tag:</strong> " . htmlspecialchars($assetTag) . "</p>";
-                $body .= "<p><strong>Type:</strong> " . htmlspecialchars($deviceType) . "</p>";
-                $body .= "<p><strong>Make/Model:</strong> " . htmlspecialchars($make . ' ' . $model) . "</p>";
-                $body .= "<p><strong>S/N:</strong> " . htmlspecialchars($serialNumber) . "</p><hr>";
-                $body .= "<h4>Issue Description</h4>";
-                $body .= "<p>" . nl2br(htmlspecialchars($issueDescription)) . "</p>";
-                $email->setMessage($body);
-                $email->setMailType('html');
-                $email->send();
+                $em2 = \Config\Services::email();
+                $em2->setTo($customerEmail);
+                $em2->setSubject('Issue Report Received: ' . ($assetTag ?: 'Unknown Asset'));
+                $em2->setMessage('<p>Thank you for reporting this issue. Our team has been notified and a work order has been created. We will follow up shortly.</p>' . $body);
+                $em2->setMailType('html');
+                $em2->send();
             } catch (\Exception $e) {
-                log_message('error', 'Report Issue email failed: ' . $e->getMessage());
+                log_message('error', 'Report Issue customer email failed: ' . $e->getMessage());
             }
         }
 
@@ -274,7 +312,7 @@ class AssetsController extends BaseController
         }
 
         return redirect()->to('/customer/assets')
-            ->with('success', 'Issue reported.' . ($customerEmail ? ' Email notification sent to ' . $customerEmail . '.' : ''));
+            ->with('success', 'Your issue has been reported successfully. Our service team has been notified and a work order has been created. You will receive a confirmation email shortly.');
     }
 
 

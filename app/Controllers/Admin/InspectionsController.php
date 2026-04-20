@@ -725,4 +725,71 @@ class InspectionsController extends BaseController
         ]);
     }
 
+
+    /**
+     * POST admin/inspections/updateGroupStatus
+     * Saves the Closed/Complete or In Progress status for all rows in a group.
+     * The inspections.status column is auto-migrated from ENUM to VARCHAR if needed.
+     */
+    public function updateGroupStatus()
+    {
+        $companyId = (int) session('company_id');
+        $groupId   = trim((string) $this->request->getPost('group_id'));
+        $newStatus = trim((string) $this->request->getPost('status'));
+
+        if (!$groupId || !$newStatus) {
+            return $this->response->setJSON(['success' => false, 'message' => 'group_id and status required.']);
+        }
+
+        $allowed = ['In Progress', 'Closed/Complete'];
+        if (!in_array($newStatus, $allowed)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid status value.']);
+        }
+
+        $db = \Config\Database::connect();
+
+        // ── Auto-migrate: convert status ENUM to VARCHAR so it can hold
+        //    group-level values like 'Closed/Complete' and 'In Progress'.
+        //    Safe to run every time — SHOW COLUMNS is cheap.
+        try {
+            $col = $db->query("SHOW COLUMNS FROM inspections LIKE 'status'")->getRow();
+            if ($col && stripos($col->Type, 'enum') !== false) {
+                $db->query("ALTER TABLE inspections MODIFY COLUMN `status` VARCHAR(50) DEFAULT NULL");
+                log_message('info', '[updateGroupStatus] Migrated inspections.status ENUM -> VARCHAR(50)');
+            }
+        } catch (\Throwable $e) {
+            log_message('warning', '[updateGroupStatus] Schema check failed: ' . $e->getMessage());
+        }
+
+        // Verify the group exists
+        $exists = $db->query(
+            "SELECT id FROM inspections WHERE group_id = ? AND company_id = ? AND deleted_at IS NULL LIMIT 1",
+            [$groupId, $companyId]
+        )->getRow();
+
+        if (!$exists) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Inspection group not found.']);
+        }
+
+        // Update status and completed_at for all rows in this group
+        $completedAt = ($newStatus === 'Closed/Complete') ? date('Y-m-d') : null;
+
+        try {
+            $db->query(
+                "UPDATE inspections SET status = ?, completed_at = ?, updated_at = NOW()
+                  WHERE group_id = ? AND company_id = ? AND deleted_at IS NULL",
+                [$newStatus, $completedAt, $groupId, $companyId]
+            );
+        } catch (\Throwable $e) {
+            log_message('error', '[updateGroupStatus] Update failed: ' . $e->getMessage());
+            return $this->response->setJSON(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+        }
+
+        return $this->response->setJSON([
+            'success'  => true,
+            'group_id' => $groupId,
+            'status'   => $newStatus,
+        ]);
+    }
+
 }

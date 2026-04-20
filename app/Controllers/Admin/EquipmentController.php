@@ -21,25 +21,31 @@ class EquipmentController extends BaseController
     {
         $companyId = (int) session('company_id');
 
-        // Equipment list (with site name for "Customer Location")
-        $equipment = $this->equipmentModel
-            ->select('equipment.*, sites.name as site_name')
-            ->join('sites', 'sites.id = equipment.site_id', 'left')
-            ->where('equipment.company_id', $companyId)
-            ->where('equipment.deleted_at', null)
-            ->orderBy('equipment.id', 'DESC')
-            ->findAll();
-
-        // Sites dropdown for Customer Location
-        $sites = $this->siteModel
-            ->where('company_id', $companyId)
-            ->where('deleted_at', null)
-            ->orderBy('name', 'ASC')
-            ->findAll();
+        // Group by make + model + device_type — one visible row per model.
+        // all_ids and serial_numbers are pipe-separated so the view can render
+        // expandable sub-rows (one per series) each with its own Edit/Delete buttons.
+        $db = \Config\Database::connect();
+        $equipment = $db->query(
+            "SELECT
+                MIN(id)                          AS id,
+                COALESCE(make,'')                AS make,
+                COALESCE(model,'')               AS model,
+                COALESCE(device_type,'')         AS device_type,
+                GROUP_CONCAT(id              ORDER BY serial_number ASC SEPARATOR '|') AS all_ids,
+                GROUP_CONCAT(COALESCE(serial_number,'') ORDER BY serial_number ASC SEPARATOR '|') AS serial_numbers,
+                MIN(service_manual_path) AS service_manual_path,
+                MIN(pm_manual_path)      AS pm_manual_path,
+                MIN(photo_path)          AS photo_path,
+                company_id
+             FROM equipment
+             WHERE company_id = ? AND deleted_at IS NULL
+             GROUP BY make, model, device_type
+             ORDER BY make ASC, model ASC",
+            [$companyId]
+        )->getResultArray();
 
         return view('admin/equipment/index', [
             'equipment' => $equipment,
-            'sites'     => $sites,
         ]);
     }
 

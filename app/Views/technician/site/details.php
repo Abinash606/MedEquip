@@ -876,7 +876,7 @@
                                     <td><?= $wo['start_date'] ? date('M d, Y', strtotime($wo['start_date'])) : '—' ?></td>
                                     <td><?= $wo['end_date']   ? date('M d, Y', strtotime($wo['end_date']))   : '—' ?></td>
                                     <td class="text-center">
-                                        <div class="action-btns">
+                                        <div class="action-btns d-flex align-items-center gap-1 flex-wrap">
                                             <button class="btn btn-sm btn-primary edit-workorder-btn" data-id="<?= $wo['id'] ?>"
                                                 data-equipment_id="<?= $wo['equipment_id'] ?? '' ?>"
                                                 data-site_equipment_id="<?= $wo['site_equipment_id'] ?? '' ?>"
@@ -890,16 +890,31 @@
                                                 data-end_date="<?= $wo['end_date'] ?? '' ?>">
                                                 <i class="fa fa-edit"></i> Edit
                                             </button>
-                                            <button type="button"
-                                                class="btn btn-sm btn-danger delete-workorder-btn"
-                                                data-id="<?= $wo['id'] ?>">
-                                                <i class="fa fa-trash"></i> Delete
-                                            </button>
-
-                                            <!-- <a href="<?= site_url('technician/work-orders/delete/' . $wo['id']) ?>"
-                                                class="btn btn-sm btn-danger" onclick="return confirm('Delete this work order?')">
-                                                <i class="fa fa-trash"></i> Delete
-                                            </a> -->
+                                            <!-- Actions dropdown -->
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fa fa-ellipsis-v"></i> Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                    <li><h6 class="dropdown-header "><i class="fas fa-file-invoice me-1"></i> Documents</h6></li>
+                                                    <li>
+                                                        <a class="dropdown-item site-wo-invoice-btn" href="#" data-wo-id="<?= $wo['id'] ?>" data-wo-title="<?= esc($wo['title'], 'attr') ?>">
+                                                            <i class="fas fa-file-invoice-dollar me-2 text-primary"></i> Download Invoice
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="<?= site_url('technician/work-orders/' . $wo['id'] . '/packing-slip/download') ?>" target="_blank">
+                                                            <i class="fas fa-box me-2 text-success"></i> Download Packing Slip
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button type="button" class="dropdown-item text-danger delete-workorder-btn" data-id="<?= $wo['id'] ?>">
+                                                            <i class="fa fa-trash me-2"></i> Delete
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
 
                                     </td>
@@ -1428,6 +1443,7 @@
                             <select class="form-select" id="workorder-priority" name="priority" required>
                                 <option value="">-- Select Priority --</option>
                                 <option value="low">Low</option>
+                                <option value="normal">Normal</option>
                                 <option value="medium">Medium</option>
                                 <option value="high">High</option>
                                 <option value="critical">Critical</option>
@@ -1527,27 +1543,34 @@
             doc.content[1].layout = layout;
         }
         const dtBtns = (fn) => [{
-                extend: 'copy',
-                filename: fn
-            }, {
-                extend: 'csv',
-                filename: fn
-            }, {
-                extend: 'excel',
-                filename: fn
-            },
-            {
-                extend: 'pdfHtml5',
-                filename: fn + '_' + getTodayDate(),
-                title: fn,
-                orientation: 'landscape',
-                pageSize: 'LEGAL',
-                exportOptions: {
-                    columns: ':visible:not(:last-child)'
-                },
-                customize: pdfCustomize
+            extend: 'copy',
+            filename: fn,
+            exportOptions: {
+                columns: ':visible:not(:last-child)'
             }
-        ];
+        }, {
+            extend: 'csv',
+            filename: fn,
+            exportOptions: {
+                columns: ':visible:not(:last-child)'
+            }
+        }, {
+            extend: 'excel',
+            filename: fn,
+            exportOptions: {
+                columns: ':visible:not(:last-child)'
+            }
+        }, {
+            extend: 'pdfHtml5',
+            filename: fn + '_' + getTodayDate(),
+            title: fn,
+            orientation: 'landscape',
+            pageSize: 'LEGAL',
+            exportOptions: {
+                columns: ':visible:not(:last-child)'
+            },
+            customize: pdfCustomize
+        }];
 
         $('#equipment-datatable').DataTable({
             dom: 'Bfrtip',
@@ -1578,7 +1601,10 @@
                 method: 'GET',
                 dataType: 'json',
                 success: function(res) {
-                    if (res.status !== 'success') { alert('Failed to load equipment data.'); return; }
+                    if (res.status !== 'success') {
+                        alert('Failed to load equipment data.');
+                        return;
+                    }
                     const d = res.data;
                     // Populate all fields immediately — do NOT defer make/model/device_type
                     // into the dropdown AJAX callback which can race and blank them out.
@@ -1600,7 +1626,9 @@
                     // Load suggestion lists in background (does NOT overwrite set values)
                     loadTechEquipmentDropdownOptions(d.make || '', d.model || '', d.device_type || '');
                 },
-                error: function() { alert('Failed to load equipment data.'); }
+                error: function() {
+                    alert('Failed to load equipment data.');
+                }
             });
         });
 
@@ -1619,32 +1647,48 @@
                     techEquipLists['device-type'] = res.device_types || [];
                     // Only set values in Add mode (empty args = Add mode).
                     // In Edit mode, values were already set directly before this call.
-                    if (selMake)       { if (!$('#equipment-make').val())        $('#equipment-make').val(selMake); }
-                    if (selModel)      { if (!$('#equipment-model').val())       $('#equipment-model').val(selModel); }
-                    if (selDeviceType) { if (!$('#equipment-device-type').val()) $('#equipment-device-type').val(selDeviceType); }
+                    if (selMake) {
+                        if (!$('#equipment-make').val()) $('#equipment-make').val(selMake);
+                    }
+                    if (selModel) {
+                        if (!$('#equipment-model').val()) $('#equipment-model').val(selModel);
+                    }
+                    if (selDeviceType) {
+                        if (!$('#equipment-device-type').val()) $('#equipment-device-type').val(selDeviceType);
+                    }
                 }
             });
         }
 
         // Also load on page load for the Add form
-        var techEquipLists = { make: [], model: [], 'device-type': [] };
+        var techEquipLists = {
+            make: [],
+            model: [],
+            'device-type': []
+        };
         loadTechEquipmentDropdownOptions('', '', '');
 
         // Autocomplete suggestion logic for Make/Model/Device Type
         function showTechSuggestions($input, items) {
             var id = $input.attr('id');
-            var listId = id === 'equipment-make' ? 'make-list-dropdown'
-                       : id === 'equipment-model' ? 'model-list-dropdown'
-                       : 'device-type-list-dropdown';
+            var listId = id === 'equipment-make' ? 'make-list-dropdown' :
+                id === 'equipment-model' ? 'model-list-dropdown' :
+                'device-type-list-dropdown';
             var $list = $('#' + listId);
             var val = $input.val().toLowerCase().trim();
-            var filtered = val ? items.filter(function(i) { return i.toLowerCase().includes(val); }) : items;
-            if (!filtered.length) { $list.hide(); return; }
+            var filtered = val ? items.filter(function(i) {
+                return i.toLowerCase().includes(val);
+            }) : items;
+            if (!filtered.length) {
+                $list.hide();
+                return;
+            }
             $list.html(filtered.slice(0, 10).map(function(i) {
                 return '<li class="list-group-item list-group-item-action py-1 px-2" style="cursor:pointer;font-size:.9rem;">' + $('<span>').text(i).html() + '</li>';
             }).join('')).show();
             $list.off('click').on('click', 'li', function() {
-                $input.val($(this).text()); $list.hide();
+                $input.val($(this).text());
+                $list.hide();
             });
         }
 
@@ -1770,7 +1814,7 @@
         function resetWizard(keepLocation) {
             // Save dept/room before clearing so we can restore for next device
             var savedDept = $('#wiz-s3-department').val();
-            var savedLoc  = $('#wiz-s3-location').val();
+            var savedLoc = $('#wiz-s3-location').val();
             wizardAssetFound = false;
             wizardMatchedEquip = null;
             $('#wiz-serial-number,#wiz-search-model,#wiz-s2-manufacturer,#wiz-s2-model,#wiz-s2-description,#wiz-s2-serial')
@@ -1840,7 +1884,11 @@
         $('#wizStep1Next').on('click', function() {
             const serial = $.trim($('#wiz-serial-number').val());
             if (!serial) {
-                Swal.fire({ icon: 'warning', title: 'Required', text: 'Please enter a serial number.' });
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Required',
+                    text: 'Please enter a serial number.'
+                });
                 return;
             }
             $(this).prop('disabled', true).text('Searching…');
@@ -1873,7 +1921,11 @@
                 },
                 error: function() {
                     $('#wizStep1Next').prop('disabled', false).text('Next');
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Search failed. Please try again.' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Search failed. Please try again.'
+                    });
                 }
             });
         });
@@ -1974,15 +2026,33 @@
 
         $('#wizBtnPass').on('click', function() {
             addToQueue('Pass');
-            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Pass.', timer: 1500, showConfirmButton: false });
+            Swal.fire({
+                icon: 'success',
+                title: 'Added',
+                text: 'Added to queue as Pass.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         });
         $('#wizBtnFail').on('click', function() {
             addToQueue('Fail');
-            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Fail.', timer: 1500, showConfirmButton: false });
+            Swal.fire({
+                icon: 'success',
+                title: 'Added',
+                text: 'Added to queue as Fail.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         });
         $('#wizBtnRepair').on('click', function() {
             addToQueue('Repair');
-            Swal.fire({ icon: 'success', title: 'Added', text: 'Added to queue as Repair.', timer: 1500, showConfirmButton: false });
+            Swal.fire({
+                icon: 'success',
+                title: 'Added',
+                text: 'Added to queue as Repair.',
+                timer: 1500,
+                showConfirmButton: false
+            });
         });
         $('#wizBtnNextDevice').on('click', function() {
             resetWizard(true); // keepLocation=true: carry dept/room to next device
@@ -1991,7 +2061,11 @@
 
         $('#wizBtnComplete').on('click', function() {
             if (!inspectionQueue.length) {
-                Swal.fire({ icon: 'info', title: 'Queue Empty', text: 'No inspections in queue.' });
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Queue Empty',
+                    text: 'No inspections in queue.'
+                });
                 return;
             }
             $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin me-1"></i>Saving…');
@@ -2013,7 +2087,11 @@
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText);
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to save inspections. Please try again.' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to save inspections. Please try again.'
+                    });
                     $('#wizBtnComplete').prop('disabled', false).html(
                         '<i class="fa fa-check-double me-1"></i>Complete Inspections');
                 }
@@ -2032,7 +2110,11 @@
                 dataType: 'json',
                 success: function(res) {
                     if (!res.success) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'An error occurred.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message || 'An error occurred.'
+                        });
                         return;
                     }
                     const tbody = $('#inspection-details-body').empty();
@@ -2067,7 +2149,11 @@
                     $('#viewInspectionModal').modal('show');
                 },
                 error: function() {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to fetch inspection details.' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to fetch inspection details.'
+                    });
                 }
             });
         });
@@ -2086,7 +2172,11 @@
                 dataType: 'json',
                 success: function(res) {
                     if (!res.success) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load inspection.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Failed to load inspection.'
+                        });
                         return;
                     }
                     const d = res.data;
@@ -2120,7 +2210,11 @@
                     editGoToStep(1);
                 },
                 error: function() {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load inspection data.' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load inspection data.'
+                    });
                 }
             });
         });
@@ -2218,15 +2312,29 @@
                 },
                 success: function(res) {
                     if (res.success) {
-                        Swal.fire({ icon: 'success', title: 'Updated', text: 'Inspection updated successfully!', timer: 1800, showConfirmButton: false });
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: 'Inspection updated successfully!',
+                            timer: 1800,
+                            showConfirmButton: false
+                        });
                         $('#editInspectionWizardModal').modal('hide');
                         location.reload();
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Error', text: res.message || 'An error occurred.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message || 'An error occurred.'
+                        });
                     }
                 },
                 error: function() {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update inspection.' });
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to update inspection.'
+                    });
                 }
             });
         });
@@ -2338,100 +2446,140 @@
 </script>
 
 <script>
-/* ── Navigation intent from dashboard search ──────────────────────────
+    /* ── Navigation intent from dashboard search ──────────────────────────
    When the technician clicks an Inspection or Equipment result in the
    dashboard search box, the click handler stores a JSON intent in
    sessionStorage under 'siteNavIntent'.  We read it here (once) and
    open the correct tab — and, for inspections, open the matching group.
    Falls back to URL params for legacy / direct links.
 -------------------------------------------------------------------- */
-document.addEventListener('DOMContentLoaded', function () {
-    var intentJson = sessionStorage.getItem('siteNavIntent');
-    var intent = null;
-    if (intentJson) {
-        sessionStorage.removeItem('siteNavIntent');
-        try { intent = JSON.parse(intentJson); } catch(e) {}
-    }
-    if (!intent) {
-        var params  = new URLSearchParams(window.location.search);
-        var openTab = (params.get('open_tab') || '').trim();
-        if (openTab) {
-            intent = {
-                open_tab:         openTab,
-                group_id:         params.get('group_id')         || '',
-                inspection_title: params.get('inspection_title') || 'Inspection',
-            };
+    document.addEventListener('DOMContentLoaded', function() {
+        var intentJson = sessionStorage.getItem('siteNavIntent');
+        var intent = null;
+        if (intentJson) {
+            sessionStorage.removeItem('siteNavIntent');
+            try {
+                intent = JSON.parse(intentJson);
+            } catch (e) {}
         }
-    }
-    if (!intent) return;
-
-    var openTab = (intent.open_tab || '').trim();
-    var equipTabBtn  = document.getElementById('equipment-tab');
-    var inspTabBtn   = document.getElementById('inspections-tab');
-    var woTabBtn     = document.getElementById('work-orders-tab');
-
-    if (openTab === 'equipment' && equipTabBtn) {
-        bootstrap.Tab.getOrCreateInstance(equipTabBtn).show();
-    } else if (openTab === 'inspections' && inspTabBtn) {
-        bootstrap.Tab.getOrCreateInstance(inspTabBtn).show();
-
-        var groupId   = intent.group_id         || '';
-        var inspTitle = intent.inspection_title || 'Inspection';
-        if (groupId) {
-            setTimeout(function () {
-                if (typeof window.viewInspection === 'function') {
-                    // Open immediately with placeholder, then fetch real DB data
-                    window.viewInspection(groupId, inspTitle || groupId, groupId, '—');
-
-                    // Fetch real title + technician from DB and patch the header
-                    var REPORT_DATA_URL = '<?= site_url('technician/inspections/reportData') ?>';
-                    fetch(REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId), {
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                    })
-                    .then(function(r) { return r.json(); })
-                    .then(function(data) {
-                        if (!data.success || !data.latest) return;
-                        var latest = data.latest;
-
-                        // Real title from DB
-                        var realTitle = (latest.title || latest.inspection_type || groupId).trim();
-                        var titleEl = document.getElementById('insp-title');
-                        if (titleEl) titleEl.textContent = realTitle;
-                        window._savedInspTitle = realTitle;
-
-                        // Real inspection # (always the group_id)
-                        var idLabel = document.getElementById('insp-id-label');
-                        if (idLabel) idLabel.textContent = groupId;
-
-                        // Real technician name
-                        var techEl = document.getElementById('insp-technician');
-                        if (techEl) techEl.textContent = latest.technician_name || '—';
-                    })
-                    .catch(function() { /* non-fatal */ });
-
-                } else if (typeof window.viewInspectionGroup === 'function') {
-                    window.viewInspectionGroup(groupId);
-                }
-            }, 500);
+        if (!intent) {
+            var params = new URLSearchParams(window.location.search);
+            var openTab = (params.get('open_tab') || '').trim();
+            if (openTab) {
+                intent = {
+                    open_tab: openTab,
+                    group_id: params.get('group_id') || '',
+                    inspection_title: params.get('inspection_title') || 'Inspection',
+                };
+            }
         }
-    } else if (openTab === 'workorders' && woTabBtn) {
-        bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
-    }
-});
+        if (!intent) return;
+
+        var openTab = (intent.open_tab || '').trim();
+        var equipTabBtn = document.getElementById('equipment-tab');
+        var inspTabBtn = document.getElementById('inspections-tab');
+        var woTabBtn = document.getElementById('work-orders-tab');
+
+        if (openTab === 'equipment' && equipTabBtn) {
+            bootstrap.Tab.getOrCreateInstance(equipTabBtn).show();
+        } else if (openTab === 'inspections' && inspTabBtn) {
+            bootstrap.Tab.getOrCreateInstance(inspTabBtn).show();
+
+            var groupId = intent.group_id || '';
+            var inspTitle = intent.inspection_title || 'Inspection';
+            if (groupId) {
+                setTimeout(function() {
+                    if (typeof window.viewInspection === 'function') {
+                        // Open immediately with placeholder, then fetch real DB data
+                        window.viewInspection(groupId, inspTitle || groupId, groupId, '—');
+
+                        // Fetch real title + technician from DB and patch the header
+                        var REPORT_DATA_URL = '<?= site_url('technician/inspections/reportData') ?>';
+                        fetch(REPORT_DATA_URL + '?group_id=' + encodeURIComponent(groupId), {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(function(r) {
+                                return r.json();
+                            })
+                            .then(function(data) {
+                                if (!data.success || !data.latest) return;
+                                var latest = data.latest;
+
+                                // Real title from DB
+                                var realTitle = (latest.title || latest.inspection_type || groupId).trim();
+                                var titleEl = document.getElementById('insp-title');
+                                if (titleEl) titleEl.textContent = realTitle;
+                                window._savedInspTitle = realTitle;
+
+                                // Real inspection # (always the group_id)
+                                var idLabel = document.getElementById('insp-id-label');
+                                if (idLabel) idLabel.textContent = groupId;
+
+                                // Real technician name
+                                var techEl = document.getElementById('insp-technician');
+                                if (techEl) techEl.textContent = latest.technician_name || '—';
+                            })
+                            .catch(function() {
+                                /* non-fatal */
+                            });
+
+                    } else if (typeof window.viewInspectionGroup === 'function') {
+                        window.viewInspectionGroup(groupId);
+                    }
+                }, 500);
+            }
+        } else if (openTab === 'workorders' && woTabBtn) {
+            bootstrap.Tab.getOrCreateInstance(woTabBtn).show();
+        }
+    });
 
     // ── AJAX tab refresh for Equipment and Work Orders tabs ─────────────────
-    var TECH_SITE_ID  = <?= (int)$site['id'] ?>;
-    var TECH_EQ_URL   = '<?= site_url('technician/sites/equipment-data/') ?>' + TECH_SITE_ID;
-    var TECH_WO_URL   = '<?= site_url('technician/sites/work-orders-data/') ?>' + TECH_SITE_ID;
+    var TECH_SITE_ID = <?= (int)$site['id'] ?>;
+    var TECH_EQ_URL = '<?= site_url('technician/sites/equipment-data/') ?>' + TECH_SITE_ID;
+    var TECH_WO_URL = '<?= site_url('technician/sites/work-orders-data/') ?>' + TECH_SITE_ID;
 
     function techEscHtml(s) {
-        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\'\'/g,"&#39;");
+        return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/\'\'/g, "&#39;");
     }
+
     function techReInitDT(sel) {
         try {
             if ($.fn.DataTable && $.fn.DataTable.isDataTable(sel)) $(sel).DataTable().destroy();
-            if ($.fn.DataTable) $(sel).DataTable({ pageLength: 25, responsive: true });
-        } catch(e){}
+            if (!$.fn.DataTable) return;
+            var exportCols = {
+                columns: ':not(:last-child)'
+            };
+            var btns = [{
+                    extend: 'copy',
+                    exportOptions: exportCols
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: exportCols
+                },
+                {
+                    extend: 'excel',
+                    exportOptions: exportCols
+                },
+                {
+                    extend: 'pdfHtml5',
+                    exportOptions: exportCols,
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL'
+                }
+            ];
+            $(sel).DataTable({
+                dom: 'Bfrtip',
+                buttons: btns,
+                responsive: true,
+                pageLength: 10
+            });
+        } catch (e) {
+            console.warn('DataTable reinit failed:', e);
+        }
     }
 
     function techRefreshEquipmentTable() {
@@ -2440,32 +2588,34 @@ document.addEventListener('DOMContentLoaded', function () {
             var tbody = document.getElementById('techEquipmentTableBody');
             if (!tbody) return;
             var statusClsMap = {
-                'ready':'status-ready','need_attention':'status-need-attention',
-                'repair':'status-repair','out_of_service':''
+                'ready': 'status-ready',
+                'need_attention': 'status-need-attention',
+                'repair': 'status-repair',
+                'out_of_service': ''
             };
-            var editBase   = '<?= site_url('technician/equipment/delete/') ?>';
+            var editBase = '<?= site_url('technician/equipment/delete/') ?>';
             var html = '';
             res.data.forEach(function(eq) {
                 var sCls = statusClsMap[eq.status] !== undefined ? statusClsMap[eq.status] : 'status-pending';
                 var sStyle = eq.status === 'out_of_service' ? ' style="background:#fee2e2;color:#991b1b;"' : '';
-                html += '<tr>'
-                    + '<td>' + techEscHtml(eq.asset_tag) + '</td>'
-                    + '<td>' + techEscHtml(eq.make) + '</td>'
-                    + '<td>' + techEscHtml(eq.model) + '</td>'
-                    + '<td>' + techEscHtml(eq.serial_number) + '</td>'
-                    + '<td>' + techEscHtml(eq.device_type) + '</td>'
-                    + '<td>' + techEscHtml(eq.location) + '</td>'
-                    + '<td>' + techEscHtml(eq.department) + '</td>'
-                    + '<td><span class="status-badge ' + sCls + '"' + sStyle + '>' + techEscHtml(eq.status_label) + '</span></td>'
-                    + '<td class="text-center"><div class="action-btns">'
-                    +   '<button class="btn btn-sm btn-primary edit-equipment-btn"'
-                    +     ' data-id="' + eq.id + '" data-asset_tag="' + techEscHtml(eq.asset_tag) + '"'
-                    +     ' data-make="' + techEscHtml(eq.make) + '" data-model="' + techEscHtml(eq.model) + '"'
-                    +     ' data-serial_number="' + techEscHtml(eq.serial_number) + '" data-device_type="' + techEscHtml(eq.device_type) + '"'
-                    +     ' data-location="' + techEscHtml(eq.location) + '" data-department="' + techEscHtml(eq.department) + '"'
-                    +     ' data-status="' + techEscHtml(eq.status) + '"><i class="fa fa-edit"></i> Edit</button> '
-                    +   '<a href="' + editBase + eq.id + '" class="btn btn-sm btn-danger" onclick="techDeleteEquipConfirm(this)"><i class="fa fa-trash"></i> Delete</a>'
-                    + '</div></td></tr>';
+                html += '<tr>' +
+                    '<td>' + techEscHtml(eq.asset_tag) + '</td>' +
+                    '<td>' + techEscHtml(eq.make) + '</td>' +
+                    '<td>' + techEscHtml(eq.model) + '</td>' +
+                    '<td>' + techEscHtml(eq.serial_number) + '</td>' +
+                    '<td>' + techEscHtml(eq.device_type) + '</td>' +
+                    '<td>' + techEscHtml(eq.location) + '</td>' +
+                    '<td>' + techEscHtml(eq.department) + '</td>' +
+                    '<td><span class="status-badge ' + sCls + '"' + sStyle + '>' + techEscHtml(eq.status_label) + '</span></td>' +
+                    '<td class="text-center"><div class="action-btns">' +
+                    '<button class="btn btn-sm btn-primary edit-equipment-btn"' +
+                    ' data-id="' + eq.id + '" data-asset_tag="' + techEscHtml(eq.asset_tag) + '"' +
+                    ' data-make="' + techEscHtml(eq.make) + '" data-model="' + techEscHtml(eq.model) + '"' +
+                    ' data-serial_number="' + techEscHtml(eq.serial_number) + '" data-device_type="' + techEscHtml(eq.device_type) + '"' +
+                    ' data-location="' + techEscHtml(eq.location) + '" data-department="' + techEscHtml(eq.department) + '"' +
+                    ' data-status="' + techEscHtml(eq.status) + '"><i class="fa fa-edit"></i> Edit</button> ' +
+                    '<a href="' + editBase + eq.id + '" class="btn btn-sm btn-danger" onclick="techDeleteEquipConfirm(this)"><i class="fa fa-trash"></i> Delete</a>' +
+                    '</div></td></tr>';
             });
             tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No equipment found.</td></tr>';
             techReInitDT('#equipment-datatable');
@@ -2477,32 +2627,46 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!res || !res.success) return;
             var tbody = document.getElementById('techWorkOrdersTableBody');
             if (!tbody) return;
-            var sClsMap = {'completed':'status-completed','in_progress':'status-in-progress','cancelled':'status-need-attention'};
+            var sClsMap = {
+                'completed': 'status-completed',
+                'in_progress': 'status-in-progress',
+                'cancelled': 'status-need-attention'
+            };
             var html = '';
             res.data.forEach(function(wo) {
                 var sCls = 'status-badge ' + (sClsMap[wo.status] || 'status-open');
-                var sLbl = wo.status.replace(/_/g,' ').replace(/\b\w/g,function(l){return l.toUpperCase();});
-                var sd = wo.start_date ? new Date(wo.start_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
-                var ed = wo.end_date   ? new Date(wo.end_date).toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) : '-';
-                html += '<tr>'
-                    + '<td>WO-' + wo.id + '</td>'
-                    + '<td>' + techEscHtml(wo.title) + '</td>'
-                    + '<td>' + techEscHtml(wo.asset_tag) + '</td>'
-                    + '<td><span class="' + sCls + '">' + techEscHtml(sLbl) + '</span></td>'
-                    + '<td>' + techEscHtml(wo.priority) + '</td>'
-                    + '<td>' + techEscHtml(wo.assigned_to_name) + '</td>'
-                    + '<td>' + sd + '</td>'
-                    + '<td>' + ed + '</td>'
-                    + '<td class="text-center"><div class="action-btns">'
-                    +   '<button class="btn btn-sm btn-info edit-workorder-btn"'
-                    +     ' data-id="' + wo.id + '" data-equipment_id="' + (wo.equipment_id||'') + '"'
-                    +     ' data-title="' + techEscHtml(wo.title) + '" data-description="' + techEscHtml(wo.description) + '"'
-                    +     ' data-status="' + techEscHtml(wo.status) + '" data-priority="' + techEscHtml(wo.priority) + '"'
-                    +     ' data-assigned_to="' + (wo.assigned_to||'') + '"'
-                    +     ' data-start_date="' + (wo.start_date||'') + '" data-end_date="' + (wo.end_date||'') + '">'
-                    +   '<i class="fa fa-edit"></i> Edit</button> '
-                    +   '<button type="button" class="btn btn-sm btn-danger delete-workorder-btn" data-id="' + wo.id + '"><i class="fa fa-trash"></i> Delete</button>'
-                    + '</div></td></tr>';
+                var sLbl = wo.status.replace(/_/g, ' ').replace(/\b\w/g, function(l) {
+                    return l.toUpperCase();
+                });
+                var sd = wo.start_date ? new Date(wo.start_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric'
+                }) : '-';
+                var ed = wo.end_date ? new Date(wo.end_date).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                    year: 'numeric'
+                }) : '-';
+                html += '<tr>' +
+                    '<td>WO-' + wo.id + '</td>' +
+                    '<td>' + techEscHtml(wo.title) + '</td>' +
+                    '<td>' + techEscHtml(wo.asset_tag) + '</td>' +
+                    '<td><span class="' + sCls + '">' + techEscHtml(sLbl) + '</span></td>' +
+                    '<td>' + techEscHtml(wo.priority) + '</td>' +
+                    '<td>' + techEscHtml(wo.assigned_to_name) + '</td>' +
+                    '<td>' + sd + '</td>' +
+                    '<td>' + ed + '</td>' +
+                    '<td class="text-center"><div class="action-btns">' +
+                    '<button class="btn btn-sm btn-info edit-workorder-btn"' +
+                    ' data-id="' + wo.id + '" data-equipment_id="' + (wo.equipment_id || '') + '"' +
+                    ' data-title="' + techEscHtml(wo.title) + '" data-description="' + techEscHtml(wo.description) + '"' +
+                    ' data-status="' + techEscHtml(wo.status) + '" data-priority="' + techEscHtml(wo.priority) + '"' +
+                    ' data-assigned_to="' + (wo.assigned_to || '') + '"' +
+                    ' data-start_date="' + (wo.start_date || '') + '" data-end_date="' + (wo.end_date || '') + '">' +
+                    '<i class="fa fa-edit"></i> Edit</button> ' +
+                    '<button type="button" class="btn btn-sm btn-danger delete-workorder-btn" data-id="' + wo.id + '"><i class="fa fa-trash"></i> Delete</button>' +
+                    '</div></td></tr>';
             });
             tbody.innerHTML = html || '<tr><td colspan="9" class="text-center text-muted py-3">No work orders found.</td></tr>';
             techReInitDT('#work-orders-datatable');
@@ -2512,19 +2676,562 @@ document.addEventListener('DOMContentLoaded', function () {
     window.techDeleteEquipConfirm = function(btn) {
         var href = btn.getAttribute('href') || '';
         Swal.fire({
-            title: 'Delete Equipment?', text: 'This will remove the equipment from this site.',
-            icon: 'warning', showCancelButton: true,
-            confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Yes, delete'
-        }).then(function(r) { if (r.isConfirmed) window.location.href = href; });
+            title: 'Delete Equipment?',
+            text: 'This will remove the equipment from this site.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete'
+        }).then(function(r) {
+            if (r.isConfirmed) window.location.href = href;
+        });
     };
 
     // ── Bind tab click listeners ──────────────────────────────────────────────
     var _techEquipBtn = document.getElementById('equipment-tab');
-    if (_techEquipBtn) _techEquipBtn.addEventListener('shown.bs.tab', function() { techRefreshEquipmentTable(); });
+    if (_techEquipBtn) _techEquipBtn.addEventListener('shown.bs.tab', function() {
+        techRefreshEquipmentTable();
+    });
 
     var _techWOBtn = document.getElementById('work-orders-tab');
-    if (_techWOBtn) _techWOBtn.addEventListener('shown.bs.tab', function() { techRefreshWorkOrdersTable(); });
-
+    var _techWOTimer = null;
+    if (_techWOBtn) {
+        _techWOBtn.addEventListener('shown.bs.tab', function() {
+            techRefreshWorkOrdersTable();
+            clearInterval(_techWOTimer);
+            _techWOTimer = setInterval(function() {
+                var pane = document.getElementById('tab-workorders');
+                if (pane && pane.classList.contains('active')) {
+                    techRefreshWorkOrdersTable();
+                }
+            }, 60000);
+        });
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(b) {
+            if (b !== _techWOBtn) b.addEventListener('shown.bs.tab', function() {
+                clearInterval(_techWOTimer);
+            });
+        });
+    }
 </script>
 
+
+
+<style>
+  #woInvoiceModal #invoiceItemsTable thead th {
+    background: #f8f9fa !important;
+    color: #111827 !important;
+    font-weight: 700 !important;
+    vertical-align: middle;
+    white-space: normal;
+  }
+
+  #woInvoiceModal #invoiceItemsTable tbody td,
+  #woInvoiceModal #invoiceItemsTable tfoot td {
+    background: #ffffff !important;
+    color: #111827 !important;
+    vertical-align: middle;
+  }
+
+  #woInvoiceModal #invoiceItemsTable .form-control,
+  #woInvoiceModal #invoiceItemsTable .form-select {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #ced4da !important;
+  }
+
+  #woInvoiceModal #invoiceItemsTable .form-control::placeholder {
+    color: #6b7280 !important;
+  }
+
+  #woInvoiceModal #invoiceItemsTable .inv-total-cost[readonly] {
+    background: #f8f9fa !important;
+    color: #111827 !important;
+  }
+
+  #woInvoiceModal #invoiceGrandTotal,
+  #woInvoiceModal #woGrandTotal {
+    color: #111827 !important;
+  }
+</style>
+
+<div class="modal fade modal-xl" id="woInvoiceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i> Work Order Invoice</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" id="invoiceModalBody">
+        <div class="text-center py-5" id="woInvoiceSpinner">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="mt-2 text-muted">Loading invoice data…</p>
+        </div>
+
+        <!-- Invoice content (shown after load) -->
+        <div id="woInvoiceContent" style="display:none;">
+
+          <!-- Work Order header info (read-only) -->
+          <div class="row g-3 mb-3" id="woInvoiceWoInfo"></div>
+
+          <!-- Line Items table -->
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="fw-bold mb-0">Line Items</h6>
+            <button class="btn btn-sm btn-primary" id="woBtnAddItem">
+              <i class="fas fa-plus me-1"></i> Add Line Item
+            </button>
+          </div>
+
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-bordered invoice-editor-table" id="invoiceItemsTable">
+              <thead class="table-light">
+                <tr>
+                  <th style="width:90px">Type</th>
+                  <th style="width:90px">Part #</th>
+                  <th style="width:130px">Labor/Part Code</th>
+                  <th>Description</th>
+                  <th style="width:80px">QTY/Hrs</th>
+                  <th style="width:100px">Unit Cost ($)</th>
+                  <th style="width:100px">Total Cost ($)</th>
+                  <th style="width:60px"></th>
+                </tr>
+              </thead>
+              <tbody id="woItemsTbody">
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="text-end fw-bold">Grand Total</td>
+                  <td class="fw-bold" id="woGrandTotal">$0.00</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Notes -->
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Problem Notes</label>
+              <textarea id="woProblemNotes" class="form-control" rows="3"
+                placeholder="e.g. Weekly Repair/PM week of 3/30 - 4/1"></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold text-danger">Invoice Note</label>
+              <textarea id="woInvoiceNote" class="form-control" rows="3"
+                placeholder="Billing rates, terms, etc."></textarea>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Service Notes</label>
+              <textarea id="woServiceNotes" class="form-control" rows="3"
+                placeholder="Tech observations..."></textarea>
+            </div>
+          </div>
+
+          <!-- Signatures -->
+          <hr class="my-3">
+          <div class="row g-4">
+            <!-- Customer Signature -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Customer Acceptance Signature</label>
+              <canvas id="woCustCanvas" class="d-block w-100 border rounded"
+                style="height:130px;cursor:crosshair;background:#fafafa;border-style:dashed !important;"></canvas>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="woClearCust">
+                  <i class="fas fa-eraser me-1"></i>Clear
+                </button>
+              </div>
+              <div class="mt-2">
+                <label class="form-label small fw-semibold mb-1">Customer Name</label>
+                <input type="text" id="woCustName" class="form-control form-control-sm"
+                  placeholder="e.g. CHAR MORALES">
+              </div>
+            </div>
+            <!-- Technician Signature -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Technician Signature</label>
+              <canvas id="woTechCanvas" class="d-block w-100 border rounded"
+                style="height:130px;cursor:crosshair;background:#fafafa;border-style:dashed !important;"></canvas>
+              <div class="d-flex gap-2 mt-1">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="woClearTech">
+                  <i class="fas fa-eraser me-1"></i>Clear
+                </button>
+              </div>
+              <div class="mt-2">
+                <label class="form-label small fw-semibold mb-1">Technician Name</label>
+                <input type="text" id="woTechName" class="form-control form-control-sm"
+                  placeholder="Technician name">
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /invoiceContent -->
+      </div><!-- /modal-body -->
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button class="btn btn-success" id="woBtnSave">
+          <i class="fas fa-save me-1"></i> Save Invoice
+        </button>
+        <a class="btn btn-primary" id="woBtnDownload" href="#" target="_blank">
+          <i class="fas fa-download me-1"></i> Download PDF
+        </a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+var _currentWoId = null;
+var _laborCodes  = [];
+
+$(function () {
+    // ── DataTable ─────────────────────────────────────────────
+    // ── Load labor codes once ─────────────────────────────────
+    $.getJSON('<?= site_url('admin/work-orders/labor-codes-list') ?>', function (res) {
+        if (res.success) _laborCodes = res.data || [];
+    });
+
+    // ── Delete WO ─────────────────────────────────────────────
+    $(document).on('click', '.btn-delete-wo', function (e) {
+        e.preventDefault();
+        var woId = $(this).data('wo-id');
+        Swal.fire({
+            icon: 'warning', title: 'Delete work order?',
+            text: 'This cannot be undone.',
+            showCancelButton: true, confirmButtonText: 'Yes, delete'
+        }).then(function (r) {
+            if (!r.isConfirmed) return;
+            $.post('<?= site_url('admin/work-orders/delete') ?>/' + woId, {
+                '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val()
+            }, function (res) {
+                if (res.success) {
+                    Swal.fire('Deleted', res.message, 'success');
+                    _woTable.ajax ? _woTable.ajax.reload(null, false) : location.reload();
+                } else {
+                    Swal.fire('Error', res.message, 'error');
+                }
+            }, 'json');
+        });
+    });
+
+    // ── Open Invoice Modal ────────────────────────────────────
+    $(document).on('click', '.site-wo-invoice-btn', function (e) {
+        e.preventDefault();
+        _currentWoId = $(this).data('wo-id');
+
+        $('#woInvoiceContent').hide();
+        $('#woInvoiceSpinner').show();
+        $('#woInvoiceModal').modal('show');
+
+        // Set download link
+        $('#woBtnDownload').attr('href', '<?= site_url('technician/work-orders') ?>/' + _currentWoId + '/invoice/download');
+
+        // Fetch invoice data
+        $.getJSON('<?= site_url('technician/work-orders') ?>/' + _currentWoId + '/invoice/data', function (res) {
+            $('#woInvoiceSpinner').hide();
+
+            if (!res.success) {
+                $('#woInvoiceContent').html('<div class="alert alert-danger">Failed to load invoice data.</div>').show();
+                return;
+            }
+
+            var wo = res.wo || {};
+            var inv = res.invoice || {};
+
+            // Header info
+            $('#woInvoiceWoInfo').html(
+                '<div class="col-md-3"><strong>WO #</strong><br>#WO-' + String(wo.id).padStart(4,'0') + '</div>' +
+                '<div class="col-md-3"><strong>Customer</strong><br>' + (wo.customer_name || '—') + '</div>' +
+                '<div class="col-md-3"><strong>Site</strong><br>' + (wo.site_name || '—') + '</div>' +
+                '<div class="col-md-3"><strong>Technician</strong><br>' + (wo.tech_name || '—') + '</div>'
+            );
+
+            // Notes
+            $('#woProblemNotes').val(inv.problem_notes || '');
+            $('#woInvoiceNote').val(inv.invoice_note   || '');
+            $('#woServiceNotes').val(inv.service_notes || '');
+
+            // Line items
+            $('#woItemsTbody').empty();
+            (res.items || []).forEach(function (item) { addInvoiceRow(item); });
+            recalcTotal();
+
+            // Restore saved signatures if any
+            if (inv.signature_image) {
+                restoreSig(window._woCustCtx, inv.signature_image);
+            } else { clearSig(window._woCustCtx); }
+            $('#woCustName').val(inv.signed_by || wo.customer_name || '');
+            if (inv.tech_sig_image) {
+                restoreSig(window._woTechCtx, inv.tech_sig_image);
+            } else { clearSig(window._woTechCtx); }
+            $('#woTechName').val(inv.tech_signed_by || wo.tech_name || '');
+            $('#woInvoiceContent').show();
+        }).fail(function () {
+            $('#woInvoiceSpinner').hide();
+            $('#woInvoiceContent').html('<div class="alert alert-danger">Error loading data.</div>').show();
+        });
+    });
+
+    // ── Add blank row ─────────────────────────────────────────
+    $('#woBtnAddItem').on('click', function () { addInvoiceRow({}); });
+
+    // ── Build labor code select options ───────────────────────
+    // Inventory parts for Part-type rows
+    var _inventoryParts = [];
+    $.getJSON('<?= site_url('admin/inventory/data') ?>', function(res) {
+        _inventoryParts = res.data || [];
+    });
+
+    function laborCodeOptions(selected) {
+        var opts = '<option value="">-- select labor code --</option>';
+        _laborCodes.forEach(function(lc) {
+            opts += '<option value="' + lc.id + '"'
+                + ' data-code="' + lc.code + '"'
+                + ' data-amount="' + lc.amount + '"'
+                + (String(selected) === String(lc.id) ? ' selected' : '') + '>'
+                + lc.code + (lc.description ? ' — ' + lc.description : '')
+                + ' ($' + parseFloat(lc.amount).toFixed(2) + ')'
+                + '</option>';
+        });
+        return opts;
+    }
+
+    function partOptions(selectedId) {
+        var opts = '<option value="">-- select part --</option>';
+        _inventoryParts.forEach(function(p) {
+            opts += '<option value="' + p.id + '"'
+                + ' data-part-num="' + (p.part_number || '') + '"'
+                + ' data-desc="' + (p.part_description || '').replace(/"/g,'&quot;') + '"'
+                + ' data-cost="' + (p.total_value || 0) + '"'
+                + (String(selectedId) === String(p.id) ? ' selected' : '') + '>'
+                + (p.part_number || '') + (p.part_description ? ' — ' + p.part_description : '')
+                + '</option>';
+        });
+        return opts;
+    }
+
+    function buildMidCell(item) {
+        if ((item.item_type || 'labor') === 'part') {
+            return '<td><select class="form-select form-select-sm inv-part-select">'
+                + partOptions(item.inventory_id || '') + '</select></td>';
+        }
+        return '<td><select class="form-select form-select-sm inv-labor-code">'
+            + laborCodeOptions(item.labor_code_id || '') + '</select></td>';
+    }
+
+    function addInvoiceRow(item) {
+        item = item || {};
+        var typeOpts = ['labor','travel','part'].map(function(t) {
+            return '<option value="' + t + '"' + ((item.item_type || 'labor') === t ? ' selected' : '') + '>'
+                + t.charAt(0).toUpperCase() + t.slice(1) + '</option>';
+        }).join('');
+
+        var row = $('<tr>').html(
+            '<td><select class="form-select form-select-sm inv-type">' + typeOpts + '</select></td>'
+            + '<td><input class="form-control form-control-sm inv-part-num"'
+                + ' value="' + (item.part_number || '') + '" placeholder="Part # / Code"></td>'
+            + buildMidCell(item)
+            + '<td><input class="form-control form-control-sm inv-desc"'
+                + ' value="' + (item.description || '') + '" placeholder="Description"></td>'
+            + '<td><input type="number" class="form-control form-control-sm inv-qty"'
+                + ' value="' + (item.qty || 1) + '" min="0" step="0.5"></td>'
+            + '<td><input type="number" class="form-control form-control-sm inv-unit-cost"'
+                + ' value="' + (item.unit_cost || '') + '" min="0" step="0.01" placeholder="0.00"></td>'
+            + '<td><input type="number" class="form-control form-control-sm inv-total-cost"'
+                + ' value="' + (item.total_cost || '') + '" readonly style="background:#f8f9fa"></td>'
+            + '<td class="text-center"><button class="btn btn-sm btn-outline-danger btn-remove-inv-row">'
+                + '<i class="fas fa-times"></i></button></td>'
+        );
+        $('#woItemsTbody').append(row);
+        recalcRow(row);
+    }
+
+    // Type changed: swap middle cell between labor-code and part-select
+    $(document).on('change', '.inv-type', function() {
+        var $row = $(this).closest('tr');
+        var type = $(this).val();
+        var $mid = $row.find('td').eq(2);
+        if (type === 'part') {
+            $mid.html('<select class="form-select form-select-sm inv-part-select">' + partOptions('') + '</select>');
+        } else {
+            $mid.html('<select class="form-select form-select-sm inv-labor-code">' + laborCodeOptions('') + '</select>');
+        }
+        $row.find('.inv-part-num, .inv-desc, .inv-unit-cost, .inv-total-cost').val('');
+        recalcRow($row);
+    });
+
+    // Part selected from inventory: auto-fill part#, description, unit cost
+    $(document).on('change', '.inv-part-select', function() {
+        var $opt = $(this).find(':selected');
+        var $row = $(this).closest('tr');
+        $row.find('.inv-part-num').val($opt.data('part-num') || '');
+        $row.find('.inv-desc').val($opt.data('desc') || '');
+        $row.find('.inv-unit-cost').val(parseFloat($opt.data('cost') || 0).toFixed(2));
+        recalcRow($row);
+    });
+
+    // Labor code selected: auto-fill code and rate
+    $(document).on('change', '.inv-labor-code', function() {
+        var $opt = $(this).find(':selected');
+        var $row = $(this).closest('tr');
+        if ($opt.data('amount') !== undefined && $opt.data('amount') !== '') {
+            $row.find('.inv-unit-cost').val(parseFloat($opt.data('amount')).toFixed(2));
+        }
+        if ($opt.data('code')) $row.find('.inv-part-num').val($opt.data('code'));
+        recalcRow($row);
+    });
+
+    // ── Recalc row total on qty/unit change ───────────────────
+    $(document).on('input', '.inv-qty, .inv-unit-cost', function () {
+        recalcRow($(this).closest('tr'));
+    });
+
+    function recalcRow($row) {
+        var qty  = parseFloat($row.find('.inv-qty').val())       || 0;
+        var unit = parseFloat($row.find('.inv-unit-cost').val()) || 0;
+        $row.find('.inv-total-cost').val((qty * unit).toFixed(2));
+        recalcTotal();
+    }
+
+    function recalcTotal() {
+        var total = 0;
+        $('#woItemsTbody .inv-total-cost').each(function () {
+            total += parseFloat($(this).val()) || 0;
+        });
+        $('#woGrandTotal').text('$' + total.toFixed(2));
+    }
+
+    // ── Remove row ────────────────────────────────────────────
+    $(document).on('click', '.btn-remove-inv-row', function () {
+        $(this).closest('tr').remove();
+        recalcTotal();
+    });
+
+    // ── Save invoice ──────────────────────────────────────────
+    $('#woBtnSave').on('click', function () {
+        if (!_currentWoId) return;
+        var $btn = $(this).prop('disabled', true).text('Saving…');
+
+        // Collect items
+        var items = [];
+        $('#woItemsTbody tr').each(function () {
+            var $r = $(this);
+            var $lcSel = $r.find('.inv-labor-code');
+            items.push({
+                item_type:      $r.find('.inv-type').val(),
+                part_number:    $r.find('.inv-part-num').val(),
+                labor_code_id:  $lcSel.val() || null,
+                part_labor_code: $lcSel.find(':selected').data('code') || '',
+                description:    $r.find('.inv-desc').val(),
+                qty:            parseFloat($r.find('.inv-qty').val())       || 1,
+                unit_cost:      parseFloat($r.find('.inv-unit-cost').val()) || 0,
+                total_cost:     parseFloat($r.find('.inv-total-cost').val())|| 0,
+            });
+        });
+
+        $.ajax({
+            url: '<?= site_url('technician/work-orders') ?>/' + _currentWoId + '/invoice/save',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                problem_notes:      $('#woProblemNotes').val(),
+                invoice_note:       $('#woInvoiceNote').val(),
+                service_notes:      $('#woServiceNotes').val(),
+                customer_sig_name:  $('#woCustName').val(),
+                customer_sig_image: getSigDataUrl(window._woCustCanvas),
+                tech_sig_name:      $('#woTechName').val(),
+                tech_sig_image:     getSigDataUrl(window._woTechCanvas),
+                items: items,
+                '<?= csrf_token() ?>': $('input[name="<?= csrf_token() ?>"]').first().val(),
+            }),
+            dataType: 'json',
+            success: function (res) {
+                if (res.success) {
+                    Swal.fire('Saved', res.message, 'success');
+                } else {
+                    Swal.fire('Error', res.message || 'Save failed', 'error');
+                }
+            },
+            error: function () { Swal.fire('Error', 'Save failed', 'error'); },
+            complete: function () { $btn.prop('disabled', false).html('<i class="fas fa-save me-1"></i> Save Invoice'); }
+        });
+    });
+});
+
+// ── Status filter ─────────────────────────────────────────────
+// =====================================================================
+// SIGNATURE PAD HELPERS
+// =====================================================================
+window._woCustCanvas = null;
+window._woTechCanvas = null;
+window._woCustCtx    = null;
+window._woTechCtx    = null;
+
+function initSigPad(canvasId) {
+    var canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    var ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width  = canvas.offsetWidth  * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(ratio, ratio);
+    var drawing = false;
+    function getPos(e) {
+        var r = canvas.getBoundingClientRect();
+        if (e.touches && e.touches.length) {
+            return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+        }
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    canvas.addEventListener('mousedown',  function(e) { drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+    canvas.addEventListener('mousemove',  function(e) { if(!drawing) return; var p=getPos(e); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#000'; ctx.lineTo(p.x,p.y); ctx.stroke(); });
+    canvas.addEventListener('mouseup',    function()  { drawing=false; ctx.beginPath(); });
+    canvas.addEventListener('mouseleave', function()  { drawing=false; });
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); drawing=true; var p=getPos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); }, {passive:false});
+    canvas.addEventListener('touchmove',  function(e) { e.preventDefault(); if(!drawing) return; var p=getPos(e); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#000'; ctx.lineTo(p.x,p.y); ctx.stroke(); }, {passive:false});
+    canvas.addEventListener('touchend',   function()  { drawing=false; ctx.beginPath(); });
+    return ctx;
+}
+
+function clearSig(ctx) {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+}
+
+function getSigDataUrl(canvas) {
+    if (!canvas) return '';
+    var blank = document.createElement('canvas');
+    blank.width  = canvas.width;
+    blank.height = canvas.height;
+    if (canvas.toDataURL() === blank.toDataURL()) return '';
+    return canvas.toDataURL('image/png');
+}
+
+function restoreSig(ctx, dataUrl) {
+    if (!ctx || !dataUrl) return;
+    var img = new Image();
+    img.onload = function() {
+        var r = window.devicePixelRatio || 1;
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.drawImage(img, 0, 0, ctx.canvas.width / r, ctx.canvas.height / r);
+    };
+    img.src = dataUrl;
+}
+
+// Re-init sig pads every time modal opens (canvas sizing requires visible DOM)
+$('#woInvoiceModal').on('shown.bs.modal', function() {
+    window._woCustCanvas = document.getElementById('woCustCanvas');
+    window._woTechCanvas = document.getElementById('woTechCanvas');
+    window._woCustCtx    = initSigPad('woCustCanvas');
+    window._woTechCtx    = initSigPad('woTechCanvas');
+});
+
+$(document).on('click', '#woClearCust', function() { clearSig(window._woCustCtx); });
+$(document).on('click', '#woClearTech', function() { clearSig(window._woTechCtx); });
+
+
+</script>
 <?= $this->endSection() ?>

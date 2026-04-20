@@ -33,12 +33,8 @@ class DashboardController extends BaseController
                 [$companyId, $techId]
             )->getRow()->cnt ?? 0;
         }
-        // Fallback: all open WOs if no specific technician
         if (!$techId) {
-            $openRequests = $db->query(
-                "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ? AND status NOT IN ('closed','completed') AND deleted_at IS NULL",
-                [$companyId]
-            )->getRow()->cnt ?? 0;
+            $openRequests = 0;
         }
 
         // ── Compliance: pass rate from this technician's inspections ──

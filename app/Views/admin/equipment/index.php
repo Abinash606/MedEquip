@@ -21,7 +21,7 @@
                         <th>Brand</th>
                         <th>Model</th>
                         <th>Description</th>
-                        <th>Part #</th>
+                        <th>Series Number</th>
                         <!-- <th>AKA</th> -->
                         <th>Service Manual</th>
                         <th>Owners Manual</th>
@@ -68,7 +68,7 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-2">
-                            <label>Part #</label>
+                            <label>Series Number</label>
                             <input type="text" name="serial_number" id="serial_number" class="form-control">
                         </div>
                         <!-- <div class="col-md-6 mb-2">
@@ -196,7 +196,13 @@
 
             columns: [{
                     data: 'make',
-                    defaultContent: '-'
+                    defaultContent: '—',
+                    render: function(d, type, row) {
+                        if (type === 'display') {
+                            return d ? String(d) : '—';
+                        }
+                        return d || '';
+                    }
                 },
                 {
                     data: 'model',
@@ -207,8 +213,23 @@
                     defaultContent: '-'
                 },
                 {
-                    data: 'serial_number',
-                    defaultContent: '-'
+                    data: 'serial_numbers',
+                    defaultContent: '-',
+                    render: function(d, type, row) {
+                        if (!d) return '-';
+                        var parts = String(d).split('|').map(function(s){ return s.trim(); });
+                        var ids   = String(row.all_ids || row.id).split('|').map(function(s){ return s.trim(); });
+                        var first = parts[0] || '-';
+                        if (parts.length <= 1) return first;
+                        return '<span class="series-first">' + first + '</span> '
+                            + '<a href="#" class="ms-1 text-primary small expand-series-btn" '
+                            + 'data-expanded="0" '
+                            + 'data-ids=\'' + JSON.stringify(ids).replace(/'/g,"&#39;") + '\' '
+                            + 'data-series=\'' + JSON.stringify(parts).replace(/'/g,"&#39;") + '\' '
+                            + 'data-make="' + (row.make||'').replace(/"/g,'&quot;') + '" '
+                            + 'data-model="' + (row.model||'').replace(/"/g,'&quot;') + '">'
+                            + '(+' + (parts.length-1) + ' more)</a>';
+                    }
                 },
 
                 {
@@ -236,10 +257,10 @@
                     data: 'id',
                     orderable: false,
                     searchable: false,
-                    render: id => `
-                    <button class="btn btn-sm btn-info editBtn" data-id="${id}">Edit</button>
-                    <button class="btn btn-sm btn-danger deleteBtn" data-id="${id}">Delete</button>
-                `
+                    render: function(id, type, row) {
+                        return '<button class="btn btn-sm btn-info editBtn" data-id="' + id + '">Edit</button> '
+                             + '<button class="btn btn-sm btn-danger deleteBtn" data-id="' + id + '">Delete</button>';
+                    }
                 }
             ],
 
@@ -362,6 +383,7 @@
 
     /* ADD */
     $('#addBtn').on('click', () => {
+        window._equipEditMode = false;
         equipmentForm.reset();
         equipment_id.value = '';
         new bootstrap.Modal('#equipmentModal').show();
@@ -376,10 +398,17 @@
                 if (res.status === 'success') {
                     const d = res.data;
                     equipment_id.value = d.id;
-                    serial_number.value = d.serial_number ?? '';
+                    // Set edit mode flag BEFORE loading dropdowns so the model
+                    // change handler does not wipe the Part # field
+                    window._equipEditMode = true;
                     loadBrands(d.make);
                     loadModels(d.make, d.model);
                     loadDescs(d.make, d.model, d.device_type);
+                    // Set Part # AFTER all dropdown loads (which fire change events)
+                    setTimeout(function() {
+                        $('#serial_number').val(d.serial_number ?? '');
+                        window._equipEditMode = false;
+                    }, 50);
                     new bootstrap.Modal('#equipmentModal').show();
                 }
             });
@@ -443,24 +472,43 @@
             .then(r => r.json())
             .then(res => {
                 if (res.status === 'success') {
-                    location.reload();
-                } else {
+                    loader.classList.add('d-none');
+                    text.textContent = 'Save';
+
                     Swal.fire({
-                        icon: 'error',
-                        title: 'Upload Error',
-                        text: res.message ?? 'Save failed'
+                        icon: 'success',
+                        title: 'Success',
+                        text: res.message ?? 'Equipment saved successfully.',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
                     });
+
+                    return;
                 }
-            })
-            .catch(() => {
-                Swal.fire('Error', 'Something went wrong', 'error');
-            })
-            .finally(() => {
-                // 🔓 Re-enable button if needed
+
                 saveBtn.disabled = false;
                 loader.classList.add('d-none');
                 text.textContent = 'Save';
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Error',
+                    text: res.message ?? 'Save failed'
+                });
+            })
+            .catch(() => {
+                saveBtn.disabled = false;
+                loader.classList.add('d-none');
+                text.textContent = 'Save';
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Something went wrong'
+                });
             });
+
     };
 
 
@@ -503,24 +551,18 @@
         $(selector).select2({
             placeholder: placeholder,
             allowClear: true,
-            tags: true, // allows adding new entries
+            tags: true,
             dropdownParent: $('#equipmentModal'),
             createTag: function(params) {
                 const term = $.trim(params.term);
                 if (!term) return null;
+                // Use the clean term as BOTH the id and text so the form
+                // submits the actual value, never the "new_X" temp id
                 return {
-                    id: 'new_' + term,
-                    text: '+ Add "' + term + '"',
-                    newVal: term
+                    id: term,
+                    text: term,
+                    newTag: true
                 };
-            }
-        }).on('select2:select', function(e) {
-            // If user picked a "new" tag, replace value with clean text
-            if (e.params.data.newVal) {
-                const clean = e.params.data.newVal;
-                // Replace the temp option with a real one
-                const $opt = new Option(clean, clean, true, true);
-                $(this).empty().append($opt).trigger('change');
             }
         });
     }
@@ -573,8 +615,10 @@
             // Pre-select matching description but don't restrict the list
             $('#device_type').val(match.device_type).trigger('change');
         }
-        // Serial # intentionally NOT auto-populated — must remain blank for manual entry
-        $('#serial_number').val('');
+        // Only clear Serial # when user is ADDING — never during an edit load
+        if (!window._equipEditMode) {
+            $('#serial_number').val('');
+        }
     });
 
     // Load initial data
@@ -612,6 +656,53 @@
             checkFileSize(this);
         });
     });
+
+    // ── Expand series in-place: clicking "(+N more)" inserts sub-rows below ──
+    $(document).on('click', '.expand-series-btn', function(e) {
+        e.preventDefault();
+        var $btn    = $(this);
+        var $mainTr = $btn.closest('tr');
+        var expanded = $btn.data('expanded') == '1';
+
+        if (expanded) {
+            // Collapse: remove all injected sub-rows and reset button label
+            var ids   = JSON.parse($btn.attr('data-ids')   || '[]');
+            var parts = JSON.parse($btn.attr('data-series') || '[]');
+            $mainTr.nextUntil('tr:not(.series-sub-row)').filter('.series-sub-row').remove();
+            $btn.text('(+' + (parts.length - 1) + ' more)');
+            $btn.data('expanded', '0');
+            return;
+        }
+
+        // Expand: insert a sub-row for each extra series (skip index 0 = already shown)
+        var ids   = JSON.parse($btn.attr('data-ids')   || '[]');
+        var parts = JSON.parse($btn.attr('data-series') || '[]');
+        var colCount = $mainTr.find('td').length;
+
+        // Insert after the main row, in reverse so order is preserved
+        for (var i = parts.length - 1; i >= 1; i--) {
+            var sn  = parts[i] || '—';
+            var sid = ids[i]   || ids[0];
+            var $subRow = $(
+                '<tr class="series-sub-row" style="background:rgba(124,58,237,.07);">' +
+                    '<td colspan="' + (colCount - 1) + '" class="ps-5 text-muted small">' +
+                        '<i class="fa-solid fa-arrow-turn-down-right me-2 opacity-50"></i>' +
+                        '<span class="me-3">' + $('<span>').text(sn).html() + '</span>' +
+                        '<em class="text-muted me-3" style="font-size:11px;">Series ' + (i + 1) + '</em>' +
+                    '</td>' +
+                    '<td class="text-end">' +
+                        '<button class="btn btn-sm btn-info editBtn me-1" data-id="' + sid + '">Edit</button>' +
+                        '<button class="btn btn-sm btn-danger deleteBtn"  data-id="' + sid + '">Delete</button>' +
+                    '</td>' +
+                '</tr>'
+            );
+            $mainTr.after($subRow);
+        }
+
+        $btn.text('▲ collapse');
+        $btn.data('expanded', '1');
+    });
+
 </script>
 
 <?= $this->endSection() ?>

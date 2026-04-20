@@ -205,7 +205,20 @@ class SiteInspectionWorkflowController extends BaseController
         $seModel = new SiteEquipmentModel();
         $eq = $seModel->findByAssetTag($companyId, $siteId, $assetTag);
 
-        if ($eq) {
+
+        // FIX 4: If not found by findByAssetTag, do a direct DB lookup.
+        // This catches assets whose asset_tag was just updated via recordInspection.
+        // Without this, rescanning an updated tag opens 'Add New Device' incorrectly.
+        if (!$eq) {
+            $dbConn = \Config\Database::connect();
+            $directRow = $dbConn->table('site_equipment')
+                ->where('company_id', $companyId)
+                ->where('site_id', $siteId)
+                ->where('asset_tag', $assetTag)
+                ->where('deleted_at', null)
+                ->get()->getRowArray();
+            if ($directRow) $eq = $directRow;
+        }        if ($eq) {
             return $this->response->setJSON([
                 'found'         => true,
                 'id'            => (int) $eq['id'],
@@ -414,12 +427,16 @@ class SiteInspectionWorkflowController extends BaseController
 
         $insData = $this->filterToColumns($candidate, 'inspections');
 
+        // FIX 3: When user changed the asset tag on pass/fail screen,
+        // update site_equipment in-place so old tag leaves 'Not Inspected'
+        // and new tag is recognised on the next scan (FIX 4).
+        if ($assetTag !== $lookupTag && $equipment) {
+            $seModel->update((int) $equipment['id'], ['asset_tag' => $assetTag]);
+            $equipment       = $this->findSiteEquipment($companyId, $siteId, $assetTag);
+            $siteEquipmentId = $equipment ? (int) $equipment['id'] : $siteEquipmentId;
+        }
+
         // Duplicate check: match strictly by asset_tag within this group.
-        // Do NOT match by equipment_id (master_equipment_id) alone because
-        // multiple devices of the same model/type share the same master
-        // equipment record — matching on equipment_id would collapse all
-        // those separate devices into a single inspection row, causing the
-        // "only first device accumulates" bug.
         $builder = $db->table('inspections')
             ->where('company_id', $companyId)
             ->where('site_id', $siteId)
@@ -431,15 +448,15 @@ class SiteInspectionWorkflowController extends BaseController
         if ($assetTag !== $lookupTag) {
             $builder->orWhere('asset_tag', $assetTag);
         }
-
         $builder->groupEnd();
-
         $existing = $builder->orderBy('id', 'DESC')->get()->getRowArray();
 
         if ($existing) {
             $update = $insData;
             unset($update['created_at'], $update['created_by']);
             $update['updated_at'] = $now;
+            // FIX 3: update asset_tag in the inspection row to the new value
+            $update['asset_tag'] = $assetTag;
             $db->table('inspections')->where('id', (int) $existing['id'])->update($update);
         } else {
             $db->table('inspections')->insert($insData);
@@ -453,11 +470,10 @@ class SiteInspectionWorkflowController extends BaseController
 
         // work_orders.equipment_id also points to equipment.id
         if ($masterEquipmentId) {
-           // work_orders.equipment_id now stores site_equipment.id
             (new \App\Libraries\OperationalWorkOrderService())->syncFollowUpFromInspection([
                 'company_id'      => $companyId,
                 'site_id'         => $siteId,
-                'equipment_id'    => $siteEquipmentId ?: 0,
+                'equipment_id'    => $masterEquipmentId,
                 'group_id'        => $groupId,
                 'status'          => $result,
                 'inspection_type' => $action,

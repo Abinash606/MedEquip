@@ -46,100 +46,67 @@ class WorkOrdersController extends BaseController
         };
     }
 
-    /**
-     * Resolve site_equipment.id from a posted value.
-     * work_orders.equipment_id references site_equipment.id directly
-     * after the DB migration removed the FK to the master equipment table.
-     */
-    private function extractAssetTagFromText(?string $text): string
+    private function resolveEquipmentReference(int $companyId, int $siteId, $postedEquipmentId): ?array
     {
-        $text = (string) $text;
-
-        if (preg_match('/^Asset tag:\s*(.+)$/mi', $text, $m)) {
-            return trim($m[1]);
+        $postedEquipmentId = (int) $postedEquipmentId;
+        if ($postedEquipmentId <= 0) {
+            return null;
         }
 
-        return '';
-    }
-
-    private function resolveEquipmentReference(
-        int $companyId,
-        int $siteId,
-        $postedEquipmentId,
-        string $fallbackAssetTag = ''
-    ): ?array {
-        $postedEquipmentId = (int) $postedEquipmentId;
         $db = Database::connect();
 
-        if ($postedEquipmentId > 0) {
-            // 1) direct site_equipment.id
-            $siteEq = $db->table('site_equipment')
-                ->select('id, asset_tag, serial_number, make, model, device_type')
-                ->where('company_id', $companyId)
-                ->where('site_id', $siteId)
-                ->where('id', $postedEquipmentId)
-                ->where('deleted_at', null)
-                ->get()
-                ->getRowArray();
+        $siteEq = $db->table('site_equipment')
+            ->select('id, master_equipment_id, asset_tag, serial_number, make, model, device_type')
+            ->where('company_id', $companyId)
+            ->where('site_id', $siteId)
+            ->where('id', $postedEquipmentId)
+            ->where('deleted_at', null)
+            ->get()
+            ->getRowArray();
 
-            if ($siteEq) {
-                return [
-                    'site_equipment_id' => (int) $siteEq['id'],
-                    'equipment_id'      => (int) $siteEq['id'],
-                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
-                    'serial_number'     => $siteEq['serial_number'] ?? '',
-                    'make'              => $siteEq['make'] ?? '',
-                    'model'             => $siteEq['model'] ?? '',
-                    'device_type'       => $siteEq['device_type'] ?? '',
-                ];
-            }
-
-            // 2) legacy master_equipment_id
-            $siteEq = $db->table('site_equipment')
-                ->select('id, asset_tag, serial_number, make, model, device_type')
-                ->where('company_id', $companyId)
-                ->where('site_id', $siteId)
-                ->where('master_equipment_id', $postedEquipmentId)
-                ->where('deleted_at', null)
-                ->orderBy('id', 'DESC')
-                ->get()
-                ->getRowArray();
-
-            if ($siteEq) {
-                return [
-                    'site_equipment_id' => (int) $siteEq['id'],
-                    'equipment_id'      => (int) $siteEq['id'],
-                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
-                    'serial_number'     => $siteEq['serial_number'] ?? '',
-                    'make'              => $siteEq['make'] ?? '',
-                    'model'             => $siteEq['model'] ?? '',
-                    'device_type'       => $siteEq['device_type'] ?? '',
-                ];
-            }
+        if ($siteEq) {
+            // Fall back to site_equipment.id when no master link exists
+            // so work orders can still be created for site-only equipment.
+            return [
+                'site_equipment_id' => (int) $siteEq['id'],
+                'equipment_id'      => !empty($siteEq['master_equipment_id'])
+                    ? (int) $siteEq['master_equipment_id']
+                    : (int) $siteEq['id'],
+                'asset_tag'         => $siteEq['asset_tag'] ?? '',
+                'serial_number'     => $siteEq['serial_number'] ?? '',
+                'make'              => $siteEq['make'] ?? '',
+                'model'             => $siteEq['model'] ?? '',
+                'device_type'       => $siteEq['device_type'] ?? '',
+            ];
         }
 
-        if ($fallbackAssetTag !== '') {
-            $siteEq = $db->table('site_equipment')
-                ->select('id, asset_tag, serial_number, make, model, device_type')
+        $master = $db->table('equipment')
+            ->select('id, asset_tag, serial_number, make, model, device_type')
+            ->where('company_id', $companyId)
+            ->where('id', $postedEquipmentId)
+            ->where('deleted_at', null)
+            ->get()
+            ->getRowArray();
+
+        if ($master) {
+            $siteCopy = $db->table('site_equipment')
+                ->select('id')
                 ->where('company_id', $companyId)
                 ->where('site_id', $siteId)
-                ->where('asset_tag', $fallbackAssetTag)
+                ->where('master_equipment_id', (int) $master['id'])
                 ->where('deleted_at', null)
-                ->orderBy('id', 'DESC')
                 ->get()
                 ->getRowArray();
 
-            if ($siteEq) {
-                return [
-                    'site_equipment_id' => (int) $siteEq['id'],
-                    'equipment_id'      => (int) $siteEq['id'],
-                    'asset_tag'         => $siteEq['asset_tag'] ?? '',
-                    'serial_number'     => $siteEq['serial_number'] ?? '',
-                    'make'              => $siteEq['make'] ?? '',
-                    'model'             => $siteEq['model'] ?? '',
-                    'device_type'       => $siteEq['device_type'] ?? '',
-                ];
-            }
+            return [
+                'site_equipment_id' => !empty($siteCopy['id']) ? (int) $siteCopy['id'] : null,
+                'equipment_id'      => (int) $master['id'],
+                'asset_tag'         => $master['asset_tag'] ?? '',
+                'serial_number'     => $master['serial_number'] ?? '',
+                'make'              => $master['make'] ?? '',
+                'model'             => $master['model'] ?? '',
+                'device_type'       => $master['device_type'] ?? '',
+            ];
         }
 
         return null;
@@ -171,29 +138,6 @@ class WorkOrdersController extends BaseController
 
         if (!empty($row['equipment_id'])) {
             $eqRef = $this->resolveEquipmentReference($companyId, $siteId, (int) $row['equipment_id']);
-        }
-
-        if (!$eqRef && !empty($row['group_id'])) {
-            $insp = $db->table('inspections')
-                ->select('asset_tag')
-                ->where('company_id', $companyId)
-                ->where('site_id', $siteId)
-                ->where('group_id', $row['group_id'])
-                ->where('deleted_at', null)
-                ->orderBy('id', 'DESC')
-                ->get()
-                ->getRowArray();
-
-            if (!empty($insp['asset_tag'])) {
-                $eqRef = $this->resolveEquipmentReference($companyId, $siteId, 0, trim((string) $insp['asset_tag']));
-            }
-        }
-
-        if (!$eqRef) {
-            $descAsset = $this->extractAssetTagFromText($row['description'] ?? '');
-            if ($descAsset !== '') {
-                $eqRef = $this->resolveEquipmentReference($companyId, $siteId, 0, $descAsset);
-            }
         }
 
         $row['site_equipment_id'] = $eqRef['site_equipment_id'] ?? null;
@@ -256,29 +200,18 @@ class WorkOrdersController extends BaseController
                 : redirect()->back()->with('error', $msg);
         }
 
-        $postedEquipId  = (int) $this->request->getPost('equipment_id');
-        $postedAssetTag = trim((string) $this->request->getPost('asset_tag'));
-
-        // Resolve site_equipment.id — nullable, no master equipment lookups
-        if ($postedEquipId <= 0 && $postedAssetTag !== '') {
-            $dbC = Database::connect();
-            $r = $dbC->table('site_equipment')->select('id')
-                ->where('company_id', $companyId)->where('site_id', $siteId)
-                ->where('asset_tag', $postedAssetTag)->where('deleted_at', null)
-                ->get()->getRowArray();
-            if ($r) $postedEquipId = (int) $r['id'];
-        }
-
-        $resolvedEquipId = null;
-        if ($postedEquipId > 0) {
-            $eqRef = $this->resolveEquipmentReference($companyId, $siteId, $postedEquipId);
-            if ($eqRef) $resolvedEquipId = (int) $eqRef['equipment_id'];
+        $eqRef = $this->resolveEquipmentReference($companyId, $siteId, $this->request->getPost('equipment_id'));
+        if (!$eqRef) {
+            $msg = 'Equipment not found for this site.';
+            return $this->wantsJson()
+                ? $this->response->setJSON(['success' => false, 'message' => $msg, 'csrf_hash' => csrf_hash()])
+                : redirect()->back()->withInput()->with('error', $msg);
         }
 
         $data = [
             'company_id'   => $companyId,
             'site_id'      => $siteId,
-            'equipment_id' => $resolvedEquipId, // site_equipment.id or null
+            'equipment_id' => (int) $eqRef['equipment_id'],
             'title'        => $title,
             'description'  => trim((string) $this->request->getPost('description')),
             'status'       => $this->normalizeStatus($this->request->getPost('status')),
@@ -291,13 +224,13 @@ class WorkOrdersController extends BaseController
 
         $existing = null;
         if ($groupId !== '') {
-            $b = $this->workOrders
+            $existing = $this->workOrders
                 ->where('company_id', $companyId)
                 ->where('site_id', $siteId)
+                ->where('equipment_id', (int) $eqRef['equipment_id'])
                 ->where('group_id', $groupId)
-                ->where('deleted_at', null);
-            if ($resolvedEquipId) $b->where('equipment_id', $resolvedEquipId);
-            $existing = $b->first();
+                ->where('deleted_at', null)
+                ->first();
         }
 
         if ($existing) {
@@ -352,24 +285,19 @@ class WorkOrdersController extends BaseController
         }
 
         $siteId = (int) ($this->request->getPost('site_id') ?: $existingRow['site_id']);
-        $postedEquipmentId = (int) $this->request->getPost('equipment_id');
-        $postedAssetTagUpd = trim((string) $this->request->getPost('asset_tag'));
+        $postedEquipmentId = $this->request->getPost('equipment_id');
 
-        // Resolve site_equipment.id — keep existing if nothing valid posted
-        $equipmentId = !empty($existingRow['equipment_id']) ? (int) $existingRow['equipment_id'] : null;
-        $lookupId = $postedEquipmentId;
-
-        if ($lookupId <= 0 && $postedAssetTagUpd !== '') {
-            $dbB = Database::connect();
-            $r = $dbB->table('site_equipment')->select('id')
-                ->where('company_id', $companyId)->where('site_id', $siteId)
-                ->where('asset_tag', $postedAssetTagUpd)->where('deleted_at', null)
-                ->get()->getRowArray();
-            if ($r) $lookupId = (int) $r['id'];
-        }
-        if ($lookupId > 0) {
-            $eqRef = $this->resolveEquipmentReference($companyId, $siteId, $lookupId);
-            if ($eqRef) $equipmentId = (int) $eqRef['equipment_id'];
+        if ((int) $postedEquipmentId > 0) {
+            $eqRef = $this->resolveEquipmentReference($companyId, $siteId, $postedEquipmentId);
+            if (!$eqRef) {
+                $msg = 'Equipment not found for this site.';
+                return $this->wantsJson()
+                    ? $this->response->setJSON(['success' => false, 'message' => $msg, 'csrf_hash' => csrf_hash()])
+                    : redirect()->back()->withInput()->with('error', $msg);
+            }
+            $equipmentId = (int) $eqRef['equipment_id'];
+        } else {
+            $equipmentId = (int) $existingRow['equipment_id'];
         }
 
         $data = [
@@ -390,15 +318,6 @@ class WorkOrdersController extends BaseController
         }
 
         $this->workOrders->update((int) $id, $data);
-
-        // If serial_number was submitted, update it on the linked site_equipment row
-        $postedSerial = trim((string) $this->request->getPost('serial_number'));
-        if ($postedSerial !== '' && $equipmentId) {
-            Database::connect()->table('site_equipment')
-                ->where('id', $equipmentId)->where('company_id', $companyId)
-                ->update(['serial_number' => $postedSerial, 'updated_at' => date('Y-m-d H:i:s')]);
-        }
-
         $row = $this->fetchWorkOrderRow($companyId, (int) $id);
 
         if ($this->wantsJson()) {
@@ -424,66 +343,6 @@ class WorkOrdersController extends BaseController
         }
 
         return redirect()->to('/admin/sites/' . $siteId)->with('success', 'Work order updated.');
-    }
-
-    /**
-     * GET admin/work-orders/findByGroup
-     * Finds the auto-created WO for a given inspection group + asset_tag so the
-     * Fail+WO modal can do UPDATE instead of INSERT (prevents duplicates).
-     */
-    public function findByGroup()
-    {
-        $companyId = (int) $this->session->get('company_id');
-        $groupId   = trim((string) $this->request->getGet('group_id'));
-        $assetTag  = trim((string) $this->request->getGet('asset_tag'));
-        $siteId    = (int) $this->request->getGet('site_id');
-
-        if ($groupId === '' || $assetTag === '') {
-            return $this->response->setJSON(['success' => false]);
-        }
-
-        $db = Database::connect();
-
-        // Look for WO that matches this inspection group
-        $wo = $db->table('work_orders wo')
-            ->select('wo.id, wo.title, wo.description, wo.status, wo.priority, wo.assigned_to, wo.start_date, wo.end_date')
-            ->join('site_equipment se', 'se.id = wo.equipment_id AND se.deleted_at IS NULL', 'left')
-            ->where('wo.company_id', $companyId)
-            ->where('wo.group_id', $groupId)
-            ->where('wo.deleted_at', null)
-            ->groupStart()
-                ->where('se.asset_tag', $assetTag)
-                ->orWhere('wo.site_id', $siteId)
-            ->groupEnd()
-            ->orderBy('wo.id', 'DESC')
-            ->get()->getRowArray();
-
-        if (!$wo) {
-            // Simpler fallback: just match by group_id and site_id
-            $wo = $db->table('work_orders')
-                ->where('company_id', $companyId)
-                ->where('group_id', $groupId)
-                ->where('site_id', $siteId)
-                ->where('deleted_at', null)
-                ->orderBy('id', 'DESC')
-                ->get()->getRowArray();
-        }
-
-        if (!$wo) {
-            return $this->response->setJSON(['success' => false]);
-        }
-
-        return $this->response->setJSON([
-            'success'        => true,
-            'work_order_id'  => $wo['id'],
-            'title'          => $wo['title'] ?? '',
-            'description'    => $wo['description'] ?? '',
-            'status'         => $wo['status'] ?? 'open',
-            'priority'       => $wo['priority'] ?? 'normal',
-            'assigned_to'    => $wo['assigned_to'] ?? null,
-            'start_date'     => $wo['start_date'] ?? '',
-            'end_date'       => $wo['end_date'] ?? '',
-        ]);
     }
 
     public function delete($id)

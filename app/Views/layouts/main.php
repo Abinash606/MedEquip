@@ -1,13 +1,27 @@
 <?php
 
-/** @var string|null $title */ ?>
+/** @var string|null $title */
+$uriSegments = service('uri')->getSegments();
+$skipSegments = ['admin', 'technician', 'customer'];
+$pageTitle = trim((string) ($title ?? ''));
+
+if ($pageTitle === '') {
+    $usableSegments = array_values(array_filter($uriSegments, static function ($segment) use ($skipSegments) {
+        $segment = trim((string) $segment);
+        return $segment !== '' && !in_array(strtolower($segment), $skipSegments, true) && !ctype_digit($segment);
+    }));
+
+    $derived = end($usableSegments) ?: 'Dashboard';
+    $pageTitle = ucwords(str_replace(['-', '_'], ' ', (string) $derived));
+}
+?>
 <!doctype html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= esc($title ?? 'Dashboard') ?></title>
+    <title><?= esc($pageTitle ?? 'Dashboard') ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -283,10 +297,11 @@
             background: rgba(255, 255, 255, .04);
             border: 1px solid rgba(255, 255, 255, .10);
             color: var(--text);
-            padding-left: 42px;
+            padding-left: 42px !important;
             border-radius: 16px;
             height: 44px;
             transition: box-shadow .18s ease, border-color .18s ease, transform .18s ease;
+            
         }
 
         .search .form-control:focus {
@@ -842,6 +857,9 @@
 
         .schedule-view.active {
             display: block;
+            height:auto;
+            overflow-y:auto;
+            scrollbar-width:thin;
         }
 
         .timeline-view {
@@ -1086,6 +1104,12 @@
         .fc .fc-list-event:hover td {
             background-color: #000 !important;
         }
+        .fc-scroller{
+            overflow:hidden!important;
+        }
+        .fc-daygrid-body{
+            width: 100%!important;
+        }
     </style>
 </head>
 
@@ -1112,6 +1136,13 @@
 
                 <!-- Role: Super Admin -->
                 <?php if ($role === 'super_admin'): ?>
+                    <?php
+                    $__mdb  = \Config\Database::connect();
+                    $__mcid = (int) session('company_id');
+                    $__mSites = (int) $__mdb->query('SELECT COUNT(*) AS n FROM sites WHERE company_id=? AND deleted_at IS NULL', [$__mcid])->getRow()->n;
+                    $__mEq    = (int) $__mdb->query('SELECT COUNT(*) AS n FROM equipment WHERE company_id=? AND deleted_at IS NULL', [$__mcid])->getRow()->n;
+                    $__mWO    = (int) $__mdb->query("SELECT COUNT(*) AS n FROM work_orders WHERE company_id=? AND deleted_at IS NULL AND status = 'open'", [$__mcid])->getRow()->n;
+                    ?>
                     <div class="section-header">CORE OPERATIONS</div>
                     <a class="nav-link<?= url_is('admin/dashboard') ? ' active' : '' ?>"
                         href="<?= site_url('admin/dashboard') ?>">
@@ -1132,12 +1163,17 @@
                     </a>
                     <a class="nav-link<?= url_is('admin/sites*') ? ' active' : '' ?>" href="<?= site_url('admin/sites') ?>">
                         <i class="fa-solid fa-sitemap"></i>
-                        <span>Sites</span>
+                        <span>Sites <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__mSites ?></span></span>
                     </a>
                     <a class="nav-link<?= url_is('admin/equipment*') ? ' active' : '' ?>"
                         href="<?= site_url('admin/equipment') ?>">
                         <i class="fa-solid fa-boxes-stacked"></i>
-                        <span>Equipment DB</span>
+                        <span>Equipment DB <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__mEq ?></span></span>
+                    </a>
+                    <a class="nav-link<?= url_is('admin/work-orders*') ? ' active' : '' ?>"
+                        href="<?= site_url('admin/work-orders') ?>">
+                        <i class="fa-solid fa-wrench"></i>
+                        <span>Work Orders <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__mWO ?></span></span>
                     </a>
                     <a class="nav-link<?= url_is('admin/inspection-reports*') ? ' active' : '' ?>"
                         href="<?= site_url('admin/inspection-reports') ?>">
@@ -1187,15 +1223,52 @@
 
                     <!-- Role: Technician -->
                 <?php elseif ($role === 'technician'): ?>
+                    <?php
+                    $__tdb2  = \Config\Database::connect();
+                    $__tcid2 = (int) session('company_id');
+                    $__tSites2 = (int) $__tdb2->query('SELECT COUNT(*) AS n FROM sites WHERE company_id=? AND deleted_at IS NULL', [$__tcid2])->getRow()->n;
+                    // Resolve this technician's ID so WO count matches the dashboard "Open Requests" card
+                    $__techRow = $__tdb2->query('SELECT id FROM technicians WHERE user_id=? AND company_id=? AND deleted_at IS NULL LIMIT 1', [(int)session('user_id'), $__tcid2])->getRow();
+                    $__techId2 = $__techRow ? (int)$__techRow->id : 0;
+                    if ($__techId2) {
+                        $__tWO2 = (int) $__tdb2->query("SELECT COUNT(*) AS n FROM work_orders WHERE company_id=? AND assigned_to=? AND deleted_at IS NULL AND status NOT IN ('closed','completed')", [$__tcid2, $__techId2])->getRow()->n;
+                    } else {
+                        $__tWO2 = (int) $__tdb2->query("SELECT COUNT(*) AS n FROM work_orders WHERE company_id=? AND deleted_at IS NULL AND status NOT IN ('closed','completed')", [$__tcid2])->getRow()->n;
+                    }
+                    ?>
+                    <p class="section-header">Main Menu</p>
                     <a class="nav-link<?= url_is('technician/dashboard') ? ' active' : '' ?>"
                         href="<?= site_url('technician/dashboard') ?>">
-                        <i class="fa-solid fa-gauge-high"></i>
-                        <span>Dashboard</span>
+                        <i class="fa-solid fa-chart-pie"></i><span>Dashboard</span>
+                    </a>
+                    <a class="nav-link<?= url_is('technician/scheduling*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/scheduling') ?>">
+                        <i class="fa-solid fa-calendar-check"></i><span>Scheduling</span>
+                    </a>
+                    <a class="nav-link<?= url_is('technician/customers*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/customers') ?>">
+                        <i class="fa-solid fa-users"></i><span>Customers</span>
+                    </a>
+                    <a class="nav-link<?= url_is('technician/sites*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/sites') ?>">
+                        <i class="fa-solid fa-sitemap"></i><span>Sites <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__tSites2 ?></span></span>
                     </a>
                     <a class="nav-link<?= url_is('technician/work-orders*') ? ' active' : '' ?>"
                         href="<?= site_url('technician/work-orders') ?>">
-                        <i class="fa-solid fa-file-contract"></i>
-                        <span>Work Orders</span>
+                        <i class="fa-solid fa-wrench"></i><span>Work Orders <span class="badge bg-secondary ms-1" style="font-size:10px;"><?= $__tWO2 ?></span></span>
+                    </a>
+                    <a class="nav-link<?= url_is('technician/inspections*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/inspections') ?>">
+                        <i class="fa-solid fa-clipboard-check"></i><span>Inspections</span>
+                    </a>
+                    <p class="section-header mt-3">Reports</p>
+                    <a class="nav-link<?= url_is('technician/reports*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/reports') ?>">
+                        <i class="fa-solid fa-file-pdf"></i><span>Reports</span>
+                    </a>
+                    <a class="nav-link<?= url_is('technician/inventory*') ? ' active' : '' ?>"
+                        href="<?= site_url('technician/inventory') ?>">
+                        <i class="fa-solid fa-boxes-stacked"></i><span>Inventory</span>
                     </a>
                 <?php endif; ?>
             </div>

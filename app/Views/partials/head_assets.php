@@ -72,4 +72,22 @@
         @media (min-width: 769px) {
             .hamburger-menu { display: none; }
         }
+        /* ── SweetAlert2 button visibility fix ──────────────────────────────
+           Ensures the confirm/cancel buttons are always visible and have
+           readable text on hover, regardless of theme overrides.          */
+        .swal2-confirm, .swal2-cancel, .swal2-deny {
+            color: #fff !important;
+            opacity: 1 !important;
+        }
+        .swal2-confirm:hover, .swal2-confirm:focus {
+            opacity: 0.9 !important;
+            color: #fff !important;
+        }
+        .swal2-cancel:hover, .swal2-cancel:focus {
+            opacity: 0.9 !important;
+            color: #fff !important;
+        }
+        /* ── General page spacing fix ─────────────────────────────────────── */
+        .glass-card { margin-bottom: 1.25rem; }
+        .tab-content > .tab-pane { padding-top: 1rem; }
     </style>

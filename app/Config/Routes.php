@@ -61,6 +61,8 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('scheduling', 'Admin\SchedulingController::index');
     $routes->get('scheduling/events', 'Admin\\SchedulingController::events');
     $routes->post('scheduling/store', 'Admin\\SchedulingController::store');
+    $routes->post('scheduling/reschedule', 'Admin\\\\SchedulingController::reschedule');
+    $routes->post('scheduling/send-reminder', 'Admin\\\\SchedulingController::sendReminder');
     $routes->get('customers/filter-sites/(:num)', 'Admin\\CustomersController::filterSites/$1');
     $routes->get('technicians', 'Admin\\TechniciansController::index');
     $routes->get('states', 'Admin\\TechniciansController::states');
@@ -101,9 +103,9 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('equipment/delete/(:num)', 'Admin\EquipmentController::delete/$1');
     $routes->get('equipment/show/(:num)', 'Admin\EquipmentController::show/$1');
 
-    $routes->get('equipment-db/(:num)', 'Admin\EquipmentController::show/$1');
-    $routes->post('equipment-db/save', 'Admin\EquipmentController::save');
-    $routes->post('equipment-db/delete/(:num)', 'Admin\EquipmentController::deletedb/$1');
+    $routes->get('equipment-db/(:num)', 'Admin\EquipmentDbController::show/$1');
+    $routes->post('equipment-db/save', 'Admin\EquipmentDbController::save');
+    $routes->post('equipment-db/delete/(:num)', 'Admin\EquipmentDbController::deleteRecord/$1');
     $routes->post('equipment/bulk-import', 'Admin\\EquipmentController::bulkImport');
 
     $routes->post(
@@ -133,6 +135,7 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->get('inspections/reportData', 'Admin\InspectionsController::reportData');
     $routes->get('inspections/reportData/(:any)', 'Admin\InspectionsController::reportData/$1');
     $routes->post('inspections/updateGroupTitle',  'Admin\\InspectionsController::updateGroupTitle');
+    $routes->post('inspections/updateGroupStatus', 'Admin\\InspectionsController::updateGroupStatus');
 
     // PDF endpoint for inspection reports
     $routes->get('inspections/reportPdf/(:any)', 'Admin\InspectionsController::reportPdf/$1');
@@ -174,6 +177,20 @@ $routes->group('admin', ['filter' => 'role:super_admin'], static function ($rout
     $routes->post('site-inspection/record', 'Admin\SiteInspectionWorkflowController::recordInspection');
     $routes->post('site-inspection/add-device', 'Admin\\SiteInspectionWorkflowController::addDevice');
     $routes->delete('settings/equipment/delete/(:num)', 'Admin\SystemSettings::equipmentDelete/$1');
+
+    // Labor Codes (Settings > Labor Codes tab)
+    $routes->get('settings/labor-codes',                  'Admin\\LaborCodesController::index');
+    $routes->get('settings/labor-codes/(:num)',           'Admin\\LaborCodesController::get/$1');
+    $routes->post('settings/labor-codes/save',            'Admin\\LaborCodesController::save');
+    $routes->delete('settings/labor-codes/delete/(:num)', 'Admin\\LaborCodesController::delete/$1');
+
+    // Work Order Invoice + Packing Slip
+    // IMPORTANT: literal route 'labor-codes-list' must be BEFORE (:num) routes
+    $routes->get('work-orders/labor-codes-list',               'Admin\\WorkOrderInvoiceController::laborCodesList');
+    $routes->get('work-orders/(:num)/invoice/data',            'Admin\\WorkOrderInvoiceController::getData/$1');
+    $routes->post('work-orders/(:num)/invoice/save',           'Admin\\WorkOrderInvoiceController::save/$1');
+    $routes->get('work-orders/(:num)/invoice/download',        'Admin\\WorkOrderInvoiceController::downloadInvoice/$1');
+    $routes->get('work-orders/(:num)/packing-slip/download',   'Admin\\WorkOrderInvoiceController::downloadPackingSlip/$1');
 });
 
 // Routes for Customer role
@@ -231,9 +248,11 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->get('inspections/reportData',                      'Technician\\SiteInspectionWorkflowController::reportData');
     $routes->get('inspections/reportData/(:any)',               'Technician\\SiteInspectionWorkflowController::reportData/$1');
     $routes->post('inspections/updateGroupTitle',               'Admin\\InspectionsController::updateGroupTitle');
+    $routes->post('inspections/updateGroupStatus',              'Admin\\InspectionsController::updateGroupStatus');
     $routes->post('inspections/deleteGroup', 'Technician\\SiteInspectionWorkflowController::deleteGroup');
     // ── Work Orders ────────────────────────────────────────────
     $routes->get('work-orders',                                 'Technician\\WorkOrdersController::index');
+    $routes->get('work-orders/view/(:num)',                     'Technician\\WorkOrdersController::show/$1');
     $routes->post('work-orders/create',       'Technician\SitesController::workOrderCreate');
     $routes->get('work-orders/show/(:num)',   'Technician\SitesController::workOrderShow/$1');
     $routes->get('work-orders/findByGroup', 'Technician\SitesController::workOrderFindByGroup');
@@ -245,6 +264,8 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     // ── Sites ──────────────────────────────────────────────────
     $routes->get('sites',                                       'Technician\\SitesController::index');
     $routes->get('sites/view/(:num)',                           'Technician\\SitesController::view/$1');
+    $routes->get('sites/equipment-data/(:num)',                 'Technician\SitesController::equipmentData/$1');
+    $routes->get('sites/work-orders-data/(:num)',               'Technician\SitesController::workOrdersData/$1');
 
     // ── Equipment ──────────────────────────────────────────────
     $routes->get('equipment/show/(:num)',                       'Technician\\SitesController::equipmentShow/$1');
@@ -258,6 +279,13 @@ $routes->group('technician', ['filter' => 'role:technician'], static function ($
     $routes->get('service-history',                             'Technician\\ServiceHistoryController::index');
     $routes->post('service-history/create',                     'Technician\\ServiceHistoryController::create');
     $routes->get('inventory',                                   'Technician\\InventoryController::index');
+
+    // Technician: Work Order Invoice + Packing Slip (reuses Admin controller)
+    $routes->get('work-orders/labor-codes-list',               'Admin\\WorkOrderInvoiceController::laborCodesList');
+    $routes->get('work-orders/(:num)/invoice/data',            'Admin\\WorkOrderInvoiceController::getData/$1');
+    $routes->post('work-orders/(:num)/invoice/save',           'Admin\\WorkOrderInvoiceController::save/$1');
+    $routes->get('work-orders/(:num)/invoice/download',        'Admin\\WorkOrderInvoiceController::downloadInvoice/$1');
+    $routes->get('work-orders/(:num)/packing-slip/download',   'Admin\\WorkOrderInvoiceController::downloadPackingSlip/$1');
 });
 
 

@@ -35,19 +35,41 @@ class FinancialController extends BaseController
         $customerStats = $db->query("
             SELECT
                 c.name AS customer_name,
-                COUNT(DISTINCT i.id)  AS inspection_count,
-                COUNT(DISTINCT wo.id) AS wo_count,
-                COUNT(DISTINCT s.id)  AS site_count,
-                COUNT(DISTINCT e.id)  AS equipment_count
+                (
+                    SELECT COUNT(*)
+                    FROM sites s
+                    WHERE s.company_id = c.company_id
+                      AND s.customer_id = c.id
+                      AND s.deleted_at IS NULL
+                ) AS site_count,
+                (
+                    SELECT COUNT(*)
+                    FROM site_equipment se
+                    INNER JOIN sites s2 ON s2.id = se.site_id AND s2.deleted_at IS NULL
+                    WHERE se.company_id = c.company_id
+                      AND s2.customer_id = c.id
+                      AND se.deleted_at IS NULL
+                ) AS equipment_count,
+                (
+                    SELECT COUNT(*)
+                    FROM inspections i
+                    INNER JOIN sites s3 ON s3.id = i.site_id AND s3.deleted_at IS NULL
+                    WHERE i.company_id = c.company_id
+                      AND s3.customer_id = c.id
+                      AND i.deleted_at IS NULL
+                ) AS inspection_count,
+                (
+                    SELECT COUNT(*)
+                    FROM work_orders wo
+                    INNER JOIN sites s4 ON s4.id = wo.site_id AND s4.deleted_at IS NULL
+                    WHERE wo.company_id = c.company_id
+                      AND s4.customer_id = c.id
+                      AND wo.deleted_at IS NULL
+                ) AS wo_count
             FROM customers c
-            LEFT JOIN sites s       ON s.customer_id = c.id AND s.deleted_at IS NULL
-            LEFT JOIN inspections i ON i.site_id = s.id
-            LEFT JOIN work_orders wo ON wo.site_id = s.id
-            LEFT JOIN equipment e   ON e.site_id = s.id AND e.deleted_at IS NULL
             WHERE c.company_id = ?
               AND c.deleted_at IS NULL
-            GROUP BY c.id, c.name
-            ORDER BY inspection_count DESC
+            ORDER BY inspection_count DESC, c.name ASC
         ", [$companyId])->getResultArray();
 
         // Monthly inspection trend (last 6 months)
@@ -66,11 +88,11 @@ class FinancialController extends BaseController
 
         // Equipment count and compliance rate
         $equipCount = $db->query(
-            "SELECT COUNT(*) AS cnt FROM equipment WHERE company_id = ? AND deleted_at IS NULL", [$companyId]
+            "SELECT COUNT(*) AS cnt FROM site_equipment WHERE company_id = ? AND deleted_at IS NULL", [$companyId]
         )->getRow()->cnt ?? 0;
 
         $passCount  = $db->query(
-            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ? AND status IN ('Pass','pass')", [$companyId]
+            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ? AND deleted_at IS NULL AND status IN ('Pass','pass')", [$companyId]
         )->getRow()->cnt ?? 0;
 
         $complianceRate = $totalInspections > 0

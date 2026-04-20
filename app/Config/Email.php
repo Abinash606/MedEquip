@@ -6,6 +6,15 @@ use CodeIgniter\Config\BaseConfig;
 
 class Email extends BaseConfig
 {
+
+    public string $protocol = 'smtp';
+    public string $SMTPHost = 'smtp.yourprovider.com';
+    public int    $SMTPPort = 587;
+    public string $SMTPUser = 'your@email.com';
+    public string $SMTPPass = 'yourpassword';
+    public string $SMTPCrypto = 'tls';
+
+
     public string $fromEmail = 'no-reply@assetiq.com';
     public string $fromName  = 'AssetIQ';
     public string $recipients = '';
@@ -18,7 +27,7 @@ class Email extends BaseConfig
     /**
      * Use PHP mail() function
      */
-    public string $protocol = 'mail';
+    // public string $protocol = 'mail';
 
     /**
      * Path to sendmail (used internally by PHP mail)

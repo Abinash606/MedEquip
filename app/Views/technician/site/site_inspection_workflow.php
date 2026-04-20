@@ -41,6 +41,68 @@
  */
 ?>
 
+<style>
+    /* ── Dark theme: override Bootstrap table-striped white backgrounds ── */
+    #notInspectedTable,
+    #inspectedTable,
+    #inspectionTable,
+    #archivedTable {
+        --bs-table-bg: transparent !important;
+        --bs-table-striped-bg: rgba(255, 255, 255, .04) !important;
+        --bs-table-hover-bg: rgba(255, 255, 255, .07) !important;
+        --bs-table-border-color: rgba(255, 255, 255, .07) !important;
+        --bs-table-color: #e9edff !important;
+        --bs-table-striped-color: #e9edff !important;
+        --bs-table-hover-color: #fff !important;
+        color: #e9edff !important;
+    }
+
+    #techInspectedResultFilter {
+        max-width: 140px;
+        background: rgba(255, 255, 255, .06);
+        border: 1px solid rgba(255, 255, 255, .15);
+        color: #e9edff;
+    }
+
+    #notInspectedTable thead th,
+    #inspectedTable thead th,
+    #inspectionTable thead th,
+    #archivedTable thead th {
+        background: transparent !important;
+        color: rgba(233, 237, 255, .55) !important;
+        font-size: 11px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+        white-space: nowrap;
+    }
+
+    #notInspectedTable tbody td,
+    #inspectedTable tbody td,
+    #inspectionTable tbody td,
+    #archivedTable tbody td {
+        background: transparent !important;
+        color: #e9edff !important;
+        border-color: rgba(255, 255, 255, .06) !important;
+    }
+
+    thead th.sort-asc::after {
+        content: ' ▲';
+        font-size: 10px;
+        opacity: .7;
+    }
+
+    thead th.sort-desc::after {
+        content: ' ▼';
+        font-size: 10px;
+        opacity: .7;
+    }
+
+    thead th[title="Click to sort"]:hover {
+        color: #fff !important;
+    }
+</style>
+
 <div id="site-inspection-workflow">
     <div class="container-fluid px-4 py-4 g-card">
 
@@ -56,6 +118,29 @@
                 </button>
             </div>
             <div class="card p-4 shadow-sm">
+                <!-- FIX 6: Open/All/Closed filter -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                    <div class="btn-group btn-group-sm" id="techInspFilterBtns" role="group">
+                        <button type="button" class="btn btn-primary active" id="techInspFilterOpen"
+                            onclick="techFilterInspectionsByStatus('open')">
+                            <i class="fa-solid fa-rotate me-1"></i> Open
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="techInspFilterAll"
+                            onclick="techFilterInspectionsByStatus('all')">
+                            All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="techInspFilterClosed"
+                            onclick="techFilterInspectionsByStatus('closed')">
+                            <i class="fa-solid fa-circle-check me-1"></i> Closed
+                        </button>
+                    </div>
+                    <div class="input-group" style="max-width:300px;">
+                        <span class="input-group-text border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                        <input class="form-control border-start-0 ps-0" id="techInspSearchInput"
+                            placeholder="Search inspections..." type="text"
+                            oninput="techApplyInspectionSearch(this.value)">
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover" id="inspectionsTable">
                         <thead>
@@ -64,24 +149,21 @@
                                 <th>Scheduled Date</th>
                                 <th>Technician</th>
                                 <th>Next Due Date</th>
+                                <th>Status</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (!empty($inspectionList ?? [])): ?>
                                 <?php foreach ($inspectionList as $insp):
-                                    // Use the actual group_id stored in the database — this is what
-                                    // appears in the report header (e.g. INSP-20260309151712).
                                     $inspId = $insp['group_id'];
                                     $stLow  = strtolower($insp['status'] ?? '');
-                                    $isDone = in_array($stLow, ['pass', 'fail', 'repair', 'completed', 'closed/complete']) || !empty($insp['completed_at']);
+                                    $isClosed = ($insp['status'] ?? '') === 'Closed/Complete';
+                                    $isDone = $isClosed || in_array($stLow, ['pass', 'fail', 'repair', 'completed']) || !empty($insp['completed_at']);
                                 ?>
-                                    <tr>
+                                    <tr data-insp-status="<?= $isClosed ? 'closed' : 'open' ?>">
                                         <td>
                                             <span class="fw-medium"><?= esc($inspId) ?></span>
-                                            <?php if (!$isDone): ?>
-                                                <span class="badge bg-warning text-dark ms-1" style="font-size:10px;">In Progress</span>
-                                            <?php endif; ?>
                                         </td>
                                         <td><?= esc(date('M d, Y', strtotime($insp['scheduled_at']))) ?></td>
                                         <td>
@@ -104,13 +186,24 @@
                                                 <span class="text-muted">-</span>
                                             <?php endif; ?>
                                         </td>
+                                        <td>
+                                            <?php if ($isClosed): ?>
+                                                <span class="badge bg-success">
+                                                    <i class="fa-solid fa-circle-check me-1"></i>Closed
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fa-solid fa-rotate me-1"></i>In Progress
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-secondary me-1"
                                                 onclick="openInspectionReport('<?= esc($insp['group_id']) ?>')"
                                                 title="View Report">
                                                 <i class="fa-solid fa-file-export"></i>
                                             </button>
-                                            <?php if (!$isDone): ?>
+                                            <?php if (!$isClosed): ?>
                                                 <button class="btn btn-sm btn-warning me-1 btn-resume-insp"
                                                     data-group="<?= esc($insp['group_id']) ?>"
                                                     data-site="<?= esc($site['name']) ?>"
@@ -118,6 +211,7 @@
                                                     data-title="<?= esc($insp['title'] ?? '') ?>"
                                                     data-inspid="<?= esc($inspId) ?>"
                                                     data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>"
+                                                    data-status="<?= esc($insp['status'] ?? 'In Progress') ?>"
                                                     title="Resume this in-progress inspection">
                                                     <i class="fa-solid fa-play me-1"></i> Resume
                                                 </button>
@@ -128,7 +222,8 @@
                                                     data-type="<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>"
                                                     data-title="<?= esc($insp['title'] ?? '') ?>"
                                                     data-inspid="<?= esc($inspId) ?>"
-                                                    data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>">
+                                                    data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>"
+                                                    data-status="<?= esc($insp['status'] ?? 'In Progress') ?>">
                                                     <i class="fa-solid fa-eye me-1"></i> View
                                                 </button>
                                             <?php endif; ?>
@@ -141,7 +236,7 @@
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">No inspections found. Click "Add
+                                    <td colspan="6" class="text-center text-muted py-4">No inspections found. Click "Add
                                         Inspection" to start.</td>
                                 </tr>
                             <?php endif; ?>
@@ -206,19 +301,34 @@
                                 data-bs-toggle="dropdown" id="statusDropdown" type="button">
                                 <i class="fa-solid fa-rotate"></i> In Progress
                             </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="updateStatus('In Progress')">In
-                                        Progress</a></li>
+                            <ul class="dropdown-menu" id="statusDropdownMenu">
+                                <!-- Technicians can only mark Closed; only Admins can reopen -->
                                 <li><a class="dropdown-item" href="#"
-                                        onclick="updateStatus('Closed/Complete')">Closed/Complete</a></li>
+                                        onclick="updateStatus('Closed/Complete')">
+                                        <i class="fa-solid fa-circle-check me-2 text-success"></i>Mark as Closed/Complete
+                                    </a></li>
+                                <li id="statusReopenNote" class="d-none">
+                                    <span class="dropdown-item-text text-muted small px-3 py-2">
+                                        <i class="fa-solid fa-lock me-1"></i>Contact Admin to reopen
+                                    </span>
+                                </li>
                             </ul>
                         </div>
-                        <div class="small text-muted mt-1 fst-italic">Mark as Closed when done</div>
+                        <div class="small text-muted mt-1 fst-italic" id="statusHelpText">Mark as Closed when done</div>
                     </div>
                 </div>
             </div>
 
             <!-- Asset entry -->
+            <!-- Locked banner shown when inspection is Closed/Complete -->
+            <div id="inspectionLockedBanner" class="d-none alert mb-3"
+                style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.4);color:#fca5a5;border-radius:10px;">
+                <i class="fa-solid fa-lock me-2"></i>
+                <strong>Inspection Closed.</strong>
+                This inspection has been marked as complete. You cannot add or edit items.
+                Contact your Admin if changes are needed.
+            </div>
+
             <div class="asset-input-wrapper glass-card p-3 mb-3">
                 <h5 class="fw-bold mb-3">Start With Asset Number <span class="text-danger">Not</span> Serial Number</h5>
                 <div id="assetLookupAlert" class="alert mb-3" style="display:none;" role="alert"></div>
@@ -309,6 +419,7 @@
                                         <tr>
                                             <th>Action</th>
                                             <th>Asset #</th>
+                                            <th>Brand</th>
                                             <th>Model</th>
                                             <th>Type</th>
                                             <th>Dept / Room</th>
@@ -331,6 +442,7 @@
 
                                                     </td>
                                                     <td><?= esc($eq['asset_tag']) ?></td>
+                                                    <td><?= esc($eq['make'] ?? '') ?></td>
                                                     <td><?= esc($eq['model'] ?? $eq['make'] ?? 'N/A') ?></td>
                                                     <td><?= esc($eq['device_type'] ?? 'N/A') ?></td>
                                                     <td><?= esc($eq['department'] ?? '') ?><?php if (!empty($eq['location'])): ?>
@@ -340,7 +452,7 @@
                                             <?php endforeach; ?>
                                         <?php else: ?>
                                             <tr id="notInspectedEmpty">
-                                                <td colspan="6" class="text-center text-muted py-3">No equipment pending
+                                                <td colspan="7" class="text-center text-muted py-3">No equipment pending
                                                     inspection.</td>
                                             </tr>
                                         <?php endif; ?>
@@ -484,18 +596,47 @@
                                         </table>
                                     </div>
                                 </div>
-
-                                <div class="d-flex gap-2 mb-2 flex-wrap">
-                                    <button class="export-btn btn btn-sm" onclick="techCopyTable('inspectedTable')">Copy</button>
-                                    <button class="export-btn btn btn-sm" onclick="techExportCSV('inspectedTable')">CSV</button>
-                                    <button class="export-btn btn btn-sm" onclick="techExportExcel('inspectedTable')">Excel</button>
-                                    <button class="export-btn btn btn-sm" onclick="techExportPDF('inspectedTable')">PDF</button>
+                                <div class="d-flex gap-2 mb-2 align-items-center justify-content-between" style="flex-wrap:nowrap;">
+                                    <div class="d-flex gap-2" style="flex-shrink:0;">
+                                        <button class="export-btn btn btn-sm" onclick="techCopyTable('inspectedTable')">Copy</button>
+                                        <button class="export-btn btn btn-sm" onclick="techExportCSV('inspectedTable')">CSV</button>
+                                        <button class="export-btn btn btn-sm" onclick="techExportExcel('inspectedTable')">Excel</button>
+                                        <button class="export-btn btn btn-sm" onclick="techExportPDF('inspectedTable')">PDF</button>
+                                    </div>
+                                    <div class="d-flex gap-2 align-items-center" style="flex-shrink:0;">
+                                        <!-- Search first -->
+                                        <div class="input-group" style="max-width:240px;">
+                                            <span class="input-group-text border-end-0 bg-transparent border-secondary">
+                                                <i class="fa-solid fa-search" style="color:#e9edff;"></i>
+                                            </span>
+                                            <input class="form-control border-start-0 ps-0"
+                                                id="techInspectedSearch"
+                                                placeholder="Search inspected..."
+                                                type="text"
+                                                oninput="techSearchInspected(this.value)"
+                                                style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2);color:#e9edff;">
+                                        </div>
+                                        <!-- Result filter after search -->
+                                        <select id="techInspectedResultFilter"
+                                            class="form-select form-select-sm"
+                                            style="max-width:150px;
+               background:#1e2a45;
+               border:1px solid rgba(255,255,255,.2);
+               color:#e9edff;"
+                                            onchange="techFilterInspectedResult(this.value)">
+                                            <option value="" style="background:#1e2a45;color:#e9edff;">All Results</option>
+                                            <option value="Pass" style="background:#1e2a45;color:#e9edff;">✓ Pass</option>
+                                            <option value="Fail" style="background:#1e2a45;color:#e9edff;">✗ Fail</option>
+                                            <option value="Repair" style="background:#1e2a45;color:#e9edff;">Repair</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-striped mb-0" id="inspectedTable">
                                         <thead>
                                             <tr>
                                                 <th>Actions</th>
+                                                <th>Brand</th>
                                                 <th>Model</th>
                                                 <th>Type</th>
                                                 <th>S/N</th>
@@ -510,7 +651,7 @@
                                         <tbody id="inspectionTableBody">
                                             <?php if (!empty($inspectedItems ?? [])): ?>
                                                 <tr id="inspectedEmptyRow" style="display:none">
-                                                    <td colspan="10" class="text-center text-muted">No inspected items for
+                                                    <td colspan="11" class="text-center text-muted">No inspected items for
                                                         this inspection yet.</td>
                                                 </tr>
                                                 <?php foreach ($inspectedItems as $item): ?>
@@ -545,6 +686,7 @@
                                                                 </button>
                                                             </div>
                                                         </td>
+                                                        <td><?= esc($item['make'] ?? '') ?></td>
                                                         <td><strong><?= esc($item['model'] ?? $item['make'] ?? 'N/A') ?></strong>
                                                         </td>
                                                         <td><?= esc($item['device_type'] ?? '') ?></td>
@@ -806,7 +948,7 @@
              ══════════════════════════════════════════════════════════════ -->
         <div class="modal fade" id="addDeviceModal" tabindex="-1" aria-labelledby="addDeviceModalLabel"
             aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content" style="border:0;border-radius:12px;overflow:hidden;">
 
                     <div class="modal-header border-0 pb-0"
@@ -1245,7 +1387,13 @@
 
         function fillFromModelSuggestion(btn) {
             if (!btn) return;
-            if (_modelInp) _modelInp.value = btn.getAttribute('data-model') || '';
+            if (_modelInp) {
+                _modelInp.value = btn.getAttribute('data-model') || '';
+                // Lock model field once a selection is made
+                _modelInp.setAttribute('readonly', 'readonly');
+                _modelInp.classList.add('bg-light');
+                _modelInp.title = 'Model locked. Clear the field to change.';
+            }
 
             var mfr = document.getElementById('addManufacturer');
             var typ = document.getElementById('addType');
@@ -1394,6 +1542,13 @@
                 var el = document.getElementById(id);
                 if (el) el.value = '';
             });
+            // Unlock model field so next use starts fresh
+            var addModelEl = document.getElementById('addModel');
+            if (addModelEl) {
+                addModelEl.removeAttribute('readonly');
+                addModelEl.classList.remove('bg-light');
+                addModelEl.title = '';
+            }
             var est = document.getElementById('addEST');
             if (est) est.value = 'No';
             var cal = document.getElementById('addCAL');
@@ -1432,12 +1587,20 @@
             var errBox = document.getElementById('addDeviceError');
             if (errBox) errBox.classList.add('d-none');
 
-            var assetTag = (document.getElementById('addAsset').value || '').trim();
+            var assetTag  = (document.getElementById('addAsset').value || '').trim();
+            var modelVal  = (document.getElementById('addModel').value || '').trim();
+            var makeVal   = (document.getElementById('addManufacturer').value || '').trim();
+            var typeVal   = (document.getElementById('addType').value || '').trim();
             var serialVal = (document.getElementById('addSerial').value || '').trim();
 
-            if (!assetTag) {
-                _showAddDeviceError('Asset # is required.');
-                document.getElementById('addAsset').focus();
+            // All core fields are required
+            if (!assetTag || !makeVal || !modelVal || !typeVal) {
+                var missing = [];
+                if (!assetTag)  missing.push('Asset #');
+                if (!makeVal)   missing.push('Manufacturer');
+                if (!modelVal)  missing.push('Model Number');
+                if (!typeVal)   missing.push('Type');
+                _showAddDeviceError('Required fields missing: ' + missing.join(', ') + '.');
                 return;
             }
             if (!SITE_ID) {
@@ -1764,15 +1927,31 @@
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.btn-view-insp, .btn-resume-insp');
             if (!btn) return;
-            var groupId = btn.dataset.group || '';
-            var siteName = btn.dataset.site || '';
-            var inspType = btn.dataset.title || btn.dataset.type || 'Equipment Inspection';
-            var inspId = btn.dataset.inspid || groupId;
-            var techName = btn.dataset.tech || '—';
+            var groupId  = btn.dataset.group  || '';
+            var siteName = btn.dataset.site   || '';
+            var inspType = btn.dataset.title  || btn.dataset.type || 'Equipment Inspection';
+            var inspId   = btn.dataset.inspid || groupId;
+            var techName = btn.dataset.tech   || '—';
+            var status   = btn.dataset.status || 'In Progress';
             if (btn.classList.contains('btn-resume-insp')) {
                 resumeInspection(groupId, siteName, inspType, inspId, techName);
             } else {
                 viewInspection(groupId, siteName, inspType, inspId, techName);
+            }
+            // Apply lock if inspection is already closed
+            if (typeof window._applyInspectionLock === 'function') {
+                window._applyInspectionLock(status === 'Closed/Complete');
+                // Also update the status button to reflect current status
+                var statusBtn = document.getElementById('statusDropdown');
+                if (statusBtn) {
+                    if (status === 'Closed/Complete') {
+                        statusBtn.className = 'btn btn-light dropdown-toggle status-badge status-completed';
+                        statusBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Closed/Complete';
+                    } else {
+                        statusBtn.className = 'btn btn-light dropdown-toggle status-badge status-in-progress';
+                        statusBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> In Progress';
+                    }
+                }
             }
         });
 
@@ -1781,6 +1960,8 @@
             document.getElementById('view-dashboard').classList.remove('d-none-view');
             window.CURRENT_INSPECTION_GROUP_ID = null;
             window.CURRENT_REPORT_GROUP_ID = null;
+            // Reset lock state when leaving inspection view
+            if (typeof window._applyInspectionLock === 'function') window._applyInspectionLock(false);
         };
 
         window.updateStatus = function(status) {
@@ -1792,6 +1973,66 @@
             } else {
                 btn.className = 'btn btn-light dropdown-toggle status-badge status-in-progress';
                 btn.innerHTML = '<i class="fa-solid fa-rotate"></i> In Progress';
+            }
+            // ── Save to database ───────────────────────────────────────────────
+            var groupId = window.CURRENT_INSPECTION_GROUP_ID || window.CURRENT_REPORT_GROUP_ID;
+            if (!groupId) return;
+            var fd = new FormData();
+            fd.append('group_id', groupId);
+            fd.append('status', status);
+            fetch('<?= site_url("technician/inspections/updateGroupStatus") ?>', {
+                method: 'POST', body: fd,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (typeof showToast === 'function') {
+                    showToast(res.success ? 'Status saved.' : 'Failed to save status.', res.success ? 'success' : 'danger');
+                }
+                // Update badge in the inspection list row
+                document.querySelectorAll('#inspectionsTable tbody tr').forEach(function(row) {
+                    var vb = row.querySelector('.btn-view-insp');
+                    if (!vb || vb.dataset.group !== groupId) return;
+                    var td = row.querySelector('td:nth-child(5)');
+                    if (td) td.innerHTML = status === 'Closed/Complete'
+                        ? '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i>Closed</span>'
+                        : '<span class="badge bg-warning text-dark"><i class="fa-solid fa-rotate me-1"></i>In Progress</span>';
+                });
+            }).catch(function() {
+                if (typeof showToast === 'function') showToast('Network error saving status.', 'danger');
+            });
+            // Lock UI when closed, unlock when in progress
+            _applyInspectionLock(status === 'Closed/Complete');
+        };
+
+        // Lock or unlock the inspection editing UI for technicians
+        window._applyInspectionLock = function(locked) {
+            var dropdownBtn  = document.getElementById('statusDropdown');
+            var closeItem    = document.querySelector('#statusDropdownMenu li:first-child');
+            var reopenNote   = document.getElementById('statusReopenNote');
+            var helpText     = document.getElementById('statusHelpText');
+            var assetInput   = document.getElementById('assetInput');
+            var goBtn        = document.querySelector('.big-btn');
+            var saveDeviceBtn = document.getElementById('saveDeviceBtn');
+
+            if (locked) {
+                // Hide the Close option, show the locked note
+                if (closeItem) closeItem.classList.add('d-none');
+                if (reopenNote) reopenNote.classList.remove('d-none');
+                if (helpText) { helpText.textContent = 'Inspection is closed. Contact Admin to reopen.'; helpText.classList.add('text-warning'); }
+                // Disable asset scan input
+                if (assetInput) { assetInput.disabled = true; assetInput.placeholder = 'Inspection closed — contact Admin to reopen'; }
+                if (goBtn) goBtn.disabled = true;
+                // Show a banner
+                var banner = document.getElementById('inspectionLockedBanner');
+                if (banner) banner.classList.remove('d-none');
+            } else {
+                if (closeItem) closeItem.classList.remove('d-none');
+                if (reopenNote) reopenNote.classList.add('d-none');
+                if (helpText) { helpText.textContent = 'Mark as Closed when done'; helpText.classList.remove('text-warning'); }
+                if (assetInput) { assetInput.disabled = false; assetInput.placeholder = 'Scan or Enter Asset Number...'; }
+                if (goBtn) goBtn.disabled = false;
+                var banner = document.getElementById('inspectionLockedBanner');
+                if (banner) banner.classList.add('d-none');
             }
         };
 
@@ -2158,7 +2399,9 @@
                                     document.getElementById('workOrderModalTitle').textContent = 'Edit Work Order';
                                     document.getElementById('saveWorkOrderBtn').textContent = 'Update Work Order';
                                 }
-                            }, 'json').fail(function() { /* silent - stays as new WO */ });
+                            }, 'json').fail(function() {
+                                /* silent - stays as new WO */
+                            });
                         }
                     }, 350);
                 });
@@ -2189,11 +2432,27 @@
                         group_id: groupId
                     }, function(res) {
                         if (res && res.success) {
-                            Swal.fire({ icon: 'success', title: 'Deleted', text: 'Inspection group deleted.', timer: 1500, showConfirmButton: false });
-                            setTimeout(function() { location.reload(); }, 1600);
-                        } else Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed.' });
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted',
+                                text: 'Inspection group deleted.',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                            setTimeout(function() {
+                                location.reload();
+                            }, 1600);
+                        } else Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Delete failed.'
+                        });
                     }, 'json').fail(function() {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Delete request failed.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Delete request failed.'
+                        });
                     });
                 });
             });
@@ -2228,20 +2487,36 @@
                     if (!result.isConfirmed) return;
                     fetch(URL_DELETE_INSP + encodeURIComponent(id), {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
                         body: CSRF_NAME + '=' + encodeURIComponent(csrfHash)
                     }).then(function(r) {
                         if (r.ok || r.status === 302 || r.redirected) {
                             var row = document.querySelector('#inspectionTableBody tr[data-row-id="' + id + '"]');
                             if (row) row.remove();
                             backgroundRefreshTabs(function() {
-                                Swal.fire({ icon: 'success', title: 'Removed', text: 'Inspection record deleted.', timer: 1500, showConfirmButton: false });
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Removed',
+                                    text: 'Inspection record deleted.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
                             });
                         } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed (HTTP ' + r.status + ').' });
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Delete failed (HTTP ' + r.status + ').'
+                            });
                         }
                     }).catch(function(err) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Delete failed – ' + err.message });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Delete failed – ' + err.message
+                        });
                     });
                 });
             });
@@ -2296,7 +2571,7 @@
                     });
             });
 
-           $(document).on('click', '.btn-edit-wo', function() {
+            $(document).on('click', '.btn-edit-wo', function() {
                 var id = $(this).data('id');
                 _resetWO();
                 document.getElementById('woId').value = id;
@@ -2420,33 +2695,14 @@
                         sel.addEventListener('change', window._techIqNoteHandler);
                         // Do NOT call on load — notes stay blank until technician interacts
 
-                        // Fix 3: When user edits notes textarea, save back to IQ notes table
+                        // FIX 5 (tech): Do NOT write user-edited notes back to the master IQ
+                        // notes table. Notes typed on the pass/fail screen are inspection-
+                        // specific. The dropdown always restores the original text from
+                        // data-note when re-selected (handled by _techIqNoteHandler above).
                         var notesArea = document.getElementById('inspectNotes');
-                        if (notesArea) {
+                        if (notesArea && window._techNotesBlurHandler) {
                             notesArea.removeEventListener('blur', window._techNotesBlurHandler);
-                            window._techNotesBlurHandler = function() {
-                                var selected = sel.options[sel.selectedIndex];
-                                if (!selected || selected.value === '') return;
-                                var noteId = selected.getAttribute('data-id') || '';
-                                var noteTitle = selected.getAttribute('data-title') || selected.textContent;
-                                var newNote = notesArea.value.trim();
-                                if (!newNote || !noteTitle) return;
-                                // Update cached data-note so future selects use updated text
-                                selected.setAttribute('data-note', newNote);
-                                // Persist to server via technician IQ notes endpoint
-                                var fd = new FormData();
-                                if (noteId) fd.append('id', noteId);
-                                fd.append('title', noteTitle);
-                                fd.append('note', newNote);
-                                fetch('<?= site_url("technician/iq-notes/save") ?>', {
-                                    method: 'POST',
-                                    body: fd,
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
-                                }).catch(function() {});
-                            };
-                            notesArea.addEventListener('blur', window._techNotesBlurHandler);
+                            window._techNotesBlurHandler = null;
                         }
                     })
                     .catch(function() {
@@ -2548,9 +2804,12 @@
 
             function getTableData(tableId) {
                 var table = document.getElementById(tableId);
-                if (!table) return { headers: [], rows: [] };
+                if (!table) return {
+                    headers: [],
+                    rows: []
+                };
                 var headers = [];
-                var rows    = [];
+                var rows = [];
 
                 // Headers — skip col 0 (Action)
                 var ths = table.querySelectorAll('thead th');
@@ -2572,16 +2831,19 @@
                     if (row.length) rows.push(row);
                 });
 
-                return { headers: headers, rows: rows };
+                return {
+                    headers: headers,
+                    rows: rows
+                };
             }
 
             function labelFor(tableId) {
                 var map = {
-                    notInspectedTable : 'Not_Inspected',
-                    inspectedTable    : 'Inspected_Items',
-                    archivedTable     : 'Archived_Items',
-                    inventoryTable    : 'All_Inventory',
-                    workOrdersTable   : 'Work_Orders',
+                    notInspectedTable: 'Not_Inspected',
+                    inspectedTable: 'Inspected_Items',
+                    archivedTable: 'Archived_Items',
+                    inventoryTable: 'All_Inventory',
+                    workOrdersTable: 'Work_Orders',
                 };
                 return map[tableId] || tableId;
             }
@@ -2591,35 +2853,64 @@
             }
 
             function buildFilename(tableId, ext) {
-                return safeFilename(SITE_NAME) + '_' + labelFor(tableId) + '_' + new Date().toISOString().slice(0,10) + '.' + ext;
+                return safeFilename(SITE_NAME) + '_' + labelFor(tableId) + '_' + new Date().toISOString().slice(0, 10) + '.' + ext;
             }
 
             window.techCopyTable = function(tableId) {
                 var d = getTableData(tableId);
-                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to copy.' }); return; }
+                if (!d.rows.length) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data',
+                        text: 'No data to copy.'
+                    });
+                    return;
+                }
                 var text = [d.headers.join('\t')]
-                    .concat(d.rows.map(function(r) { return r.join('\t'); })).join('\n');
+                    .concat(d.rows.map(function(r) {
+                        return r.join('\t');
+                    })).join('\n');
                 navigator.clipboard.writeText(text).then(function() {
                     var btn = event && event.target;
-                    if (btn) { var o = btn.textContent; btn.textContent = '✓ Copied!'; setTimeout(function() { btn.textContent = o; }, 1500); }
+                    if (btn) {
+                        var o = btn.textContent;
+                        btn.textContent = '✓ Copied!';
+                        setTimeout(function() {
+                            btn.textContent = o;
+                        }, 1500);
+                    }
                 }).catch(function() {
                     var ta = document.createElement('textarea');
-                    ta.value = text; document.body.appendChild(ta); ta.select();
-                    document.execCommand('copy'); document.body.removeChild(ta);
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
                 });
             };
 
             window.techExportCSV = function(tableId) {
                 var d = getTableData(tableId);
-                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                if (!d.rows.length) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data',
+                        text: 'No data to export.'
+                    });
+                    return;
+                }
                 var esc = function(v) {
                     v = String(v);
-                    return (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1)
-                        ? '"' + v.replace(/"/g, '""') + '"' : v;
+                    return (v.indexOf(',') !== -1 || v.indexOf('"') !== -1 || v.indexOf('\n') !== -1) ?
+                        '"' + v.replace(/"/g, '""') + '"' : v;
                 };
                 var csv = [d.headers.map(esc).join(',')]
-                    .concat(d.rows.map(function(r) { return r.map(esc).join(','); })).join('\n');
-                var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                    .concat(d.rows.map(function(r) {
+                        return r.map(esc).join(',');
+                    })).join('\n');
+                var blob = new Blob(['\uFEFF' + csv], {
+                    type: 'text/csv;charset=utf-8;'
+                });
                 var a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = buildFilename(tableId, 'csv');
@@ -2628,10 +2919,21 @@
 
             window.techExportExcel = function(tableId) {
                 var d = getTableData(tableId);
-                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
+                if (!d.rows.length) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data',
+                        text: 'No data to export.'
+                    });
+                    return;
+                }
                 var tsv = [d.headers.join('\t')]
-                    .concat(d.rows.map(function(r) { return r.join('\t'); })).join('\n');
-                var blob = new Blob([tsv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                    .concat(d.rows.map(function(r) {
+                        return r.join('\t');
+                    })).join('\n');
+                var blob = new Blob([tsv], {
+                    type: 'application/vnd.ms-excel;charset=utf-8;'
+                });
                 var a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = buildFilename(tableId, 'xls');
@@ -2640,27 +2942,38 @@
 
             window.techExportPDF = function(tableId) {
                 var d = getTableData(tableId);
-                if (!d.rows.length) { Swal.fire({ icon: 'warning', title: 'No Data', text: 'No data to export.' }); return; }
-                var label = labelFor(tableId).replace(/_/g,' ');
-                var ths = d.headers.map(function(h) { return '<th>' + h + '</th>'; }).join('');
-                var trs = d.rows.map(function(r) {
-                    return '<tr>' + r.map(function(c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
+                if (!d.rows.length) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'No Data',
+                        text: 'No data to export.'
+                    });
+                    return;
+                }
+                var label = labelFor(tableId).replace(/_/g, ' ');
+                var ths = d.headers.map(function(h) {
+                    return '<th>' + h + '</th>';
                 }).join('');
-                var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + SITE_NAME + ' — ' + label + '</title>'
-                    + '<style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;}'
-                    + 'h2{font-size:15px;margin-bottom:2px;}h3{font-size:12px;color:#475569;margin:0 0 10px;font-weight:400;}'
-                    + 'p{font-size:11px;color:#555;margin:0 0 12px;}'
-                    + 'table{width:100%;border-collapse:collapse;}'
-                    + 'th{background:#1e293b;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;}'
-                    + 'td{padding:6px 10px;border-bottom:1px solid #e2e8f0;}'
-                    + 'tr:nth-child(even) td{background:#f8fafc;}'
-                    + '@media print{body{margin:0;}}</style></head><body>'
-                    + '<h2>' + SITE_NAME + '</h2>'
-                    + '<h3>' + label + '</h3>'
-                    + '<p>Generated: ' + new Date().toLocaleString() + '</p>'
-                    + '<table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>'
-                    + '<script>window.onload=function(){window.print();}<\/script>'
-                    + '</body></html>';
+                var trs = d.rows.map(function(r) {
+                    return '<tr>' + r.map(function(c) {
+                        return '<td>' + c + '</td>';
+                    }).join('') + '</tr>';
+                }).join('');
+                var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + SITE_NAME + ' — ' + label + '</title>' +
+                    '<style>body{font-family:Arial,sans-serif;font-size:11px;margin:20px;}' +
+                    'h2{font-size:15px;margin-bottom:2px;}h3{font-size:12px;color:#475569;margin:0 0 10px;font-weight:400;}' +
+                    'p{font-size:11px;color:#555;margin:0 0 12px;}' +
+                    'table{width:100%;border-collapse:collapse;}' +
+                    'th{background:#1e293b;color:#fff;padding:7px 10px;text-align:left;font-size:10px;text-transform:uppercase;}' +
+                    'td{padding:6px 10px;border-bottom:1px solid #e2e8f0;}' +
+                    'tr:nth-child(even) td{background:#f8fafc;}' +
+                    '@media print{body{margin:0;}}</style></head><body>' +
+                    '<h2>' + SITE_NAME + '</h2>' +
+                    '<h3>' + label + '</h3>' +
+                    '<p>Generated: ' + new Date().toLocaleString() + '</p>' +
+                    '<table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>' +
+                    '<script>window.onload=function(){window.print();}<\/script>' +
+                    '</body></html>';
                 var w = window.open('', '_blank');
                 w.document.write(html);
                 w.document.close();
@@ -2747,7 +3060,7 @@
                 var e = document.getElementById(id);
                 if (e) e.value = '';
             });
-            
+
             $('#woPriority').val('normal');
             $('#woStatus').val('open');
             // Pre-select the logged-in technician
@@ -2868,4 +3181,165 @@
         };
 
     })();
+
+    // ── Column sorting for inspection sub-tabs (tech) ─────────────────────────
+    (function() {
+        var _sortState = {};
+
+        function cellText(cell) {
+            return (cell ? cell.innerText || cell.textContent || '' : '').trim().toLowerCase();
+        }
+
+        function sortTable(tableId, colIdx) {
+            var tbl = document.getElementById(tableId);
+            if (!tbl) return;
+            var tbody = tbl.querySelector('tbody');
+            if (!tbody) return;
+            var state = _sortState[tableId] || {
+                col: -1,
+                asc: true
+            };
+            var asc = (state.col === colIdx) ? !state.asc : true;
+            _sortState[tableId] = {
+                col: colIdx,
+                asc: asc
+            };
+            var rows = Array.from(tbody.querySelectorAll('tr')).filter(function(r) {
+                return r.cells.length > 1;
+            });
+            rows.sort(function(a, b) {
+                var ta = cellText(a.cells[colIdx]);
+                var tb = cellText(b.cells[colIdx]);
+                var na = parseFloat(ta),
+                    nb = parseFloat(tb);
+                if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+                return asc ? ta.localeCompare(tb) : tb.localeCompare(ta);
+            });
+            rows.forEach(function(r) {
+                tbody.appendChild(r);
+            });
+            var ths = tbl.querySelectorAll('thead th');
+            ths.forEach(function(th, i) {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (i === colIdx) th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+            });
+        }
+
+        function makeSortable(tableId, skipCols) {
+            skipCols = skipCols || [0];
+            var tbl = document.getElementById(tableId);
+            if (!tbl) return;
+            var ths = tbl.querySelectorAll('thead th');
+            ths.forEach(function(th, i) {
+                if (skipCols.indexOf(i) !== -1) return;
+                th.style.cursor = 'pointer';
+                th.style.userSelect = 'none';
+                th.setAttribute('title', 'Click to sort');
+                th.addEventListener('click', function() {
+                    sortTable(tableId, i);
+                });
+            });
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            makeSortable('notInspectedTable', [0]);
+            makeSortable('inspectionTable', [0]);
+            makeSortable('inspectedTable', [0]);
+            makeSortable('archivedTable', [0]);
+            makeSortable('inventoryTable', [0]);
+            makeSortable('workOrdersTable', [0]);
+        });
+    })();
+
+
+    // ── Search + Result filter for tech Inspected Items ──────────────────────
+    window.techSearchInspected = function(query) {
+        query = (query || '').toLowerCase().trim();
+        var currentGroup = window.CURRENT_INSPECTION_GROUP_ID || '';
+        var resultFilter = (document.getElementById('techInspectedResultFilter') || {}).value || '';
+        document.querySelectorAll('#inspectionTableBody tr[data-row-id]').forEach(function(row) {
+            var rowGroup = row.getAttribute('data-group-id') || '';
+            if (rowGroup !== currentGroup && currentGroup) {
+                row.style.display = 'none';
+                return;
+            }
+            var text = Array.from(row.querySelectorAll('td')).map(function(td) {
+                return td.textContent;
+            }).join(' ').toLowerCase();
+            var matchSearch = !query || text.includes(query);
+            var resultCell = row.querySelector('td:nth-child(9)');
+            var resultText = resultCell ? resultCell.textContent.trim() : '';
+            var matchResult = !resultFilter || resultText.toLowerCase().includes(resultFilter.toLowerCase());
+            row.style.display = (matchSearch && matchResult) ? '' : 'none';
+        });
+    };
+    window.techFilterInspectedResult = function(result) {
+        var query = (document.getElementById('techInspectedSearch') || {}).value || '';
+        window.techSearchInspected(query);
+    };
+
+    // ================================================================
+    // FIX 6 (tech): Inspection list filter - Open / All / Closed
+    // ================================================================
+    var _techInspCurrentFilter = 'open'; // default: open only
+
+    window.techFilterInspectionsByStatus = function techFilterInspectionsByStatus(mode) {
+        _techInspCurrentFilter = mode;
+
+        var btnOpen   = document.getElementById('techInspFilterOpen');
+        var btnAll    = document.getElementById('techInspFilterAll');
+        var btnClosed = document.getElementById('techInspFilterClosed');
+        [btnOpen, btnAll, btnClosed].forEach(function(b) {
+            if (!b) return;
+            b.classList.remove('btn-primary', 'btn-outline-secondary', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        var activeBtn = mode === 'open' ? btnOpen : (mode === 'closed' ? btnClosed : btnAll);
+        if (activeBtn) {
+            activeBtn.classList.remove('btn-outline-secondary');
+            activeBtn.classList.add('btn-primary', 'active');
+        }
+
+        var rows = document.querySelectorAll('#inspectionsTable tbody tr[data-insp-status]');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var st = row.getAttribute('data-insp-status') || 'open';
+            var show = (mode === 'all')
+                    || (mode === 'open'   && st === 'open')
+                    || (mode === 'closed' && st === 'closed');
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        var emptyRow = document.querySelector('#inspectionsTable tbody tr:not([data-insp-status])');
+        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+
+        // Reset search when tab changes
+        var searchEl = document.getElementById('techInspSearchInput');
+        if (searchEl) searchEl.value = '';
+    };
+
+    window.techApplyInspectionSearch = function techApplyInspectionSearch(q) {
+        q = (q || '').toLowerCase().trim();
+        var rows = document.querySelectorAll('#inspectionsTable tbody tr[data-insp-status]');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var st = row.getAttribute('data-insp-status') || 'open';
+            var passFilter = (_techInspCurrentFilter === 'all')
+                          || (_techInspCurrentFilter === 'open'   && st === 'open')
+                          || (_techInspCurrentFilter === 'closed' && st === 'closed');
+            if (!passFilter) { row.style.display = 'none'; return; }
+            if (!q) { row.style.display = ''; visible++; return; }
+            var text = row.textContent || row.innerText || '';
+            var show = text.toLowerCase().includes(q);
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        var emptyRow = document.querySelector('#inspectionsTable tbody tr:not([data-insp-status])');
+        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+    };
+
+    // Auto-apply 'open' filter on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        techFilterInspectionsByStatus('open');
+    });
 </script>

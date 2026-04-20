@@ -17,6 +17,7 @@
             Notes</a>
           <a href="#" class="list-group-item list-group-item-action" data-target="equipmentSettings">Equipment
             Setting</a>
+          <a href="#" class="list-group-item list-group-item-action" data-target="laborCodesSettings">Labor Codes</a>
         </div>
       </div>
 
@@ -198,6 +199,35 @@
             </div>
           </div>
         </div>
+
+        <!-- Labor Codes Settings Pane -->
+        <div id="laborCodesSettings" class="settings-pane d-none">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-0">Labor Codes</h5>
+              <small class="text-muted">Manage labor and travel billing codes with their hourly rates.</small>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnAddLaborCode">
+              <i class="fas fa-plus me-1"></i> Add Labor Code
+            </button>
+          </div>
+          <div class="glass-card mb-3 p-3">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover w-100" id="laborCodesTable">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Description</th>
+                    <th class="text-end">Rate ($/hr)</th>
+                    <th class="text-center" style="width:140px">Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- /Labor Codes Settings Pane -->
 
 
       </div>
@@ -1085,6 +1115,157 @@
     });
 
   });
+</script>
+
+<!-- ========== Labor Code Modal ========== -->
+<div class="modal fade" id="laborCodeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="laborCodeForm">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" id="lc-id">
+        <div class="modal-header">
+          <h5 class="modal-title" id="laborCodeModalTitle">Add Labor Code</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Labor Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="lc-code" class="form-control"
+              placeholder="e.g. 777, TRAVEL" required>
+            <div class="form-text">Short identifier shown on invoices.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            <input type="text" name="description" id="lc-description" class="form-control"
+              placeholder="e.g. Standard PM labor rate">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Amount ($/hr) <span class="text-danger">*</span></label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="amount" id="lc-amount" class="form-control"
+                placeholder="0.00" min="0" step="0.01" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveLaborCode">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<!-- ========== /Labor Code Modal ========== -->
+
+<script>
+$(function() {
+  // =====================================================================
+  // LABOR CODES TAB
+  // =====================================================================
+  var LC_URL = '<?= site_url('admin/settings/labor-codes') ?>';
+
+  var lcTable = $('#laborCodesTable').DataTable({
+    ajax: { url: LC_URL, dataSrc: 'data' },
+    pageLength: 25,
+    order: [[0, 'asc']],
+    columns: [
+      { data: 'code', defaultContent: '-' },
+      { data: 'description', defaultContent: '<em class="text-muted">-</em>' },
+      {
+        data: 'amount', className: 'text-end',
+        render: function(d) { return '$' + parseFloat(d || 0).toFixed(2); }
+      },
+      {
+        data: null, orderable: false, className: 'text-center',
+        render: function(row) {
+          return '<div class="action-btns">'
+            + '<button class="btn btn-sm btn-primary btn-edit-lc" data-id="' + row.id + '">Edit</button> '
+            + '<button class="btn btn-sm btn-danger btn-del-lc" data-id="' + row.id + '">Delete</button>'
+            + '</div>';
+        }
+      }
+    ]
+  });
+
+  // Auto-reload when tab opens
+  $('a[data-target="laborCodesSettings"]').on('click', function() {
+    if ($.fn.DataTable.isDataTable('#laborCodesTable')) {
+      lcTable.ajax.reload(null, false);
+    }
+  });
+
+  // Open Add modal
+  $('#btnAddLaborCode').on('click', function() {
+    $('#laborCodeModalTitle').text('Add Labor Code');
+    $('#laborCodeForm')[0].reset();
+    $('#lc-id').val('');
+    $('#laborCodeModal').modal('show');
+  });
+
+  // Open Edit modal
+  $(document).on('click', '.btn-edit-lc', function() {
+    var id = $(this).data('id');
+    $.get(LC_URL + '/' + id, function(res) {
+      if (res.status === 'success') {
+        $('#laborCodeModalTitle').text('Edit Labor Code');
+        $('#lc-id').val(res.data.id);
+        $('#lc-code').val(res.data.code);
+        $('#lc-description').val(res.data.description || '');
+        $('#lc-amount').val(parseFloat(res.data.amount).toFixed(2));
+        $('#laborCodeModal').modal('show');
+      } else {
+        Swal.fire('Error', 'Labor code not found.', 'error');
+      }
+    }, 'json').fail(function() {
+      Swal.fire('Error', 'Failed to load labor code.', 'error');
+    });
+  });
+
+  // Save (Add/Edit)
+  $('#laborCodeForm').on('submit', function(e) {
+    e.preventDefault();
+    $('#btnSaveLaborCode').prop('disabled', true).text('Saving...');
+    $.ajax({
+      url: LC_URL + '/save',
+      type: 'POST',
+      data: $(this).serialize(),
+      dataType: 'json',
+      success: function(res) {
+        if (res.status === 'error') { Swal.fire('Error', res.message, 'error'); return; }
+        $('#laborCodeModal').modal('hide');
+        Swal.fire('Saved', res.message || 'Labor code saved.', 'success');
+        lcTable.ajax.reload(null, false);
+      },
+      error: function() { Swal.fire('Error', 'Save failed. Please try again.', 'error'); },
+      complete: function() { $('#btnSaveLaborCode').prop('disabled', false).text('Save'); }
+    });
+  });
+
+  // Delete
+  $(document).on('click', '.btn-del-lc', function() {
+    var id = $(this).data('id');
+    Swal.fire({
+      icon: 'warning', title: 'Delete labor code?',
+      text: 'This cannot be undone.',
+      showCancelButton: true, confirmButtonText: 'Yes, delete'
+    }).then(function(r) {
+      if (!r.isConfirmed) return;
+      $.ajax({
+        url: LC_URL + '/delete/' + id,
+        type: 'DELETE',
+        dataType: 'json',
+        success: function(res) {
+          Swal.fire('Deleted', res.message || 'Labor code deleted.', 'success');
+          lcTable.ajax.reload(null, false);
+        },
+        error: function() { Swal.fire('Error', 'Delete failed.', 'error'); }
+      });
+    });
+  });
+
+});
 </script>
 
 <?= $this->endSection() ?>

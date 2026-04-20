@@ -147,7 +147,7 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <label class="form-label" for="customer-website">Website</label>
-                            <input type="url" class="form-control" id="customer-website" name="website">
+                            <input type="url" class="form-control" id="customer-website" name="website" placeholder="https://www.example.com">
                         </div>
                     </div>
 
@@ -157,6 +157,24 @@
                             <label class="form-label" for="customer-logo">Customer Logo</label>
                             <input type="file" class="form-control" id="customer-logo" name="logo" accept="image/*">
                             <div id="logo-preview" class="mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Internal Labor Rate Notes (admin/internal only) -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold" for="customer-labor-notes">
+                                Internal Labor Rate Notes
+                                <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">Internal Only</span>
+                            </label>
+                            <textarea class="form-control" id="customer-labor-notes"
+                                name="internal_labor_rate_notes" rows="3"
+                                placeholder="e.g. PM: $100/hr · Repair: $110/hr · After-hours: $175.50/hr · Travel: $70/hr"></textarea>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-lock me-1"></i>
+                                Visible on the Site screen for tech/admin reference only.
+                                <strong>Never printed on invoices or packing slips.</strong>
+                            </div>
                         </div>
                     </div>
 
@@ -276,9 +294,11 @@
     </div>
 </div>
 <script>
+    var _newCustomerId = '<?= session()->getFlashdata("new_customer_id") ?? "" ?>';
+
     $(document).ready(function() {
         // When the "Add Site" button is clicked — pre-select the customer in the dropdown
-        $(".btn-add-site").click(function() {
+        $(document).on('click', '.btn-add-site', function() {
             var customerId = $(this).data('id');
             // Pre-select the customer in the dropdown
             $("#site-customer-id-select").val(customerId);
@@ -287,6 +307,13 @@
             $("#site-state").val('');
             $("#site-id").val('');
         });
+
+        if (_newCustomerId) {
+            $('#site-customer-id-select').val(_newCustomerId);
+            $('#site-name,#site-address,#site-city,#site-zip').val('');
+            $('#site-contact,#site-email,#site-phone,#site-state,#site-id').val('');
+            setTimeout(function() { $('#siteModal').modal('show'); }, 400);
+        }
 
         // jQuery Validation for Add Site form
         $('#siteForm').validate({
@@ -331,7 +358,9 @@
                                 .then(function() {
                                     $('#siteModal').modal('hide');
                                     $('#siteForm')[0].reset();
-                                    location.reload();
+                                    if (response.redirect_url) {
+                                        window.location.href = response.redirect_url;
+                                    } else { location.reload(); }
                                 });
                         } else {
                             var msg = (response && response.message) ? response.message : 'Failed to save site. Please try again.';
@@ -355,21 +384,21 @@
             buttons: [{
                     extend: 'copyHtml5',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
                     }
                 },
                 {
                     extend: 'excelHtml5',
                     filename: 'Customers',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
                     }
                 },
                 {
                     extend: 'csvHtml5',
                     filename: 'Customers',
                     exportOptions: {
-                        columns: ':visible'
+                        columns: ':visible:not(:last-child)'
                     }
                 },
                 {
@@ -534,6 +563,7 @@
                 'email': {
                     required: true,
                     email: true,
+                    pattern: /^[^\s@]+@[^\s@,]+\.[^\s@,]+$/,
                     maxlength: 255,
                     remote: {
                         url: "<?php echo base_url(); ?>admin/customers/check-email", // URL to check email uniqueness
@@ -587,6 +617,7 @@
                 'email': {
                     required: "Email is required.",
                     email: "Please enter a valid email address.",
+                    pattern: "Please enter a valid email (e.g. name@example.com).",
                     maxlength: "Email cannot exceed 255 characters.",
                     remote: "This email is already taken." // Error message when email is not unique
                 },
@@ -683,7 +714,8 @@
 
 
         // Edit button functionality
-        $(".btn-edit-customer").click(function() {
+        // $(".btn-edit-customer").click(function() {  
+        $(document).on('click', '.btn-edit-customer', function() {          
             var customerId = $(this).data('id'); // Get customer ID from the button
 
             // Make AJAX call to fetch customer details
@@ -709,6 +741,7 @@
                         $("#customer-email").val(customer.email);
                         $("#customer-phone").val(customer.phone);
                         $("#customer-website").val(customer.website);
+                        $("#customer-labor-notes").val(customer.internal_labor_rate_notes || '');
 
                         // Show the customer logo image if it exists
                         if (imageUrl) {
@@ -753,7 +786,7 @@
         });
 
         // Delete button functionality with SweetAlert confirmation
-        $(".btn-delete-customer").click(function(e) {
+        $(document).on('click', '.btn-delete-customer', function(e) {        
             e.preventDefault();
             var customerId = $(this).data('id');
 

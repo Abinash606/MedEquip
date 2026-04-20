@@ -392,44 +392,179 @@
 
 
 <script>
-    $(document).ready(function() {
+    // $(document).ready(function() {
 
-        // ── DataTable safe init ──────────────────────────────────────
+    //     // DataTable init
+    //     var table;
+    //     if ($.fn.dataTable.isDataTable('#sites-datatable')) {
+    //         table = $('#sites-datatable').DataTable();
+    //         $('#sites-datatable thead th').each(function() {
+    //             $(this).find('span.dt-column-order').remove();
+    //         });
+    //     } else {
+    //         table = $('#sites-datatable').DataTable({
+    //             dom: 'Brtip', pageLength: 10, order: [[0, 'asc']], stateSave: false,
+    //             buttons: [
+    //                 { extend: 'copy', text: 'Copy', exportOptions: { columns: ':visible:not(:last-child)' } },
+    //                 { extend: 'excelHtml5', text: 'Excel',
+    //                   filename: function() { var d=new Date(); return 'Technician_Sites_'+String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+d.getFullYear(); },
+    //                   title: 'Technician Sites', exportOptions: { columns: ':visible:not(:last-child)' } },
+    //                 { extend: 'pdfHtml5', text: 'PDF', orientation: 'landscape', pageSize: 'A4',
+    //                   title: 'Technician Sites',
+    //                   filename: function() { var d=new Date(); return 'Technician_Sites_'+String(d.getDate()).padStart(2,'0')+String(d.getMonth()+1).padStart(2,'0')+d.getFullYear(); },
+    //                   exportOptions: { columns: ':visible:not(:last-child)' },
+    //                   customize: function(doc) {
+    //                       doc.styles.title.fontSize=13; doc.styles.tableHeader.fontSize=9;
+    //                       doc.defaultStyle.fontSize=8; doc.pageMargins=[15,30,15,20];
+    //                       var tbl=doc.content[1].table; tbl.widths=Array(tbl.body[0].length).fill('*');
+    //                       doc.styles.tableHeader={bold:true,fontSize:9,color:'black',fillColor:'#a4d169',alignment:'left'};
+    //                       tbl.layout={hLineWidth:function(){return 0.8;},vLineWidth:function(){return 0.8;},
+    //                           hLineColor:function(){return '#cccccc';},vLineColor:function(){return '#cccccc';},
+    //                           paddingLeft:function(){return 4;},paddingRight:function(){return 4;},
+    //                           paddingTop:function(){return 3;},paddingBottom:function(){return 3;}};
+    //                   }
+    //                 }
+    //             ]
+    //         });
+    //     }
+
+    //     // Search
+    //     $('#site-search').on('keyup', function() { table.search(this.value).draw(); });
+
+    //     // Customer filter
+    //     function applyTechCustomerFilter(selectedId) {
+    //         $.fn.dataTable.ext.search = [];
+    //         if (selectedId) {
+    //             $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+    //                 var row = table.row(dataIndex).node();
+    //                 return $(row).data('customer-id') == selectedId;
+    //             });
+    //         }
+    //         table.draw();
+    //     }
+
+    //     $('#customer-filter').on('change', function() {
+    //         applyTechCustomerFilter(this.value);
+    //         if (this.value) { $('#add-site-customer').val(this.value); _defaultModalCust = this.value; }
+    //     });
+
+    //     // Pre-selection from session or flashdata
+    //     var _preselect        = '<?= (int)($active_customer_id ?? 0) ?>';
+    //     var _autoOpenCust     = '<?= (int)($auto_open_modal_customer ?? 0) ?>';
+    //     var _defaultModalCust = _autoOpenCust || _preselect;
+
+    //     if (_preselect && _preselect !== '0') {
+    //         document.getElementById('customer-filter').value = _preselect;
+    //         applyTechCustomerFilter(_preselect);
+    //     }
+    //     if (_defaultModalCust && _defaultModalCust !== '0') {
+    //         $('#add-site-customer').val(_defaultModalCust);
+    //     }
+    //     if (_autoOpenCust && _autoOpenCust !== '0') {
+    //         setTimeout(function() {
+    //             var m = document.getElementById('addSiteModal');
+    //             if (m) bootstrap.Modal.getOrCreateInstance(m).show();
+    //         }, 350);
+    //     }
+
+    //     // Always sync customer when modal opens
+    //     document.getElementById('addSiteModal').addEventListener('show.bs.modal', function() {
+    //         var c = (_defaultModalCust && _defaultModalCust !== '0') ? _defaultModalCust : document.getElementById('customer-filter').value;
+    //         if (c) $('#add-site-customer').val(c);
+    //     });
+
+    //     // After modal close, restore preselect
+    //     $('#addSiteModal').on('hidden.bs.modal', function() {
+    //         $('#addSiteForm')[0].reset();
+    //         var c = (_defaultModalCust && _defaultModalCust !== '0') ? _defaultModalCust : document.getElementById('customer-filter').value;
+    //         if (c) $('#add-site-customer').val(c);
+    //     });
+
+    //     // Save Site via AJAX
+    //     $('#saveSiteBtn').on('click', function() {
+    //         if (!$('#add-site-name').val().trim()) { Swal.fire('Validation', 'Site name is required.', 'warning'); return; }
+    //         if (!$('#add-site-customer').val()) { Swal.fire('Validation', 'Please select a customer.', 'warning'); return; }
+
+    //         var formData = new FormData($('#addSiteForm')[0]);
+    //         $.ajax({
+    //             type: 'POST',
+    //             url: '<?= site_url("technician/sites/add") ?>',
+    //             data: formData, processData: false, contentType: false,
+    //             success: function(response) {
+    //                 if (response.success) {
+    //                     Swal.fire('Success!', 'Site added successfully!', 'success').then(function() {
+    //                         $('#addSiteModal').modal('hide');
+    //                         if (response.redirect_url) { window.location.href = response.redirect_url; }
+    //                         else { location.reload(); }
+    //                     });
+    //                 } else {
+    //                     Swal.fire('Error!', response.message || 'Could not save site.', 'error');
+    //                 }
+    //             },
+    //             error: function() { Swal.fire('Error!', 'An error occurred. Please try again.', 'error'); }
+    //         });
+    //     });
+
+    // }); // end $(document).ready
+</script>
+
+<script>
+    $(document).ready(function () {
+
+        var currentCustomerId = '';
+
+        // scoped custom filter only for sites table
+        var techCustomerFilter = function (settings, data, dataIndex) {
+            if (settings.nTable.id !== 'sites-datatable') {
+                return true;
+            }
+
+            if (!currentCustomerId) {
+                return true;
+            }
+
+            var rowNode = table.row(dataIndex).node();
+            if (!rowNode) {
+                return true;
+            }
+
+            return String($(rowNode).attr('data-customer-id')) === String(currentCustomerId);
+        };
+
+        // add custom filter only once
+        $.fn.dataTable.ext.search.push(techCustomerFilter);
+
+        // DataTable init
         var table;
         if ($.fn.dataTable.isDataTable('#sites-datatable')) {
             table = $('#sites-datatable').DataTable();
-            // Remove extra span icons injected by newer DataTables
-            $('#sites-datatable thead th').each(function() {
+            $('#sites-datatable thead th').each(function () {
                 $(this).find('span.dt-column-order').remove();
             });
         } else {
             table = $('#sites-datatable').DataTable({
-                dom: 'Bfrtip',
+                dom: 'Brtip', // removed default DataTable search box
                 pageLength: 10,
-                order: [
-                    [0, 'asc']
-                ],
-                buttons: [{
+                order: [[0, 'asc']],
+                stateSave: false,
+                buttons: [
+                    {
                         extend: 'copy',
                         text: 'Copy',
-                        exportOptions: {
-                            columns: ':visible:not(:last-child)'
-                        }
+                        exportOptions: { columns: ':visible:not(:last-child)' }
                     },
                     {
                         extend: 'excelHtml5',
                         text: 'Excel',
-                        filename: function() {
-                            const d = new Date();
+                        filename: function () {
+                            var d = new Date();
                             return 'Technician_Sites_' +
                                 String(d.getDate()).padStart(2, '0') +
                                 String(d.getMonth() + 1).padStart(2, '0') +
                                 d.getFullYear();
                         },
                         title: 'Technician Sites',
-                        exportOptions: {
-                            columns: ':visible:not(:last-child)'
-                        }
+                        exportOptions: { columns: ':visible:not(:last-child)' }
                     },
                     {
                         extend: 'pdfHtml5',
@@ -437,24 +572,23 @@
                         orientation: 'landscape',
                         pageSize: 'A4',
                         title: 'Technician Sites',
-                        filename: function() {
-                            const d = new Date();
+                        filename: function () {
+                            var d = new Date();
                             return 'Technician_Sites_' +
                                 String(d.getDate()).padStart(2, '0') +
                                 String(d.getMonth() + 1).padStart(2, '0') +
                                 d.getFullYear();
                         },
-                        exportOptions: {
-                            columns: ':visible:not(:last-child)'
-                        },
-                        customize: function(doc) {
+                        exportOptions: { columns: ':visible:not(:last-child)' },
+                        customize: function (doc) {
                             doc.styles.title.fontSize = 13;
                             doc.styles.tableHeader.fontSize = 9;
                             doc.defaultStyle.fontSize = 8;
                             doc.pageMargins = [15, 30, 15, 20];
-                            const tbl = doc.content[1].table;
-                            const colCount = tbl.body[0].length;
-                            tbl.widths = Array(colCount).fill('*');
+
+                            var tbl = doc.content[1].table;
+                            tbl.widths = Array(tbl.body[0].length).fill('*');
+
                             doc.styles.tableHeader = {
                                 bold: true,
                                 fontSize: 9,
@@ -462,15 +596,16 @@
                                 fillColor: '#a4d169',
                                 alignment: 'left'
                             };
+
                             tbl.layout = {
-                                hLineWidth: () => 0.8,
-                                vLineWidth: () => 0.8,
-                                hLineColor: () => '#cccccc',
-                                vLineColor: () => '#cccccc',
-                                paddingLeft: () => 4,
-                                paddingRight: () => 4,
-                                paddingTop: () => 3,
-                                paddingBottom: () => 3
+                                hLineWidth: function () { return 0.8; },
+                                vLineWidth: function () { return 0.8; },
+                                hLineColor: function () { return '#cccccc'; },
+                                vLineColor: function () { return '#cccccc'; },
+                                paddingLeft: function () { return 4; },
+                                paddingRight: function () { return 4; },
+                                paddingTop: function () { return 3; },
+                                paddingBottom: function () { return 3; }
                             };
                         }
                     }
@@ -478,36 +613,78 @@
             });
         }
 
-        // ── DataTable search & filter ────────────────────────────────
-        $('#site-search').on('keyup', function() {
+        function applyTechCustomerFilter(selectedId) {
+            currentCustomerId = $.trim(selectedId);
+            table.draw();
+        }
+
+        // custom top search only
+        $('#site-search').on('keyup', function () {
             table.search(this.value).draw();
         });
 
-        $('#customer-filter').on('change', function() {
-            var selectedId = this.value;
-            $.fn.dataTable.ext.search = [];
-            if (selectedId !== '') {
-                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
-                    var row = table.row(dataIndex).node();
-                    return $(row).data('customer-id') == selectedId;
-                });
+        // customer filter
+        $('#customer-filter').on('change', function () {
+            applyTechCustomerFilter(this.value);
+
+            if (this.value) {
+                $('#add-site-customer').val(this.value);
+                _defaultModalCust = this.value;
             }
-            table.draw();
         });
 
-        // ── Reset Add Site modal on close ────────────────────────────
-        $('#addSiteModal').on('hidden.bs.modal', function() {
+        // Pre-selection from session or flashdata
+        var _preselect        = '<?= (int)($active_customer_id ?? 0) ?>';
+        var _autoOpenCust     = '<?= (int)($auto_open_modal_customer ?? 0) ?>';
+        var _defaultModalCust = _autoOpenCust || _preselect;
+
+        if (_preselect && _preselect !== '0') {
+            $('#customer-filter').val(_preselect);
+            applyTechCustomerFilter(_preselect);
+        }
+
+        if (_defaultModalCust && _defaultModalCust !== '0') {
+            $('#add-site-customer').val(_defaultModalCust);
+        }
+
+        if (_autoOpenCust && _autoOpenCust !== '0') {
+            setTimeout(function () {
+                var m = document.getElementById('addSiteModal');
+                if (m) bootstrap.Modal.getOrCreateInstance(m).show();
+            }, 350);
+        }
+
+        // Always sync customer when modal opens
+        document.getElementById('addSiteModal').addEventListener('show.bs.modal', function () {
+            var c = (_defaultModalCust && _defaultModalCust !== '0')
+                ? _defaultModalCust
+                : document.getElementById('customer-filter').value;
+
+            if (c) {
+                $('#add-site-customer').val(c);
+            }
+        });
+
+        // After modal close, restore preselect
+        $('#addSiteModal').on('hidden.bs.modal', function () {
             $('#addSiteForm')[0].reset();
+
+            var c = (_defaultModalCust && _defaultModalCust !== '0')
+                ? _defaultModalCust
+                : document.getElementById('customer-filter').value;
+
+            if (c) {
+                $('#add-site-customer').val(c);
+            }
         });
 
-        // ── Save Site AJAX ───────────────────────────────────────────
-        $('#saveSiteBtn').on('click', function() {
-
-            // Basic validation
+        // Save Site via AJAX
+        $('#saveSiteBtn').on('click', function () {
             if (!$('#add-site-name').val().trim()) {
                 Swal.fire('Validation', 'Site name is required.', 'warning');
                 return;
             }
+
             if (!$('#add-site-customer').val()) {
                 Swal.fire('Validation', 'Please select a customer.', 'warning');
                 return;
@@ -517,23 +694,26 @@
 
             $.ajax({
                 type: 'POST',
-                url: '<?= site_url('technician/sites/add') ?>',
+                url: '<?= site_url("technician/sites/add") ?>',
                 data: formData,
                 processData: false,
                 contentType: false,
-                success: function(response) {
+                success: function (response) {
                     if (response.success) {
-                        Swal.fire('Success!', 'Site added successfully!', 'success').then(
-                            () => {
-                                $('#addSiteModal').modal('hide');
+                        Swal.fire('Success!', 'Site added successfully!', 'success').then(function () {
+                            $('#addSiteModal').modal('hide');
+
+                            if (response.redirect_url) {
+                                window.location.href = response.redirect_url;
+                            } else {
                                 location.reload();
-                            });
+                            }
+                        });
                     } else {
-                        Swal.fire('Error!', response.message || 'Could not save site.',
-                            'error');
+                        Swal.fire('Error!', response.message || 'Could not save site.', 'error');
                     }
                 },
-                error: function() {
+                error: function () {
                     Swal.fire('Error!', 'An error occurred. Please try again.', 'error');
                 }
             });

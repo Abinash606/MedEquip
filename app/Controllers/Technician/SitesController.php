@@ -17,13 +17,22 @@ class SitesController extends BaseController
         $customerId = session()->get('site_customer_filter');
         session()->remove('site_customer_filter');
 
+        // Read auto-open modal flashdata (set after new customer creation)
+        $autoOpenModalCustomer = session()->getFlashdata('auto_open_site_modal_customer');
+
+        // Support ?customer_id= query param
+        $queryCustomerId = (int) $this->request->getGet('customer_id');
+        if ($queryCustomerId && !$customerId) { $customerId = $queryCustomerId; }
+        if ($queryCustomerId && !$autoOpenModalCustomer) { $autoOpenModalCustomer = $queryCustomerId; }
+
         $states = $this->getTechnicianStates($db, $userId);
 
         if (empty($states)) {
             return view('technician/site/index', [
                 'sites'              => [],
                 'customers'          => [],
-                'active_customer_id' => null,
+                'active_customer_id'       => null,
+                'auto_open_modal_customer' => null,
             ]);
         }
 
@@ -33,7 +42,8 @@ class SitesController extends BaseController
             return view('technician/site/index', [
                 'sites'              => [],
                 'customers'          => [],
-                'active_customer_id' => null,
+                'active_customer_id'       => null,
+                'auto_open_modal_customer' => null,
             ]);
         }
 
@@ -74,7 +84,8 @@ class SitesController extends BaseController
         return view('technician/site/index', [
             'sites'              => $sites,
             'customers'          => $customers,
-            'active_customer_id' => $customerId, // pre-selects filter dropdown
+            'active_customer_id'       => $customerId,
+            'auto_open_modal_customer' => $autoOpenModalCustomer,
         ]);
     }
 
@@ -158,6 +169,9 @@ class SitesController extends BaseController
         }
 
         $inspectionList = array_map(function ($insp) {
+            $rawStatus    = $insp['status'] ?? '';
+            $deviceStatuses = ['Pass', 'Fail', 'Repair', 'pass', 'fail', 'repair'];
+            $groupStatus  = in_array($rawStatus, $deviceStatuses) ? 'In Progress' : ($rawStatus ?: 'In Progress');
             return [
                 'group_id'        => $insp['group_id'],
                 'scheduled_at'    => $insp['scheduled_at']    ?? $insp['created_at'] ?? date('Y-m-d H:i:s'),
@@ -165,7 +179,7 @@ class SitesController extends BaseController
                 'title'           => $insp['title'] ?? '',
                 'technician_name' => $insp['technician_name'] ?? 'N/A',
                 'next_due_date'   => $insp['next_due_date']   ?? null,
-                'status'          => $insp['status']          ?? '',
+                'status'          => $groupStatus,
                 'completed_at'    => $insp['completed_at']    ?? null,
             ];
         }, $inspections);
@@ -181,6 +195,11 @@ class SitesController extends BaseController
             $statusLower = strtolower($record['status'] ?? '');
             $isDone = !empty($record['completed_at']) || in_array($statusLower, ['pass', 'fail', 'repair', 'completed'], true);
             if (!$isDone) continue;
+
+            // FIX: skip ghost rows with no asset_tag AND no device_type (inflate count)
+            $hasAsset      = !empty(trim($record['asset_tag'] ?? ''));
+            $hasDeviceType = !empty(trim($record['device_type'] ?? ''));
+            if (!$hasAsset && !$hasDeviceType) continue;
 
             $resolvedGroupId = !empty($record['group_id'])
                 ? $record['group_id']
@@ -250,7 +269,7 @@ class SitesController extends BaseController
 
         // ── Work orders ───────────────────────────────────────────
         $workOrders = $workOrderModel
-        ->select("
+            ->select("
             work_orders.*,
             work_orders.group_id,
             se.asset_tag,
@@ -259,17 +278,17 @@ class SitesController extends BaseController
             se.model,
             tech_user.full_name AS assigned_to_name
         ")
-        ->join(
-            'site_equipment se',
-            'se.id = work_orders.equipment_id AND se.deleted_at IS NULL',
-            'left'
-        )
-        ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')
-        ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
-        ->where('work_orders.site_id', $id)
-        ->where('work_orders.company_id', $companyId)
-        ->where('work_orders.deleted_at', null)
-        ->findAll();
+            ->join(
+                'site_equipment se',
+                'se.id = work_orders.equipment_id AND se.deleted_at IS NULL',
+                'left'
+            )
+            ->join('technicians', 'technicians.id = work_orders.assigned_to', 'left')
+            ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
+            ->where('work_orders.site_id', $id)
+            ->where('work_orders.company_id', $companyId)
+            ->where('work_orders.deleted_at', null)
+            ->findAll();
 
         // ── Technicians list ──────────────────────────────────────
         $technicians = $technicianModel
@@ -350,11 +369,18 @@ class SitesController extends BaseController
             return redirect()->back()->withInput()->with('error', $msg);
         }
 
+        $newSiteId = $db->insertID();
+
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true]);
+            return $this->response->setJSON([
+                'success'      => true,
+                'site_id'      => (int) $newSiteId,
+                'redirect_url' => site_url('technician/sites/view/' . $newSiteId),
+            ]);
         }
 
-        return redirect()->back()->with('success', 'Site added successfully.');
+        return redirect()->to('technician/sites/view/' . $newSiteId)
+            ->with('success', 'Site added successfully.');
     }
     // ══════════════════════════════════════════════════════════════
     // EQUIPMENT — show (AJAX JSON for edit modal)
@@ -721,7 +747,7 @@ class SitesController extends BaseController
                 'asset_tag'        => $row['asset_tag'] ?? '',
                 'serial_number'    => $row['serial_number'] ?? '',
                 'equipment_id'     => $row['equipment_id'] ?? null,
-                'site_equipment_id'=> $row['site_equipment_id'] ?? null,
+                'site_equipment_id' => $row['site_equipment_id'] ?? null,
                 'group_id'         => $row['group_id'] ?? '',
                 'csrf_hash'        => csrf_hash(),
             ]);
@@ -801,7 +827,7 @@ class SitesController extends BaseController
     // ══════════════════════════════════════════════════════════════
     // WORK ORDERS — update   POST technician/work-orders/update/:id
     // ══════════════════════════════════════════════════════════════
-   public function workOrderUpdate($id)
+    public function workOrderUpdate($id)
     {
         $db        = Database::connect();
         $companyId = (int) session()->get('company_id');
@@ -885,7 +911,7 @@ class SitesController extends BaseController
                 'asset_tag'        => $row['asset_tag'] ?? '',
                 'serial_number'    => $row['serial_number'] ?? '',
                 'equipment_id'     => $row['equipment_id'] ?? null,
-                'site_equipment_id'=> $row['site_equipment_id'] ?? null,
+                'site_equipment_id' => $row['site_equipment_id'] ?? null,
                 'group_id'         => $row['group_id'] ?? '',
                 'csrf_hash'        => csrf_hash(),
             ]);
@@ -1003,15 +1029,17 @@ class SitesController extends BaseController
     private function woNormalizePriority(?string $priority): string
     {
         $key = strtolower(trim((string) $priority));
-
         return match ($key) {
-            'low' => 'low',
-            'high', 'critical' => 'high',
-            default => 'normal',
+            'low'      => 'low',
+            'normal'   => 'normal',
+            'medium'   => 'medium',
+            'high'     => 'high',
+            'critical' => 'critical',
+            default    => 'normal',
         };
     }
 
-   private function extractAssetTagFromText(?string $text): string
+    private function extractAssetTagFromText(?string $text): string
     {
         $text = (string) $text;
 
@@ -1167,7 +1195,7 @@ class SitesController extends BaseController
     }
 
 
-}
+
     /**
      * AJAX: equipment list for a site as JSON
      * GET technician/sites/equipment-data/:id
@@ -1183,8 +1211,10 @@ class SitesController extends BaseController
             ->findAll();
 
         $statusMap = [
-            'ready' => 'Ready', 'need_attention' => 'Need Attention',
-            'repair' => 'Repair', 'out_of_service' => 'Out of Service',
+            'ready' => 'Ready',
+            'need_attention' => 'Need Attention',
+            'repair' => 'Repair',
+            'out_of_service' => 'Out of Service',
         ];
         $rows = [];
         foreach ($equipment as $eq) {
@@ -1215,9 +1245,7 @@ class SitesController extends BaseController
         $db = Database::connect();
 
         $rows = $db->table('work_orders wo')
-            ->select("wo.*, se.asset_tag, se.serial_number, se.make, se.model,
-                      tech_user.full_name AS assigned_to_name")
-            ->join('site_equipment se', 'se.id = wo.equipment_id AND se.deleted_at IS NULL', 'left')
+            ->select("wo.*, tech_user.full_name AS assigned_to_name")
             ->join('technicians', 'technicians.id = wo.assigned_to', 'left')
             ->join('users AS tech_user', 'tech_user.id = technicians.user_id', 'left')
             ->where('wo.site_id', $id)
@@ -1228,11 +1256,16 @@ class SitesController extends BaseController
 
         $out = [];
         foreach ($rows as $wo) {
+            $eqRef = null;
+            if (!empty($wo['equipment_id'])) {
+                $eqRef = $this->resolveWorkOrderEquipmentReference($companyId, (int) $id, (int) $wo['equipment_id']);
+            }
+
             $out[] = [
                 'id'               => $wo['id'],
                 'title'            => $wo['title'],
-                'asset_tag'        => $wo['asset_tag'] ?? 'N/A',
-                'serial_number'    => $wo['serial_number'] ?? '',
+                'asset_tag'        => $eqRef['asset_tag'] ?? 'N/A',
+                'serial_number'    => $eqRef['serial_number'] ?? '',
                 'status'           => $wo['status'],
                 'priority'         => $wo['priority'],
                 'assigned_to'      => $wo['assigned_to'] ?? null,
@@ -1241,10 +1274,12 @@ class SitesController extends BaseController
                 'end_date'         => $wo['end_date'] ?? '',
                 'description'      => $wo['description'] ?? '',
                 'equipment_id'     => $wo['equipment_id'] ?? null,
+                'site_equipment_id'=> $eqRef['site_equipment_id'] ?? null,
+                'make'             => $eqRef['make'] ?? '',
+                'model'            => $eqRef['model'] ?? '',
                 'group_id'         => $wo['group_id'] ?? '',
             ];
         }
         return $this->response->setJSON(['success' => true, 'data' => $out]);
     }
-
-
+}

@@ -316,16 +316,33 @@ function applySiteFilter(siteId) {
     var emptyRow = document.getElementById('inspEmptyRow');
     if (emptyRow) emptyRow.style.display = visibleCount === 0 ? '' : 'none';
 
+    var complianceEl = document.getElementById('statCompliance');
+    var dueSoonEl    = document.getElementById('statDueSoon');
+    var circleEl     = document.getElementById('complianceCircle');
+
+    function applyComplianceVisual(pct) {
+        pct = parseInt(pct || 0, 10) || 0;
+        if (!complianceEl || !circleEl) return;
+        complianceEl.textContent = pct + '%';
+        complianceEl.className = 'fw-bold mb-0 ' + (pct >= 90 ? 'text-success' : (pct >= 75 ? 'text-warning' : 'text-danger'));
+        var clr = pct >= 90 ? '#22c55e' : (pct >= 75 ? '#f59e0b' : '#ef4444');
+        circleEl.style.background = 'conic-gradient(' + clr + ' ' + pct + '%, rgba(255,255,255,.08) 0%)';
+        var inner = circleEl.querySelector('div');
+        if (inner) inner.textContent = pct + '%';
+    }
+
     if (!siteId) {
         document.getElementById('statTotalAssets').textContent = <?= $totalAssets ?>;
         document.getElementById('statOpenWO').textContent      = <?= $totalOpenWO ?>;
-        document.getElementById('statCompliance').textContent  = '<?= $overallCompliance ?>%';
+        if (dueSoonEl) dueSoonEl.textContent = <?= $dueSoon ?>;
+        applyComplianceVisual(<?= $overallCompliance ?>);
     } else {
         var stat = allSiteStats.find(function(s) { return s.id == siteId; });
         if (stat) {
             document.getElementById('statTotalAssets').textContent = stat.asset_count;
             document.getElementById('statOpenWO').textContent      = stat.open_wo;
-            document.getElementById('statCompliance').textContent  = stat.compliance_pct + '%';
+            if (dueSoonEl) dueSoonEl.textContent = stat.due_soon || 0;
+            applyComplianceVisual(stat.compliance_pct);
         }
     }
 }

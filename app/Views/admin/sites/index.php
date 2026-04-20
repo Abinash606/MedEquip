@@ -28,101 +28,101 @@ foreach ($customers as $cust) {
         <i class="fa-solid fa-sitemap me-2"></i> Add Site
     </button>
 </div>
-  <div class="content">
-<!-- Filter by Customer -->
-<div class="glass-card mb-4 p-3">
-    <div class="row align-items-end">
-        <div class="col-md-6 mb-2">
-             <div class="input-group">
-        <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
-        <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
+<div class="content">
+    <!-- Filter by Customer -->
+    <div class="glass-card mb-4 p-3">
+        <div class="row align-items-end">
+            <div class="col-md-6 mb-2">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="site-search" class="form-control border-start-0 ps-0" placeholder="Search for sites by name or address...">
+                </div>
+            </div>
+            <div class="col-md-6 mb-2">
+                <div>
+                    <label for="customer-filter" class="form-label fw-bold">Filter by Customer</label>
+                    <select id="customer-filter" class="form-select">
+                        <option value="">All Customers</option>
+                        <?php foreach ($customers as $cust): ?>
+                            <option value="<?= esc($cust['id']) ?>"><?= esc($cust['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+        </div>
     </div>
-        </div>
-      <div class="col-md-6 mb-2">
-        <div>
-              <label for="customer-filter" class="form-label fw-bold">Filter by Customer</label>
-    <select id="customer-filter" class="form-select">
-        <option value="">All Customers</option>
-        <?php foreach ($customers as $cust): ?>
-            <option value="<?= esc($cust['id']) ?>"><?= esc($cust['name']) ?></option>
-        <?php endforeach; ?>
-    </select>
-        </div>
-        </div>
-        </div>
-    </div>
-  
 
 
-<!-- Sites Table -->
-<div class="glass-card p-3">
-    <div class="table-responsive">
-    <table class="table " id="sitesTable">
-        <thead class="">
-            <tr>
-                <th>Site Name</th>
-                <th>Customer Name</th>
-                <th>Site Address</th>
-                <th>City</th>
-                <th>State</th>
-                <th>Site Contact Name</th>
-                <th>Site Phone Number</th>
-                <th>Site Email</th>
-                <th class="text-center">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php if (empty($sites)): ?>
-                <tr>
-                    <td colspan="9" class="text-center">No sites found</td>
-                </tr>
-            <?php else: ?>
-                <?php foreach ($sites as $site): ?>
-                    <tr data-customer-id="<?= $site['customer_id'] ?>">
-                        <td>
-                            <a href="<?= site_url('admin/sites/' . $site['id']) ?>" class="text-primary fw-bold">
-                                <?= esc($site['name']) ?>
-                            </a>
-                        </td>
-                        <td><?= esc($customerMap[$site['customer_id']] ?? '') ?></td>
-                        <td><?= esc($site['address'] ?? '') ?></td>
-                        <td><?= esc($site['city'] ?? '') ?></td>
-                        <td><?= esc($site['state'] ?? '') ?></td>
-                        <td><?= esc($site['contact_name'] ?? '') ?></td>
-                        <td><?= esc($site['phone'] ?? '') ?></td>
-                        <td><?= esc($site['email'] ?? '') ?></td>
-                        <td class="text-center">
-                            <div class="action-btns">
-                            <!-- Edit button: populate modal with site data -->
-                            <button type="button" class="btn btn-sm btn-primary edit-site-btn" title="Edit"
-                                data-id="<?= $site['id'] ?>"
-                                data-name="<?= esc($site['name'], 'attr') ?>"
-                                data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
-                                data-address="<?= esc($site['address'] ?? '', 'attr') ?>"
-                                data-city="<?= esc($site['city'] ?? '', 'attr') ?>"
-                                data-state="<?= esc($site['state'] ?? '', 'attr') ?>"
-                                data-zip="<?= esc($site['zip'] ?? '', 'attr') ?>"
-                                data-contact_name="<?= esc($site['contact_name'] ?? '', 'attr') ?>"
-                                data-email="<?= esc($site['email'] ?? '', 'attr') ?>"
-                                data-phone="<?= esc($site['phone'] ?? '', 'attr') ?>"
-                                class="btn btn-sm btn-outline-secondary edit-site-btn">
-                                <i class="fa fa-pen"></i> Edit
-                            </button>
 
-                            <!-- Delete button -->
-                            <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-danger" title="Delete"
-                                onclick="techDeleteSiteConfirm(this)">
-                                <i class="fa fa-trash"></i> Delete
-                            </a>
-                            </div>
-                        </td>
+    <!-- Sites Table -->
+    <div class="glass-card p-3">
+        <div class="table-responsive">
+            <table class="table " id="sitesTable">
+                <thead class="">
+                    <tr>
+                        <th>Site Name</th>
+                        <th>Customer Name</th>
+                        <th>Site Address</th>
+                        <th>City</th>
+                        <th>State</th>
+                        <th>Site Contact Name</th>
+                        <th>Site Phone Number</th>
+                        <th>Site Email</th>
+                        <th class="text-center">Actions</th>
                     </tr>
-                <?php endforeach; ?>
-            <?php endif; ?>
-        </tbody>
-    </table>
+                </thead>
+                <tbody>
+                    <?php if (empty($sites)): ?>
+                        <tr>
+                            <td colspan="9" class="text-center">No sites found</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($sites as $site): ?>
+                            <tr data-customer-id="<?= $site['customer_id'] ?>">
+                                <td>
+                                    <a href="<?= site_url('admin/sites/' . $site['id']) ?>" class="text-primary fw-bold">
+                                        <?= esc($site['name']) ?>
+                                    </a>
+                                </td>
+                                <td><?= esc($customerMap[$site['customer_id']] ?? '') ?></td>
+                                <td><?= esc($site['address'] ?? '') ?></td>
+                                <td><?= esc($site['city'] ?? '') ?></td>
+                                <td><?= esc($site['state'] ?? '') ?></td>
+                                <td><?= esc($site['contact_name'] ?? '') ?></td>
+                                <td><?= esc($site['phone'] ?? '') ?></td>
+                                <td><?= esc($site['email'] ?? '') ?></td>
+                                <td class="text-center">
+                                    <div class="action-btns">
+                                        <!-- Edit button: populate modal with site data -->
+                                        <button type="button" class="btn btn-sm btn-primary edit-site-btn" title="Edit"
+                                            data-id="<?= $site['id'] ?>"
+                                            data-name="<?= esc($site['name'], 'attr') ?>"
+                                            data-customer_id="<?= esc($site['customer_id'], 'attr') ?>"
+                                            data-address="<?= esc($site['address'] ?? '', 'attr') ?>"
+                                            data-city="<?= esc($site['city'] ?? '', 'attr') ?>"
+                                            data-state="<?= esc($site['state'] ?? '', 'attr') ?>"
+                                            data-zip="<?= esc($site['zip'] ?? '', 'attr') ?>"
+                                            data-contact_name="<?= esc($site['contact_name'] ?? '', 'attr') ?>"
+                                            data-email="<?= esc($site['email'] ?? '', 'attr') ?>"
+                                            data-phone="<?= esc($site['phone'] ?? '', 'attr') ?>"
+                                            class="btn btn-sm btn-outline-secondary edit-site-btn">
+                                            <i class="fa fa-pen"></i> Edit
+                                        </button>
+
+                                        <!-- Delete button -->
+                                        <a href="<?= site_url('admin/sites/delete/' . $site['id']) ?>" class="btn btn-sm btn-danger" title="Delete"
+                                            onclick="techDeleteSiteConfirm(event, this); return false;">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 </div>
 </div>
 <!-- Site Modal -->
@@ -334,11 +334,27 @@ foreach ($customers as $cust) {
             applyCustomerFilter(this.value);
         });
 
-        // Auto-apply filter if arriving from Customer Directory (session-based)
-        var _preselect = '<?= (int)($active_customer_id ?? 0) ?>';
+        var _preselect    = '<?= (int)($active_customer_id ?? 0) ?>';
+        var _autoOpenCust = '<?= (int)($auto_open_modal_customer ?? 0) ?>';
+        var _defaultModalCust = _autoOpenCust || _preselect;
+
+        // 1. Apply table filter
         if (_preselect && _preselect !== '0') {
             document.getElementById('customer-filter').value = _preselect;
             applyCustomerFilter(_preselect);
+        }
+
+        // 2. Pre-select customer in modal immediately
+        if (_defaultModalCust && _defaultModalCust !== '0') {
+            $('#site-customer-id').val(_defaultModalCust);
+        }
+
+        // 3. Auto-open modal when redirected after creating new customer
+        if (_autoOpenCust && _autoOpenCust !== '0') {
+            setTimeout(function() {
+                var modalEl = document.getElementById('siteModal');
+                if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }, 350);
         }
     });
 
@@ -408,28 +424,56 @@ foreach ($customers as $cust) {
                     contentType: false,
                     dataType: 'json',
                     success: function(response) {
-                        if (typeof response === 'string') { try { response = JSON.parse(response); } catch(e) {} }
+                        if (typeof response === 'string') {
+                            try {
+                                response = JSON.parse(response);
+                            } catch (e) {}
+                        }
                         if (response && response.success) {
-                            Swal.fire({ title: 'Success!', text: 'Site saved successfully!', icon: 'success', confirmButtonText: 'OK' })
+                            Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Site saved successfully!',
+                                    icon: 'success',
+                                    confirmButtonText: 'OK'
+                                })
                                 .then(function() {
                                     $('#siteModal').modal('hide');
                                     $('#siteForm')[0].reset();
                                     $('#siteModalLabel').text('Add Site');
                                     $('#submitBtn').text('Save');
-                                    location.reload();
+                                    if (response.redirect_url) {
+                                        window.location.href = response.redirect_url;
+                                    } else { location.reload(); }
                                 });
                         } else {
                             var msg = (response && response.message) ? response.message : 'Failed to save site. Please try again.';
                             // Show inline error in the modal
                             var errBox = document.getElementById('siteFormError');
-                            if (errBox) { errBox.textContent = msg; errBox.classList.remove('d-none'); }
-                            else { Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' }); }
+                            if (errBox) {
+                                errBox.textContent = msg;
+                                errBox.classList.remove('d-none');
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: msg,
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
                         }
                     },
                     error: function(xhr) {
                         var msg = 'An error occurred. Please try again.';
-                        try { var r = JSON.parse(xhr.responseText); if (r && r.message) msg = r.message; } catch(e) {}
-                        Swal.fire({ title: 'Error!', text: msg, icon: 'error', confirmButtonText: 'OK' });
+                        try {
+                            var r = JSON.parse(xhr.responseText);
+                            if (r && r.message) msg = r.message;
+                        } catch (e) {}
+                        Swal.fire({
+                            title: 'Error!',
+                            text: msg,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 });
             }
@@ -467,21 +511,40 @@ foreach ($customers as $cust) {
             $('#site-id').val('');
             $('#siteModalLabel').text('Add Site');
             $('#submitBtn').text('Save');
-            $('#siteForm').attr('action', '/admin/sites/add');
+            $('#siteForm').attr('action', '<?= site_url("admin/sites/add") ?>');
             var eb = document.getElementById('siteFormError');
             if (eb) { eb.textContent = ''; eb.classList.add('d-none'); }
+            // Restore pre-selected customer after reset
+            var custToRestore = (typeof _defaultModalCust !== 'undefined' && _defaultModalCust && _defaultModalCust !== '0')
+                ? _defaultModalCust : document.getElementById('customer-filter').value;
+            if (custToRestore) $('#site-customer-id').val(custToRestore);
         });
     });
 
-        function techDeleteSiteConfirm(btn) {
-            var href = btn.closest('a') ? btn.closest('a').getAttribute('href') : btn.getAttribute('href');
-            href = href || btn.getAttribute('href') || '';
-            Swal.fire({
-                title: 'Delete Site?', text: 'This will permanently remove the site.',
-                icon: 'warning', showCancelButton: true,
-                confirmButtonColor: '#d33', cancelButtonColor: '#6c757d', confirmButtonText: 'Yes, delete'
-            }).then(function(r) { if (r.isConfirmed) window.location.href = href; });
-        }
+    // Always pre-select the right customer when Add Site modal opens
+    document.getElementById('siteModal').addEventListener('show.bs.modal', function() {
+        if ($('#site-id').val()) return; // skip when editing
+        var custToSet = (typeof _defaultModalCust !== 'undefined' && _defaultModalCust && _defaultModalCust !== '0')
+            ? _defaultModalCust
+            : document.getElementById('customer-filter').value;
+        if (custToSet) $('#site-customer-id').val(custToSet);
+    });
+
+    function techDeleteSiteConfirm(e, btn) {
+        e.preventDefault();
+        var href = btn.getAttribute('href');
+        Swal.fire({
+            title: 'Delete Site?',
+            text: 'This will permanently remove the site.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, delete'
+        }).then(function(r) {
+            if (r.isConfirmed) window.location.href = href;
+        });
+    }
 </script>
 
 <?= $this->endSection() ?>

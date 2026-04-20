@@ -102,13 +102,13 @@
         <!-- Calendar View (FullCalendar) -->
         <div id="calendarView" class="schedule-view px-3 pb-3">
             <!-- Legend & Toggle -->
-            <div class="d-flex align-items-center gap-3 py-2 mb-1 flex-wrap">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge px-2 py-1" style="background:#10b981;"><i
-                            class="fa-solid fa-clipboard-check me-1"></i>Inspections</span>
-                    <span class="badge px-2 py-1" style="background:#ef4444;"><i
-                            class="fa-solid fa-wrench me-1"></i>Work Orders</span>
-                </div>
+            <div class="d-flex align-items-center gap-2 py-2 mb-1 flex-wrap">
+                <span class="badge px-2 py-1" style="background:#3b82f6;"><i class="fa-solid fa-wrench me-1"></i>Work Order</span>
+                <span class="badge px-2 py-1" style="background:#10b981;"><i class="fa-solid fa-clipboard-check me-1"></i>Inspection (Active)</span>
+                <span class="badge px-2 py-1" style="background:#8b5cf6;"><i class="fa-solid fa-calendar-plus me-1"></i>Next Due</span>
+                <span class="badge px-2 py-1" style="background:#f97316;"><i class="fa-solid fa-triangle-exclamation me-1"></i>Overdue / Due Soon</span>
+                <span class="badge px-2 py-1" style="background:#ef4444;"><i class="fa-solid fa-xmark me-1"></i>Failed</span>
+                <span class="badge px-2 py-1" style="background:#6b7280;"><i class="fa-solid fa-circle-check me-1"></i>Completed</span>
                 <div class="form-check form-switch ms-auto mb-0">
                     <input class="form-check-input" type="checkbox" id="toggleCompleted">
                     <label class="form-check-label small text-muted" for="toggleCompleted">Show Completed</label>
@@ -230,10 +230,10 @@
                             <?php foreach ($scheduledInspections ?? [] as $insp):
                                 $inspId = $insp['group_id'] ?? ('—'); // Use real group_id from DB
                                 $stLow  = strtolower($insp['status'] ?? '');
-                                $stCls  = $stLow === 'pass' ? 'bg-success' : ($stLow === 'fail' ? 'bg-danger' : 'bg-warning text-dark');
+                                $stCls  = in_array($stLow, ['closed/complete','closed_complete','closed','complete','completed','pass']) ? 'bg-success' : ($stLow === 'fail' ? 'bg-danger' : ($stLow === 'repair' ? 'bg-warning text-dark' : 'bg-secondary'));
                             ?>
                                 <tr class="sched-row"
-                                    data-status="<?= in_array($stLow, ['pass', 'fail', 'repair', 'completed']) ? 'closed' : 'open' ?>"
+                                    data-status="<?= esc($stLow) ?>"
                                     style="cursor:pointer;"
                                     onclick="showSchedModal('insp','<?= esc(addslashes($inspId)) ?>','<?= esc(addslashes($insp['inspection_type'] ?? 'Inspection')) ?>','<?= esc(addslashes($insp['status'] ?? '')) ?>','','<?= esc(addslashes($insp['tech_name'] ?? 'Unassigned')) ?>','<?= esc(addslashes($insp['site_name'] ?? '')) ?>','<?= esc(addslashes($insp['customer_name'] ?? '')) ?>','','<?= esc($insp['scheduled_at'] ?? '') ?>','<?= esc($insp['next_due_date'] ?? '') ?>')">
                                     <td><span class="t-pill"><?= esc($inspId) ?></span></td>
@@ -242,7 +242,7 @@
                                     <td><?= esc($insp['customer_name'] ?? '—') ?></td>
                                     <td><?= esc($insp['tech_name'] ?? '—') ?></td>
                                     <td><span
-                                            class="badge <?= $stCls ?>"><?= esc(ucfirst($insp['status'] ?? 'In Progress')) ?></span>
+                                            class="badge <?= $stCls ?>"><?= esc($insp['status'] ?? 'In Progress') ?></span>
                                     </td>
                                     <td class="text-muted small">
                                         <?= !empty($insp['scheduled_at']) ? date('M j, Y', strtotime($insp['scheduled_at'])) : '—' ?>
@@ -380,6 +380,14 @@
 
 <script>
     // ── Date navigation ─────────────────────────────────────────────────────
+    // CSRF helper: always reads from cookie so token stays current after regeneration
+    function getCsrfFromCookie() {
+        var name = '<?= config("Security")->cookieName ?? "csrf_cookie_name" ?>';
+        var parts = ('; ' + document.cookie).split('; ' + name + '=');
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return '<?= csrf_hash() ?>'; // fallback
+    }
+
     var _schedDate = new Date();
 
     function _fmtDate(d) {
@@ -472,13 +480,13 @@
 
     $(function() {
         _dtWO = $('#schedTableWO').DataTable({
-            pageLength: 15,
+            pageLength: 10,
             order: [
                 [7, 'asc']
             ]
         });
         _dtInsp = $('#schedTableInsp').DataTable({
-            pageLength: 15,
+            pageLength: 10,
             order: [
                 [6, 'asc']
             ]
@@ -487,9 +495,23 @@
 
         $('#schedShowCompleted').on('change', function() {
             _schedShowCompleted = this.checked;
+            var topToggle = document.getElementById('toggleCompleted');
+            if (topToggle && topToggle.checked !== this.checked) topToggle.checked = this.checked;
             applySchedFilter();
         });
     });
+
+    function _schedNormStatus(st) {
+        return String(st || '').trim().toLowerCase().replace(/\s+/g, '_');
+    }
+
+    function _schedIsCompletedStatus(tableId, st) {
+        st = _schedNormStatus(st);
+        if (tableId === 'schedTableWO') {
+            return ['closed', 'completed', 'complete', 'done', 'resolved'].indexOf(st) !== -1;
+        }
+        return ['closed', 'closed/complete', 'closed_complete', 'complete', 'completed'].indexOf(st) !== -1;
+    }
 
     function applySchedFilter() {
         $.fn.dataTable.ext.search = [];
@@ -497,78 +519,176 @@
             $.fn.dataTable.ext.search.push(function(settings, data, idx) {
                 var tableId = settings.nTable.id;
                 if (tableId !== 'schedTableWO' && tableId !== 'schedTableInsp') return true;
-                var row = (tableId === 'schedTableWO' ? _dtWO : _dtInsp).row(idx).node();
-                var st = $(row).data('status') || '';
-                return st !== 'closed' && st !== 'completed';
+                var rowApi = (tableId === 'schedTableWO' ? _dtWO : _dtInsp);
+                var row = rowApi ? rowApi.row(idx).node() : null;
+                var st = row ? ($(row).data('status') || '') : '';
+                return !_schedIsCompletedStatus(tableId, st);
             });
         }
         if (_dtWO) _dtWO.draw();
         if (_dtInsp) _dtInsp.draw();
+        if (window._fcCalendar) {
+            window._fcCalendar.refetchEvents();
+        }
     }
 
-    // ── FullCalendar ────────────────────────────────────────────────────────
+    // FullCalendar init
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('fcCalendar');
         if (!calendarEl || typeof FullCalendar === 'undefined') return;
 
-        var showCompleted = false;
-
         function fetchEvents(fetchInfo, successCallback, failureCallback) {
-            fetch('<?= site_url('admin/scheduling/events') ?>?show_completed=' + (showCompleted ? '1' : '0'))
-                .then(function(r) {
-                    return r.json();
-                })
-                .then(function(data) {
-                    successCallback(data);
-                })
-                .catch(function(err) {
-                    failureCallback(err);
-                });
+            fetch('<?= site_url('admin/scheduling/events') ?>?show_completed=' + (_schedShowCompleted ? '1' : '0'))
+                .then(function(r) { return r.json(); })
+                .then(function(data) { successCallback(data); })
+                .catch(function(err) { failureCallback(err); });
         }
 
         window._fcCalendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listWeek'
-            },
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
             themeSystem: 'bootstrap5',
+            editable: true,
+            droppable: true,
             events: fetchEvents,
             datesSet: function(info) {
-                // Sync the date label with FullCalendar's current date
                 _schedDate = new Date(info.view.currentStart);
                 document.getElementById('currentDateLabel').textContent = _fmtDate(_schedDate);
             },
             eventClick: function(info) {
                 var p = info.event.extendedProps;
-                var isInsp = (p.event_type === 'inspection');
-                showSchedModal(
-                    isInsp ? 'insp' : 'wo',
-                    info.event.id || '—',
-                    info.event.title || '—',
-                    p.status || '—',
-                    p.priority || '',
-                    p.tech || '—',
-                    p.site_name || '—',
-                    '', '', '', ''
-                );
+                var type = p.event_type || 'wo';
+                if (type === 'next_due') {
+                    showNextDueModal(info.event.id, info.event.title,
+                        p.customer_name || '', p.site_name || '',
+                        info.event.startStr || '', p.group_id || '',
+                        p.days_until_due || 0);
+                } else {
+                    showSchedModal(type === 'inspection' ? 'insp' : 'wo',
+                        info.event.id || '', info.event.title || '',
+                        p.status || '', p.priority || '',
+                        p.tech || '', p.site_name || '', p.customer_name || '',
+                        p.equipment || '', info.event.startStr || '', p.next_due_date || '');
+                }
             },
             eventDidMount: function(info) {
+                var p = info.event.extendedProps;
                 info.el.title = info.event.title;
+                if (p.event_type === 'next_due') {
+                    info.el.style.fontWeight = 'bold';
+                    info.el.style.borderLeft = '4px solid rgba(255,255,255,.5)';
+                }
+                if (p.event_type === 'inspection' && info.event.backgroundColor === '#f97316') {
+                    var t = info.el.querySelector('.fc-event-title');
+                    if (t) t.insertAdjacentHTML('beforeend', ' <i class="fa-solid fa-bell" style="font-size:9px;"></i>');
+                }
+            },
+            eventDrop: function(info) {
+                var newDate = info.event.startStr.substring(0, 10);
+
+                var fd = new FormData();
+                fd.append('event_id', info.event.id);
+                fd.append('new_date', newDate);
+                fd.append('<?= csrf_token() ?>', getCsrfFromCookie());
+
+                fetch('<?= site_url('admin/scheduling/reschedule') ?>', {
+                    method: 'POST', body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) {
+                    if (!r.ok) {
+                        // 403 = CSRF failure, 500 = server error
+                        info.revert();
+                        if (r.status === 403) {
+                            Swal.fire('Session Expired', 'Your session token expired. Please refresh the page and try again.', 'warning');
+                        } else {
+                            Swal.fire('Error', 'Server error (' + r.status + '). Could not save new date.', 'error');
+                        }
+                        return null;
+                    }
+                    return r.json();
+                })
+                .then(function(res) {
+                    if (!res) return; // already handled above
+                    if (!res.success) {
+                        info.revert();
+                        Swal.fire('Could Not Save', res.message || 'Failed to reschedule. Please try again.', 'warning');
+                    } else {
+                        if (typeof showToast === 'function') showToast('Rescheduled to ' + newDate, 'success');
+                        else Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Rescheduled to ' + newDate, showConfirmButton: false, timer: 2000 });
+                    }
+                })
+                .catch(function(err) {
+                    info.revert();
+                    console.error('Reschedule error:', err);
+                });
             },
         });
         window._fcCalendar.render();
 
-        var togEl = document.getElementById('toggleCompleted');
-        if (togEl) {
-            togEl.addEventListener('change', function() {
-                showCompleted = this.checked;
-                window._fcCalendar.refetchEvents();
-            });
+        function syncToggles(checked) {
+            _schedShowCompleted = checked;
+            var t1 = document.getElementById('toggleCompleted');
+            var t2 = document.getElementById('schedShowCompleted');
+            if (t1 && t1.checked !== checked) t1.checked = checked;
+            if (t2 && t2.checked !== checked) t2.checked = checked;
+            applySchedFilter();
+        }
+        var t1 = document.getElementById('toggleCompleted');
+        if (t1) t1.addEventListener('change', function() { syncToggles(this.checked); });
+        var t2 = document.getElementById('schedShowCompleted');
+        if (t2) {
+            t2.removeEventListener('change', t2._handler);
+            t2._handler = function() { syncToggles(this.checked); };
+            t2.addEventListener('change', t2._handler);
         }
     });
 
+    // Next-Due detail modal
+    function showNextDueModal(eventId, title, customer, site, date, groupId, daysOut) {
+        var urgency = daysOut <= 0
+            ? '<span class="badge bg-danger">OVERDUE</span>'
+            : daysOut <= 30
+                ? '<span class="badge bg-warning text-dark">Due in ' + daysOut + ' days</span>'
+                : '<span class="badge bg-success">Due in ' + daysOut + ' days</span>';
+        var body =
+            '<table class="table table-sm table-borderless mb-0 text-white">'
+            + '<tr><th class="text-muted pe-3">Customer</th><td class="fw-bold" style="color:#a78bfa;">' + (customer || '') + '</td></tr>'
+            + '<tr><th class="text-muted pe-3">Site</th><td>' + (site || '') + '</td></tr>'
+            + '<tr><th class="text-muted pe-3">Next Due Date</th><td>' + (date || '') + '</td></tr>'
+            + '<tr><th class="text-muted pe-3">Status</th><td>' + urgency + '</td></tr>'
+            + '</table>'
+            + (groupId
+                ? '<button class="btn btn-warning btn-sm mt-3 w-100" onclick="sendReminderEmail(\'' + groupId + '\')">'
+                  + '<i class="fa-solid fa-envelope me-1"></i>Send Email Reminder to Customer & Technician</button>'
+                : '');
+        document.getElementById('schedItemModalTitle').innerHTML =
+            '<i class="fa-solid fa-calendar-plus me-2" style="color:#8b5cf6;"></i>' + (title || 'Scheduled Inspection');
+        document.getElementById('schedItemModalBody').innerHTML = body;
+        new bootstrap.Modal(document.getElementById('schedItemModal')).show();
+    }
+
+    // Send Email Reminder via AJAX
+    function sendReminderEmail(groupId) {
+        var btn = event && event.currentTarget;
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+        var fd = new FormData();
+        fd.append('group_id', groupId);
+        fd.append('event_type', 'inspection');
+        fd.append('<?= csrf_token() ?>', getCsrfFromCookie());
+        fetch('<?= site_url('admin/scheduling/send-reminder') ?>', {
+            method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-envelope me-1"></i>Send Email Reminder to Customer & Technician'; }
+            Swal.fire(res.success ? 'Sent!' : 'Notice', res.message, res.success ? 'success' : 'warning');
+        })
+        .catch(function() {
+            if (btn) btn.disabled = false;
+            Swal.fire('Error', 'Failed to send. Please check SMTP settings in your app config.', 'error');
+        });
+    }
     // AJAX form submit for appointment
     document.getElementById('appointmentForm')?.addEventListener('submit', function(e) {
         // allow standard POST — no AJAX needed here

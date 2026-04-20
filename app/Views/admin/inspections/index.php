@@ -121,6 +121,13 @@ $(function () {
                 data: null,
                 render: function(row) {
                     if (!row.group_id) return '—';
+                    // Link to the site detail page (inspections tab) if site_id is available
+                    if (row.site_id) {
+                        // Use ?open_tab=inspections which the site detail page already handles
+                        var url = '<?= site_url('admin/sites/') ?>' + row.site_id + '?open_tab=inspections';
+                        return '<a href="' + url + '" class="t-pill" style="font-size:11px;text-decoration:none;cursor:pointer;" '
+                            + 'title="Open inspection on site detail page">' + row.group_id + '</a>';
+                    }
                     return '<span class="t-pill" style="font-size:11px;">' + row.group_id + '</span>';
                 }
             },

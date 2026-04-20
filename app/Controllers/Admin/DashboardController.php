@@ -8,84 +8,100 @@ class DashboardController extends BaseController
 {
     public function index()
     {
-        $companyId = $this->session->get('company_id');
+        $companyId = (int) $this->session->get('company_id');
         $db = \Config\Database::connect();
 
-        // ── KPI: Total Inspections ─────────────────────────────────
-        $totalInspections = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ?",
+        // Count inspections as grouped inspection sessions so the dashboard
+        // matches the Inspection Reports page (one row per group/session).
+        $inspectionStatusSub = "
+            SELECT
+                COALESCE(NULLIF(group_id, ''), CONCAT('ROW-', id)) AS group_key,
+                MAX(CASE
+                    WHEN status IS NULL OR status = ''
+                      OR LOWER(status) NOT IN ('pass','fail','repair','completed','closed/complete')
+                    THEN 1 ELSE 0
+                END) AS has_open
+            FROM inspections
+            WHERE company_id = ?
+              AND deleted_at IS NULL
+            GROUP BY COALESCE(NULLIF(group_id, ''), CONCAT('ROW-', id))
+        ";
+
+        $totalInspections = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt FROM (" . $inspectionStatusSub . ") g",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        // ── KPI: Critical/High open work orders ───────────────────
-        $criticalWO = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ? AND priority IN ('critical','high') AND status != 'closed'",
+        $inspCompleted = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt FROM (" . $inspectionStatusSub . ") g WHERE g.has_open = 0",
+            [$companyId]
+        )->getRow()->cnt ?? 0);
+        $inspInProgress = max(0, $totalInspections - $inspCompleted);
+
+        $criticalWO = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt
+             FROM work_orders
+             WHERE company_id = ?
+               AND deleted_at IS NULL
+               AND priority IN ('critical','high')
+               AND status NOT IN ('closed','completed','cancelled')",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        // ── KPI: Equipment operational % ──────────────────────────
-        $totalEquipment = (int)($db->query(
+        $totalEquipment = (int) ($db->query(
             "SELECT COUNT(*) AS cnt FROM site_equipment WHERE company_id = ? AND deleted_at IS NULL",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        $readyEquipment = (int)($db->query(
+        $readyEquipment = (int) ($db->query(
             "SELECT COUNT(*) AS cnt FROM site_equipment WHERE company_id = ? AND deleted_at IS NULL AND status = 'ready'",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
         $equipPct = $totalEquipment > 0 ? round(($readyEquipment / $totalEquipment) * 100) : 0;
 
-        // ── KPI: Compliance score (pass rate) ─────────────────────
-        $passCount = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ? AND status IN ('Pass','pass')",
-            [$companyId]
-        )->getRow()->cnt ?? 0);
+        $passCount = $inspCompleted;
         $complianceScore = $totalInspections > 0 ? round(($passCount / $totalInspections) * 100) : 100;
 
-        // ── KPI: Pending/Open work orders ─────────────────────────
-        $pendingWO = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ? AND status = 'open'",
+        $pendingWO = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt
+             FROM work_orders
+             WHERE company_id = ?
+               AND deleted_at IS NULL
+               AND status = 'open'",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        // ── Work Order Overview ────────────────────────────────────
-        $woCompleted = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ? AND status IN ('closed','completed')",
+        $woCompleted = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt
+             FROM work_orders
+             WHERE company_id = ?
+               AND deleted_at IS NULL
+               AND status IN ('closed','completed')",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        $woInProgress = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ? AND status = 'in_progress'",
+        $woInProgress = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt
+             FROM work_orders
+             WHERE company_id = ?
+               AND deleted_at IS NULL
+               AND status = 'in_progress'",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        $woTotal = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM work_orders WHERE company_id = ?",
+        $woTotal = (int) ($db->query(
+            "SELECT COUNT(*) AS cnt
+             FROM work_orders
+             WHERE company_id = ?
+               AND deleted_at IS NULL",
             [$companyId]
         )->getRow()->cnt ?? 0);
 
-        // ── Inspection Overview ────────────────────────────────────
-        $inspCompleted = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inspections WHERE company_id = ? AND status IN ('Pass','Fail','Repair','pass','fail','repair','completed')",
-            [$companyId]
-        )->getRow()->cnt ?? 0);
-        $inspInProgress = max(0, $totalInspections - $inspCompleted);
+        $invTotal = (int)($db->query("SELECT COUNT(*) AS cnt FROM inventory")->getRow()->cnt ?? 0);
+        $invLowStock = (int)($db->query("SELECT COUNT(*) AS cnt FROM inventory WHERE qty > 0 AND qty <= 5")->getRow()->cnt ?? 0);
+        $invOutOfStock = (int)($db->query("SELECT COUNT(*) AS cnt FROM inventory WHERE qty = 0")->getRow()->cnt ?? 0);
 
-        // ── Inventory Overview ─────────────────────────────────────
-        $invTotal = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inventory"
-        )->getRow()->cnt ?? 0);
-
-        $invLowStock = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inventory WHERE qty > 0 AND qty <= 5"
-        )->getRow()->cnt ?? 0);
-
-        $invOutOfStock = (int)($db->query(
-            "SELECT COUNT(*) AS cnt FROM inventory WHERE qty = 0"
-        )->getRow()->cnt ?? 0);
-
-        // ── Live Service Feed ──────────────────────────────────────
         $liveServiceFeed = $db->query("
             SELECT
                 wo.id,
@@ -101,17 +117,17 @@ class DashboardController extends BaseController
                 e.device_type,
                 u.full_name    AS tech_name
             FROM work_orders wo
-            LEFT JOIN sites s       ON s.id = wo.site_id
-            LEFT JOIN customers c   ON c.id = s.customer_id
-            LEFT JOIN site_equipment e ON e.id = wo.equipment_id
-            LEFT JOIN technicians t ON t.id = wo.assigned_to
-            LEFT JOIN users u       ON u.id = t.user_id
+            LEFT JOIN sites s          ON s.id = wo.site_id
+            LEFT JOIN customers c      ON c.id = s.customer_id
+            LEFT JOIN site_equipment e ON e.id = wo.equipment_id AND e.deleted_at IS NULL
+            LEFT JOIN technicians t    ON t.id = wo.assigned_to
+            LEFT JOIN users u          ON u.id = t.user_id
             WHERE wo.company_id = ?
+              AND wo.deleted_at IS NULL
             ORDER BY wo.updated_at DESC, wo.id DESC
             LIMIT 10
         ", [$companyId])->getResultArray();
 
-        // ── Technician Workload ────────────────────────────────────
         $techWorkload = $db->query("
             SELECT
                 u.full_name,
@@ -121,7 +137,7 @@ class DashboardController extends BaseController
                 SUM(CASE WHEN wo.status = 'open' THEN 1 ELSE 0 END) AS new_wo
             FROM technicians t
             LEFT JOIN users u        ON u.id  = t.user_id
-            LEFT JOIN work_orders wo ON wo.assigned_to = t.id AND wo.company_id = ?
+            LEFT JOIN work_orders wo ON wo.assigned_to = t.id AND wo.company_id = ? AND wo.deleted_at IS NULL
             WHERE t.company_id = ?
             GROUP BY t.id, u.full_name
             ORDER BY total_wo DESC
@@ -156,7 +172,6 @@ class DashboardController extends BaseController
             'maxWO'            => $maxWO,
         ]);
     }
-
     /**
      * GET admin/dashboard/search?q=...
      * Global search across customers, equipment, sites, inspections.

@@ -1,9 +1,25 @@
+<?php
+$uriSegments = service('uri')->getSegments();
+$skipSegments = ['admin', 'technician', 'customer'];
+$pageTitle = trim((string) ($title ?? ''));
+
+if ($pageTitle === '') {
+    $usableSegments = array_values(array_filter($uriSegments, static function ($segment) use ($skipSegments) {
+        $segment = trim((string) $segment);
+        return $segment !== '' && !in_array(strtolower($segment), $skipSegments, true) && !ctype_digit($segment);
+    }));
+
+    $derived = end($usableSegments) ?: 'Dashboard';
+    $pageTitle = ucwords(str_replace(['-', '_'], ' ', (string) $derived));
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AssetIQ | Customer Portal</title>
+    <title><?= esc($pageTitle) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">

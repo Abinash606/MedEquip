@@ -11,6 +11,90 @@
  */
 ?>
 
+<style>
+    /* ── Dark theme: override Bootstrap table-striped white backgrounds ── */
+    #notInspectedTable,
+    #inspectedTable,
+    #archivedTable,
+    #inventoryTable,
+    #workOrdersTable {
+        --bs-table-bg: transparent !important;
+        --bs-table-striped-bg: rgba(255, 255, 255, .04) !important;
+        --bs-table-hover-bg: rgba(255, 255, 255, .07) !important;
+        --bs-table-border-color: rgba(255, 255, 255, .07) !important;
+        --bs-table-color: #e9edff !important;
+        --bs-table-striped-color: #e9edff !important;
+        --bs-table-hover-color: #fff !important;
+        color: #e9edff !important;
+    }
+
+    #notInspectedTable thead th,
+    #inspectedTable thead th,
+    #archivedTable thead th,
+    #inventoryTable thead th,
+    #workOrdersTable thead th {
+        background: transparent !important;
+        color: rgba(233, 237, 255, .55) !important;
+        font-size: 11px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+        white-space: nowrap;
+    }
+
+    #notInspectedTable tbody td,
+    #inspectedTable tbody td,
+    #archivedTable tbody td,
+    #inventoryTable tbody td,
+    #workOrdersTable tbody td {
+        background: transparent !important;
+        color: #e9edff !important;
+        border-color: rgba(255, 255, 255, .06) !important;
+    }
+
+    /* Sort indicator arrows on column headers */
+    thead th.sort-asc::after {
+        content: ' ▲';
+        font-size: 10px;
+        opacity: .7;
+    }
+
+    thead th.sort-desc::after {
+        content: ' ▼';
+        font-size: 10px;
+        opacity: .7;
+    }
+
+    thead th[title="Click to sort"]:hover {
+        color: #fff !important;
+    }
+
+    /* Asset # badge: dark border on dark bg */
+    #inspectedTable .badge.text-dark {
+        color: #e9edff !important;
+        border-color: rgba(255, 255, 255, .25) !important;
+    }
+
+    /* Status dropdown button states */
+    .status-badge {
+        border: none;
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .status-in-progress {
+        background: rgba(234, 179, 8, .15);
+        color: #fbbf24;
+        border: 1px solid rgba(234, 179, 8, .3);
+    }
+
+    .status-closed {
+        background: rgba(34, 197, 94, .15);
+        color: #4ade80;
+        border: 1px solid rgba(34, 197, 94, .3);
+    }
+</style>
+
 <!-- Site Inspection Workflow -->
 <div id="site-inspection-workflow">
     <div class="container-fluid px-4 py-4 g-card">
@@ -28,17 +112,35 @@
                 </button>
             </div>
             <div class="card-custom p-4">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-                    <div class="export-bar mb-0">
+                <!-- FIX 6: Open / All / Closed filter tabs -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+                 <div class="export-bar mb-0">
                         <button class="export-btn btn">Copy</button>
                         <button class="export-btn btn">CSV</button>
                         <button class="export-btn btn">Excel</button>
                         <button class="export-btn btn">PDF</button>
                     </div>
+                        
+                <div class="btn-group btn-group-sm" id="inspFilterBtns" role="group">
+                        <button type="button" class="btn btn-primary active" id="inspFilterOpen"
+                            onclick="filterInspectionsByStatus('open')">
+                            <i class="fa-solid fa-rotate me-1"></i> Open
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="inspFilterAll"
+                            onclick="filterInspectionsByStatus('all')">
+                            All
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="inspFilterClosed"
+                            onclick="filterInspectionsByStatus('closed')">
+                            <i class="fa-solid fa-circle-check me-1"></i> Closed
+                        </button>
+                    </div>
                     <div class="input-group" style="max-width: 300px">
-                        <span class="input-group-text  border-end-0"><i
+                        <span class="input-group-text border-end-0"><i
                                 class="fa-solid fa-search text-muted"></i></span>
-                        <input class="form-control border-start-0 ps-0" placeholder="Search inspections..." type="text">
+                        <input class="form-control border-start-0 ps-0" id="inspSearchInput"
+                            placeholder="Search inspections..." type="text"
+                            oninput="applyInspectionSearch(this.value)">
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -49,13 +151,14 @@
                                 <th>Scheduled Date</th>
                                 <th>Technician</th>
                                 <th>Next Due Date</th>
+                                <th>Status</th>
                                 <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (!empty($inspectionList ?? [])): ?>
                                 <?php foreach ($inspectionList as $insp): ?>
-                                    <tr>
+                                    <tr data-insp-status="<?= ($insp['status'] ?? '') === 'Closed/Complete' ? 'closed' : 'open' ?>">
                                         <td>
                                             <?php
                                             // Use the actual group_id stored in the database — this is what
@@ -85,6 +188,20 @@
                                                 <span class="text-muted">-</span>
                                             <?php endif; ?>
                                         </td>
+                                        <td>
+                                            <?php
+                                            $st = $insp['status'] ?? 'In Progress';
+                                            if ($st === 'Closed/Complete'):
+                                            ?>
+                                                <span class="badge bg-success">
+                                                    <i class="fa-solid fa-circle-check me-1"></i>Closed
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge bg-warning text-dark">
+                                                    <i class="fa-solid fa-rotate me-1"></i>In Progress
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-secondary me-1"
                                                 onclick="openInspectionReport('<?= esc($insp['group_id']) ?>')"
@@ -98,7 +215,8 @@
                                                 data-type="<?= esc($insp['inspection_type'] ?? 'Equipment Inspection') ?>"
                                                 data-title="<?= esc($insp['title'] ?? '') ?>"
                                                 data-inspid="<?= esc($inspId) ?>"
-                                                data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>">
+                                                data-tech="<?= esc($insp['technician_name'] ?? 'N/A') ?>"
+                                                data-status="<?= esc($insp['status'] ?? 'In Progress') ?>">
                                                 <i class="fa-solid fa-eye me-1"></i> View
                                             </button>
                                             <!--
@@ -119,7 +237,7 @@
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">No inspections found.</td>
+                                    <td colspan="6" class="text-center text-muted">No inspections found.</td>
                                 </tr>
                             <?php endif; ?>
                         </tbody>
@@ -178,7 +296,7 @@
             </div>
         </div>
         <!-- Inspection detail view -->
-        <div class="fade-in d-none-view" id="view-inspection">
+        <div class="fade-in d-none-view" id="view-inspection" data-current-status="In Progress">
             <!-- Hidden JSON data: Equipment EST/CAL settings for counting logic -->
             <script type="application/json" id="equipmentSettingsData">
                 <?php
@@ -363,6 +481,7 @@
                                         <tr>
                                             <th>Action</th>
                                             <th>Asset #</th>
+                                            <th>Brand</th>
                                             <th>Model</th>
                                             <th>Type</th>
                                             <th>Dept / Room</th>
@@ -380,6 +499,7 @@
                                                         </button>
                                                     </td>
                                                     <td><?= esc($eq['asset_tag']) ?></td>
+                                                    <td><?= esc($eq['make'] ?? $eq['equipment_make'] ?? '') ?></td>
                                                     <td><?= esc($eq['model'] ?? $eq['equipment_model'] ?? '') ?></td>
                                                     <td><?= esc($eq['device_type'] ?? '') ?></td>
                                                     <td><?= esc($eq['department'] ?? '') ?><?php if (!empty($eq['location'])): ?>
@@ -389,7 +509,7 @@
                                             <?php endforeach; ?>
                                         <?php else: ?>
                                             <tr>
-                                                <td colspan="6" class="text-center text-muted">No equipment pending
+                                                <td colspan="7" class="text-center text-muted">No equipment pending
                                                     inspection.</td>
                                             </tr>
                                         <?php endif; ?>
@@ -471,8 +591,8 @@
                                                     type="button">Fail Inspection &amp; Open Work Order</button>
                                                 <button class="btn btn-primary px-4" id="btnRepairInspection"
                                                     type="button">Repair Inspection</button>
-                                                <button class="btn btn-primary ms-auto" id="btnCancelInspection"
-                                                    type="button">Cancel</button>
+                                                <!-- <button class="btn btn-primary ms-auto" id="btnCancelInspection"
+                                                    type="button">Cancel</button> -->
                                             </div>
                                         </div>
                                     </div>
@@ -496,11 +616,21 @@
                                     <button class="export-btn btn"
                                         onclick="exportTablePDF('inspectedTable')">PDF</button>
                                 </div>
-                                <div class="input-group" style="max-width: 320px">
-                                    <span class="input-group-text  border-end-0"><i
-                                            class="fa-solid fa-search text-muted"></i></span>
-                                    <input class="form-control border-start-0 ps-0" id="inspectedSearch"
-                                        placeholder="Search inspected..." type="text">
+                                <div class="d-flex gap-2 align-items-center flex-wrap">
+                                    <!-- Result filter -->
+                                    <select id="inspectedResultFilter" class="form-select form-select-sm"
+                                        style="max-width:140px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#e9edff;"
+                                        onchange="filterInspectedResult(this.value)">
+                                        <option value="">All Results</option>
+                                        <option value="Pass">✓ Pass</option>
+                                        <option value="Fail">✗ Fail</option>
+                                        <option value="Repair">Repair</option>
+                                    </select>
+                                    <div class="input-group" style="max-width: 260px">
+                                        <span class="input-group-text border-end-0"><i class="fa-solid fa-search text-muted"></i></span>
+                                        <input class="form-control border-start-0 ps-0" id="inspectedSearch"
+                                            placeholder="Search brand, model, asset..." type="text">
+                                    </div>
                                 </div>
                             </div>
                             <!-- Device type counter: Total, EST, CAL per device type with totals row -->
@@ -585,6 +715,7 @@
                                     <thead>
                                         <tr>
                                             <th>Actions</th>
+                                            <th>Brand</th>
                                             <th>Model</th>
                                             <th>Type</th>
                                             <th>S/N</th>
@@ -632,6 +763,7 @@
                                                             </button>
                                                         </div>
                                                     </td>
+                                                    <td><?= esc($item['make'] ?? '') ?></td>
                                                     <td><strong><?= esc($item['model'] ?? $item['make']) ?></strong></td>
                                                     <td><?= esc($item['device_type'] ?? '') ?></td>
                                                     <td><?= esc($item['serial_number'] ?? 'N/A') ?></td>
@@ -866,10 +998,14 @@
                                                     data-group-id="<?= esc($wo['group_id'] ?? '') ?>">
                                                     <td>
                                                         <div class="action-btns">
-                                                            <button class="btn-icon btn-edit btn-primary" title="Edit"><i
-                                                                    class="fa-solid fa-pen text-white"></i></button>
-                                                            <button class="btn-icon text-danger btn-delete" title="Delete"><i
-                                                                    class="fa-solid fa-trash"></i></button>
+                                                            <button class="btn-icon btn-edit btn-primary" title="Edit"
+                                                                data-tech-id="<?= esc($wo['assigned_to'] ?? '') ?>"
+                                                                data-tech-name="<?= esc($wo['assigned_to_name'] ?? '') ?>">
+                                                                <i class="fa-solid fa-pen text-white"></i>
+                                                            </button>
+                                                            <button class="btn-icon text-danger btn-delete" title="Delete">
+                                                                <i class="fa-solid fa-trash"></i>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                     <td><?= esc($wo['id']) ?></td>
@@ -886,7 +1022,12 @@
                                                     </td>
                                                     <td><?= esc($wo['priority'] ?? '') ?></td>
                                                     <td><?= esc($wo['status'] ?? '') ?></td>
-                                                    <td><?= esc($wo['assigned_to_name'] ?? 'N/A') ?></td>
+                                                    <td><?= esc(
+                                                            (!empty($wo['assigned_to_name']) ? $wo['assigned_to_name'] : null)
+                                                                ?? (!empty($wo['technician'])    ? $wo['technician']       : null)
+                                                                ?? (!empty($wo['technician_name']) ? $wo['technician_name'] : null)
+                                                                ?? 'N/A'
+                                                        ) ?></td>
                                                     <td><?= !empty($wo['start_date']) ? esc(date('Y-m-d', strtotime($wo['start_date']))) : '<span class="text-muted">-</span>' ?>
                                                     </td>
                                                     <td><?= !empty($wo['end_date']) ? esc(date('Y-m-d', strtotime($wo['end_date']))) : '<span class="text-muted">-</span>' ?>
@@ -1006,7 +1147,7 @@
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </select>
-                                                                    </div>
+                                </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Start Date</label>
                                     <input class="form-control" id="woStartDate" type="date">
@@ -1053,7 +1194,7 @@
         <!-- Add Device Modal-->
         <div aria-hidden="true" aria-labelledby="addDeviceModalLabel" class="modal fade" id="addDeviceModal"
             tabindex="-1">
-            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-dialog modal-lg ">
                 <div class="modal-content">
                     <div class="modal-header">
                         <div>
@@ -1212,6 +1353,171 @@
              ================================================================ -->
 
         <script>
+            document.addEventListener('DOMContentLoaded', function() {
+
+                // ── 1. NOT INSPECTED ─────────────────────────────────────────────────────
+                var notInspectedSearch = document.getElementById('notInspectedSearch');
+                if (notInspectedSearch) {
+                    notInspectedSearch.addEventListener('input', function() {
+                        var query = this.value.toLowerCase().trim();
+                        var rows = document.querySelectorAll('#notInspectedTableBody tr[data-asset]');
+                        var visible = 0;
+
+                        rows.forEach(function(row) {
+                            // Respect rows already hidden by filterNotInspectedByGroup()
+                            // (those have data-group-hidden="1")
+                            var groupHidden = row.getAttribute('data-group-hidden') === '1';
+                            if (groupHidden) {
+                                row.style.display = 'none';
+                                return;
+                            }
+
+                            if (!query) {
+                                row.style.display = '';
+                                visible++;
+                                return;
+                            }
+
+                            // Search only visible columns — td index matches table header order:
+                            // 0=Action(btn) 1=Asset# 2=Model 3=Type 4=Dept/Room 5=Status
+                            var asset = (row.querySelector('td:nth-child(2)') || {}).textContent || '';
+                            var model = (row.querySelector('td:nth-child(3)') || {}).textContent || '';
+                            var type = (row.querySelector('td:nth-child(4)') || {}).textContent || '';
+                            var dept = (row.querySelector('td:nth-child(5)') || {}).textContent || '';
+
+                            var match = [asset, model, type, dept].join(' ').toLowerCase().includes(query);
+                            row.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        });
+
+                        // Update badge and message to reflect search results
+                        var badge = document.getElementById('not-inspected-count');
+                        if (badge) badge.textContent = visible;
+                        var msg = document.getElementById('not-inspected-message');
+                        if (msg) msg.textContent = visible + ' item(s) remaining in site inventory pending inspection.';
+
+                        // Empty row
+                        var emptyRow = document.querySelector('#notInspectedTableBody tr:not([data-asset])');
+                        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+                    });
+                }
+
+                // ── 2. INSPECTED ITEMS ───────────────────────────────────────────────────
+                var inspectedSearch = document.getElementById('inspectedSearch');
+                if (inspectedSearch) {
+                    inspectedSearch.addEventListener('input', function() {
+                        var query = this.value.toLowerCase().trim();
+                        var currentGroup = window.CURRENT_INSPECTION_GROUP_ID || '';
+                        var rows = document.querySelectorAll('#inspectionTableBody tr[data-row-id]');
+                        var visible = 0;
+
+                        rows.forEach(function(row) {
+                            // Only operate on rows that belong to the current inspection group
+                            var rowGroup = row.getAttribute('data-group-id') || '';
+                            if (rowGroup !== currentGroup) {
+                                row.style.display = 'none';
+                                return;
+                            }
+
+                            if (!query) {
+                                row.style.display = '';
+                                visible++;
+                                return;
+                            }
+
+                            // Col order: 0=Actions 1=Brand 2=Model 3=Type 4=S/N
+                            //            5=Asset# 6=Dept/Room 7=Tech 8=Result 9=Notes 10=InspDate
+                            var brand = (row.querySelector('td:nth-child(2)') || {}).textContent || '';
+                            var model = (row.querySelector('td:nth-child(3)') || {}).textContent || '';
+                            var type = (row.querySelector('td:nth-child(4)') || {}).textContent || '';
+                            var serial = (row.querySelector('td:nth-child(5)') || {}).textContent || '';
+                            var asset = (row.querySelector('td:nth-child(6)') || {}).textContent || '';
+                            var dept = (row.querySelector('td:nth-child(7)') || {}).textContent || '';
+                            var tech = (row.querySelector('td:nth-child(8)') || {}).textContent || '';
+                            var result = (row.querySelector('td:nth-child(9)') || {}).textContent || '';
+                            var notes = (row.querySelector('td:nth-child(10)') || {}).textContent || '';
+
+                            var match = [brand, model, type, serial, asset, dept, tech, result, notes]
+                                .join(' ').toLowerCase().includes(query);
+
+                            row.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        });
+
+                        // Update inspected badge count
+                        var badge = document.getElementById('inspected-count');
+                        if (badge) badge.textContent = visible;
+
+                        // Empty placeholder row
+                        var emptyRow = document.getElementById('inspectedEmptyRow');
+                        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+                    });
+                }
+
+                // ── 3. ARCHIVED ITEMS ────────────────────────────────────────────────────
+                var archivedSearch = document.getElementById('archivedSearch');
+                if (archivedSearch) {
+                    archivedSearch.addEventListener('input', function() {
+                        var query = this.value.toLowerCase().trim();
+                        var rows = document.querySelectorAll('#archivedTableBody tr[data-asset]');
+                        var visible = 0;
+
+                        rows.forEach(function(row) {
+                            if (!query) {
+                                row.style.display = '';
+                                visible++;
+                                return;
+                            }
+
+                            // Col order: 0=Asset# 1=Model 2=Type 3=Dept/Room 4=Status
+                            var asset = (row.querySelector('td:nth-child(1)') || {}).textContent || '';
+                            var model = (row.querySelector('td:nth-child(2)') || {}).textContent || '';
+                            var type = (row.querySelector('td:nth-child(3)') || {}).textContent || '';
+                            var dept = (row.querySelector('td:nth-child(4)') || {}).textContent || '';
+
+                            var match = [asset, model, type, dept].join(' ').toLowerCase().includes(query);
+                            row.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        });
+
+                        var emptyRow = document.querySelector('#archivedTableBody tr:not([data-asset])');
+                        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+                    });
+                }
+
+                // ── 4. ALL INVENTORY ─────────────────────────────────────────────────────
+                var allInventorySearch = document.getElementById('allInventorySearch');
+                if (allInventorySearch) {
+                    allInventorySearch.addEventListener('input', function() {
+                        var query = this.value.toLowerCase().trim();
+                        var rows = document.querySelectorAll('#allInventoryTableBody tr[data-asset]');
+                        var visible = 0;
+
+                        rows.forEach(function(row) {
+                            if (!query) {
+                                row.style.display = '';
+                                visible++;
+                                return;
+                            }
+
+                            // Col order: 0=Action(btn) 1=Asset# 2=Model 3=Type 4=Department 5=Status
+                            var asset = (row.querySelector('td:nth-child(2)') || {}).textContent || '';
+                            var model = (row.querySelector('td:nth-child(3)') || {}).textContent || '';
+                            var type = (row.querySelector('td:nth-child(4)') || {}).textContent || '';
+                            var dept = (row.querySelector('td:nth-child(5)') || {}).textContent || '';
+                            var status = (row.querySelector('td:nth-child(6)') || {}).textContent || '';
+
+                            var match = [asset, model, type, dept, status].join(' ').toLowerCase().includes(query);
+                            row.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        });
+
+                        var emptyRow = document.querySelector('#allInventoryTableBody tr:not([data-asset])');
+                        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+                    });
+                }
+
+            });
             /**
              * Switch from the inspections list dashboard to the detail workflow view
              * for a specific inspection group. Populates the dynamic header elements
@@ -1224,52 +1530,114 @@
              * @param {string} techName      Name of the technician assigned
              */
             // ── Event delegation for View buttons (handles special chars safely) ──
+           function setInspectionStatusUI(status) {
+                var btn = document.getElementById('statusDropdown');
+                if (!btn) return;
+
+                var normalized = String(status || '').trim().toLowerCase();
+                var isClosed =
+                    normalized === 'closed/complete' ||
+                    normalized === 'closed' ||
+                    normalized === 'complete';
+
+                btn.className = 'btn btn-light dropdown-toggle status-badge';
+
+                if (isClosed) {
+                    btn.innerHTML = '<i class="fa-solid fa-circle-check"></i> Closed/Complete';
+                    btn.classList.add('status-closed');
+                } else {
+                    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> In Progress';
+                    btn.classList.add('status-in-progress');
+                }
+            }
+
             document.addEventListener('click', function(e) {
                 var btn = e.target.closest('.btn-view-insp');
                 if (!btn) return;
-                var groupId  = btn.dataset.group  || '';
-                var siteName = btn.dataset.site   || '';
-                // Use saved DB title if available, else fall back to inspection_type
-                var inspType = btn.dataset.title  || btn.dataset.type || 'Equipment Inspection';
-                var inspId   = btn.dataset.inspid || groupId;
-                var techName = btn.dataset.tech   || '—';
-                viewInspection(groupId, siteName, inspType, inspId, techName);
+
+                var groupId = btn.dataset.group || '';
+                var siteName = btn.dataset.site || '';
+                var inspType = btn.dataset.title || btn.dataset.type || 'Equipment Inspection';
+                var inspId = btn.dataset.inspid || groupId;
+                var techName = btn.dataset.tech || '—';
+
+                // safest source: read visible row status first, then fallback to data-status
+                var currentStatus = 'In Progress';
+                var row = btn.closest('tr');
+                if (row) {
+                    var statusTd = row.querySelector('td:nth-child(5)');
+                    var statusText = statusTd ? statusTd.textContent.trim().toLowerCase() : '';
+                    if (statusText.indexOf('closed') !== -1 || statusText.indexOf('complete') !== -1) {
+                        currentStatus = 'Closed/Complete';
+                    }
+                }
+
+                if (btn.dataset.status) {
+                    var ds = String(btn.dataset.status).trim().toLowerCase();
+                    if (ds === 'closed/complete' || ds === 'closed' || ds === 'complete') {
+                        currentStatus = 'Closed/Complete';
+                    }
+                }
+
+                var detailWrap = document.getElementById('view-inspection');
+                if (detailWrap) {
+                    detailWrap.setAttribute('data-current-status', currentStatus);
+                }
+
+                viewInspection(groupId, siteName, inspType, inspId, techName, currentStatus);
             });
 
-            function viewInspection(groupId, siteName, inspType, inspDisplayId, techName) {
-                // Populate the dynamic red-boxed header
+            function viewInspection(groupId, siteName, inspType, inspDisplayId, techName, currentStatus) {
                 var siteLabel = document.getElementById('insp-site-label');
                 var titleEl = document.getElementById('insp-title');
                 var idLabel = document.getElementById('insp-id-label');
                 var techEl = document.getElementById('insp-technician');
+                var inspView = document.getElementById('view-inspection');
+                var dashView = document.getElementById('view-dashboard');
 
                 if (siteLabel) siteLabel.textContent = 'Site: ' + (siteName || '—');
-                // inspType already has DB title (from data-title attr), use it directly
                 if (titleEl) titleEl.textContent = inspType || 'Equipment Inspection';
                 if (idLabel) idLabel.textContent = 'Inspection #' + (inspDisplayId || groupId);
                 if (techEl) techEl.textContent = techName || '—';
-                // Save for backgroundRefreshTabs
-                window._savedInspTitle = inspType || 'Equipment Inspection';
 
-                // Store current group for status update AJAX calls
+                window._savedInspTitle = inspType || 'Equipment Inspection';
                 window.CURRENT_INSPECTION_GROUP_ID = groupId;
 
-                // ── Filter Inspected Items & Device Counter to this group only ──────
+                if (inspView) {
+                    inspView.setAttribute('data-current-status', currentStatus || 'In Progress');
+                }
+
                 filterInspectedByGroup(groupId);
 
-                // Switch views
-                showDashboard(); // hide all first
-                var dashView = document.getElementById('view-dashboard');
-                var inspView = document.getElementById('view-inspection');
+                ['notInspectedSearch', 'inspectedSearch', 'archivedSearch', 'allInventorySearch', 'workOrdersSearch']
+                    .forEach(function(id) {
+                        var el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+
+                showDashboard();
+
                 if (dashView) dashView.classList.add('d-none-view');
                 if (inspView) inspView.classList.remove('d-none-view');
 
-                // Scroll to top of inspection section
+                function repaintStatus() {
+                    var savedStatus = inspView ? inspView.getAttribute('data-current-status') : currentStatus;
+                    setInspectionStatusUI(savedStatus || 'In Progress');
+                }
+
+                // paint more than once in case another script resets the button
+                repaintStatus();
+                requestAnimationFrame(repaintStatus);
+                setTimeout(repaintStatus, 80);
+                setTimeout(repaintStatus, 200);
+
                 var workflow = document.getElementById('site-inspection-workflow');
-                if (workflow) workflow.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
+                if (workflow) {
+                    workflow.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
             }
             /**
              * Show only Inspected Items rows and Device Type Counter rows that belong
@@ -1441,7 +1809,7 @@
                 rows.forEach(function(r) {
                     var asset = (r.getAttribute('data-asset') || '').toLowerCase();
                     var done = inspectedAssets[asset];
-                    r.style.display = done ? 'none' : '';
+                    r.setAttribute('data-group-hidden', done ? '1' : '0');
                     if (!done) rem++;
                 });
                 var badge = document.getElementById('not-inspected-count');
@@ -1501,6 +1869,13 @@
                     document.getElementById('addManufacturer').value = btn.getAttribute('data-make') || '';
                     document.getElementById('addType').value = btn.getAttribute('data-device_type') || '';
                     document.getElementById('addDescription').value = btn.getAttribute('data-device_type') || '';
+                    // Lock the model field to read-only once a model has been selected
+                    var addModelEl = document.getElementById('addModel');
+                    if (addModelEl) {
+                        addModelEl.setAttribute('readonly', 'readonly');
+                        addModelEl.classList.add('bg-light');
+                        addModelEl.title = 'Model locked. Clear field to change.';
+                    }
                     // Serial # intentionally NOT auto-populated — technician must fill manually
                     // Only fill department/room if empty (don't overwrite user entries)
                     var deptEl = document.getElementById('addDept');
@@ -1632,23 +2007,27 @@
 
                 // Fetch reportPdf (same endpoint technician uses) and render in iframe
                 fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId), {
-                    headers: { 'Accept': 'text/html' }
-                })
-                .then(function(r) { return r.text(); })
-                .then(function(html) {
-                    var iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#fff;';
-                    reportContent.innerHTML = '';
-                    reportContent.appendChild(iframe);
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(html);
-                    iframe.contentDocument.close();
-                })
-                .catch(function() {
-                    reportContent.innerHTML =
-                        '<div class="alert alert-danger m-3">' +
-                        '<i class="fa-solid fa-triangle-exclamation me-2"></i>Failed to load report.</div>';
-                });
+                        headers: {
+                            'Accept': 'text/html'
+                        }
+                    })
+                    .then(function(r) {
+                        return r.text();
+                    })
+                    .then(function(html) {
+                        var iframe = document.createElement('iframe');
+                        iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#fff;';
+                        reportContent.innerHTML = '';
+                        reportContent.appendChild(iframe);
+                        iframe.contentDocument.open();
+                        iframe.contentDocument.write(html);
+                        iframe.contentDocument.close();
+                    })
+                    .catch(function() {
+                        reportContent.innerHTML =
+                            '<div class="alert alert-danger m-3">' +
+                            '<i class="fa-solid fa-triangle-exclamation me-2"></i>Failed to load report.</div>';
+                    });
 
                 // Wire download button
                 var dlBtn = document.getElementById('adminReportDownloadBtn');
@@ -1659,7 +2038,26 @@
                 }
             }
 
+            function renderWorkOrdersTable() {
+                var query = (document.getElementById('workOrdersSearch').value || '').toLowerCase().trim();
+                var rows = document.querySelectorAll('#workOrdersTableBody tr[data-row-id]');
+                var emptyRow = document.querySelector('#workOrdersTableBody tr:not([data-row-id])');
+                var visible = 0;
 
+                rows.forEach(function(row) {
+                    // Only search within rows that belong to the current inspection group
+                    var groupId = row.getAttribute('data-group-id') || '';
+                    if (window.CURRENT_INSPECTION_GROUP_ID && groupId !== window.CURRENT_INSPECTION_GROUP_ID) {
+                        return; // already hidden by filterInspectedByGroup — skip
+                    }
+                    var text = row.textContent.toLowerCase();
+                    var show = !query || text.includes(query);
+                    row.style.display = show ? '' : 'none';
+                    if (show) visible++;
+                });
+
+                if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+            }
             /**
              * Generate a site/inspection header for PDF output.
              */
@@ -1687,18 +2085,24 @@
             // Tab Preview: open current group in the styled modal (iframe)
             window.adminTabPreviewReport = function() {
                 var groupId = window.CURRENT_REPORT_GROUP_ID;
-                if (!groupId) { alert('Click the report icon on an inspection row first.'); return; }
+                if (!groupId) {
+                    alert('Click the report icon on an inspection row first.');
+                    return;
+                }
                 openInspectionReport(groupId);
             };
 
             window.adminTabDownloadReport = function() {
                 var groupId = window.CURRENT_REPORT_GROUP_ID;
-                if (!groupId) { alert('Click the report icon on an inspection row first.'); return; }
+                if (!groupId) {
+                    alert('Click the report icon on an inspection row first.');
+                    return;
+                }
                 window.open(REPORT_PDF_URL + '/' + encodeURIComponent(groupId), '_blank');
             };
 
             window.previewReportPDF = window.adminTabPreviewReport;
-            window.exportReportPDF  = window.adminTabDownloadReport;
+            window.exportReportPDF = window.adminTabDownloadReport;
 
             /* ══════════════════════════════════════════════════════════════
                INSPECTION TITLE — database persistence
@@ -1717,23 +2121,37 @@
                 fd.append('title', title);
                 fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
                 fetch('<?= site_url("admin/inspections/updateGroupTitle") ?>', {
-                    method: 'POST', body: fd,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(res) {
-                    var badge = document.getElementById('insp-title-saved');
-                    if (badge) {
-                        badge.style.opacity = '1';
-                        badge.textContent = res.success ? '✓ saved' : '✗ error';
-                        badge.style.color = res.success ? '#22c55e' : '#ef4444';
-                        setTimeout(function(){ badge.style.opacity = '0'; }, 2000);
-                    }
-                })
-                .catch(function() {
-                    var badge = document.getElementById('insp-title-saved');
-                    if (badge) { badge.textContent = '✗ error'; badge.style.color = '#ef4444'; badge.style.opacity = '1'; setTimeout(function(){ badge.style.opacity='0'; }, 2000); }
-                });
+                        method: 'POST',
+                        body: fd,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(res) {
+                        var badge = document.getElementById('insp-title-saved');
+                        if (badge) {
+                            badge.style.opacity = '1';
+                            badge.textContent = res.success ? '✓ saved' : '✗ error';
+                            badge.style.color = res.success ? '#22c55e' : '#ef4444';
+                            setTimeout(function() {
+                                badge.style.opacity = '0';
+                            }, 2000);
+                        }
+                    })
+                    .catch(function() {
+                        var badge = document.getElementById('insp-title-saved');
+                        if (badge) {
+                            badge.textContent = '✗ error';
+                            badge.style.color = '#ef4444';
+                            badge.style.opacity = '1';
+                            setTimeout(function() {
+                                badge.style.opacity = '0';
+                            }, 2000);
+                        }
+                    });
             };
 
             window.restoreInspTitle = function(groupId) {
@@ -1765,30 +2183,33 @@
 
                 var previewUrl = '<?= site_url("admin/inspections/reportPreview") ?>/' + encodeURIComponent(groupId);
                 fetch(previewUrl, {
-                    headers: { 'Accept': 'text/html', 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(function(r) {
-                    if (!r.ok) throw new Error('HTTP ' + r.status);
-                    return r.text();
-                })
-                .then(function(html) {
-                    container.innerHTML = '';
-                    var iframe = document.createElement('iframe');
-                    iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
-                    iframe.setAttribute('scrolling', 'yes');
-                    var wrapper = document.createElement('div');
-                    wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
-                    wrapper.appendChild(iframe);
-                    container.appendChild(wrapper);
-                    iframe.contentDocument.open();
-                    iframe.contentDocument.write(html);
-                    iframe.contentDocument.close();
-                })
-                .catch(function(err) {
-                    container.innerHTML =
-                        '<div class="alert alert-danger m-3"><i class="fa-solid fa-triangle-exclamation me-2"></i>' +
-                        'Failed to load report: ' + escapeHtml(String(err)) + '</div>';
-                });
+                        headers: {
+                            'Accept': 'text/html',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.text();
+                    })
+                    .then(function(html) {
+                        container.innerHTML = '';
+                        var iframe = document.createElement('iframe');
+                        iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                        iframe.setAttribute('scrolling', 'yes');
+                        var wrapper = document.createElement('div');
+                        wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                        wrapper.appendChild(iframe);
+                        container.appendChild(wrapper);
+                        iframe.contentDocument.open();
+                        iframe.contentDocument.write(html);
+                        iframe.contentDocument.close();
+                    })
+                    .catch(function(err) {
+                        container.innerHTML =
+                            '<div class="alert alert-danger m-3"><i class="fa-solid fa-triangle-exclamation me-2"></i>' +
+                            'Failed to load report: ' + escapeHtml(String(err)) + '</div>';
+                    });
             }
 
             // Keep generateInspectionReportHTML as a no-op shim so any legacy
@@ -1848,31 +2269,20 @@
                         sel.addEventListener('change', window._iqNoteChangeHandler);
                         // Do NOT fire immediately — notes stay blank until user selects action
 
-                        // Fix 3: When user edits notes, save back to IQ notes table
+                        // FIX 5: Do NOT save user-edited notes back to the master IQ table.
+                        // Only update the in-memory data-note attribute so the text stays
+                        // in the dropdown for the current session, but the master IQ notes
+                        // record is never modified by what the inspector types here.
                         var notesArea = document.getElementById('inspectNotes');
                         if (notesArea) {
-                            notesArea.removeEventListener('blur', window._adminNotesBlurHandler);
-                            window._adminNotesBlurHandler = function() {
-                                var selected = sel.options[sel.selectedIndex];
-                                if (!selected || selected.value === '') return;
-                                var noteId = selected.getAttribute('data-id') || '';
-                                var noteTitle = selected.getAttribute('data-title') || selected.textContent;
-                                var newNote = notesArea.value.trim();
-                                if (!newNote || !noteTitle) return;
-                                // Update the option's data-note so future selects use new text
-                                selected.setAttribute('data-note', newNote);
-                                // Persist to server
-                                var fd = new FormData();
-                                if (noteId) fd.append('id', noteId);
-                                fd.append('title', noteTitle);
-                                fd.append('note', newNote);
-                                fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
-                                fetch('<?= site_url("admin/settings/iq-notes/save") ?>', {
-                                    method: 'POST', body: fd,
-                                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                                }).catch(function() {});
-                            };
-                            notesArea.addEventListener('blur', window._adminNotesBlurHandler);
+                            // Remove any previously attached blur handler
+                            if (window._adminNotesBlurHandler) {
+                                notesArea.removeEventListener('blur', window._adminNotesBlurHandler);
+                                window._adminNotesBlurHandler = null;
+                            }
+                            // When a dropdown is re-selected, always reload the original
+                            // note text from data-note (not any user-edited value)
+                            // -- handled above by _iqNoteChangeHandler reading data-note
                         }
                     })
                     .catch(function() {
@@ -2017,6 +2427,11 @@
 
                     // Re-apply group filter so only current inspection rows stay visible
                     if (window.CURRENT_INSPECTION_GROUP_ID) {
+                        // Reset filter selects on group change
+                        var rf = document.getElementById('inspectedResultFilter');
+                        if (rf) rf.value = '';
+                        var sf = document.getElementById('inspectedSearch');
+                        if (sf) sf.value = '';
                         filterInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
                         filterNotInspectedByGroup(window.CURRENT_INSPECTION_GROUP_ID);
                     }
@@ -2107,33 +2522,61 @@
                         }).then(function(result) {
                             if (!result.isConfirmed) return;
 
-                        var body = CSRF_NAME + '=' + encodeURIComponent(csrfHash);
-                        fetch(URL_DELETE + encodeURIComponent(id), {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/x-www-form-urlencoded'
-                                },
-                                body: body,
-                                redirect: 'follow'
-                            })
-                            .then(function(r) {
-                                if (r.ok || r.status === 302 || r.redirected) {
-                                    var row = delBtn.closest('tr');
-                                    if (row) row.remove();
-                                    backgroundRefreshTabs(function() {
-                                        Swal.fire({ icon: 'success', title: 'Removed', text: 'Inspection record deleted.', timer: 1500, showConfirmButton: false });
-                                    });
-                                } else {
-                                    toast('Delete failed (HTTP ' + r.status + ').', 'danger');
-                                }
-                            })
-                            .catch(function(err) {
-                                toast('Delete failed – ' + err.message, 'danger');
-                            });
+                            var body = CSRF_NAME + '=' + encodeURIComponent(csrfHash);
+                            fetch(URL_DELETE + encodeURIComponent(id), {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/x-www-form-urlencoded'
+                                    },
+                                    body: body,
+                                    redirect: 'follow'
+                                })
+                                .then(function(r) {
+                                    if (r.ok || r.status === 302 || r.redirected) {
+                                        var row = delBtn.closest('tr');
+                                        if (row) row.remove();
+                                        backgroundRefreshTabs(function() {
+                                            Swal.fire({
+                                                icon: 'success',
+                                                title: 'Removed',
+                                                text: 'Inspection record deleted.',
+                                                timer: 1500,
+                                                showConfirmButton: false
+                                            });
+                                        });
+                                    } else {
+                                        toast('Delete failed (HTTP ' + r.status + ').', 'danger');
+                                    }
+                                })
+                                .catch(function(err) {
+                                    toast('Delete failed – ' + err.message, 'danger');
+                                });
                         }); // end Swal.fire
                     });
                 }
+                document.addEventListener('click', function(e) {
+                    var btn = e.target.closest('#workOrdersTableBody .btn-edit');
+                    if (!btn) return;
 
+                    // ... your existing code that populates other fields ...
+
+                    // ── ADD ONLY THIS PART for technician ──────────────────────────
+                    var techSelect = document.getElementById('woTech');
+                    if (techSelect) {
+                        // dataset converts data-tech-id → btn.dataset.techId
+                        techSelect.value = btn.dataset.techId || '';
+
+                        // Fallback: if ID not matched, try by name
+                        if (!techSelect.value && btn.dataset.techName) {
+                            Array.from(techSelect.options).forEach(function(opt) {
+                                if (opt.textContent.trim() === btn.dataset.techName.trim()) {
+                                    techSelect.value = opt.value;
+                                }
+                            });
+                        }
+                    }
+                    // ── END technician fix ─────────────────────────────────────────
+                });
                 // ── Save Changes ────────────────────────────────────────────────
                 var form = document.getElementById('editInspectedForm');
                 if (form) {
@@ -2287,27 +2730,31 @@
                         '<p class="mt-3 text-muted">Loading report...</p></div>';
 
                     fetch('<?= site_url("admin/inspections/reportPdf") ?>/' + encodeURIComponent(groupId) + '?inline=1', {
-                        headers: { 'Accept': 'text/html' }
-                    })
-                    .then(function(r) { return r.text(); })
-                    .then(function(html) {
-                        if (!container) return;
-                        container.innerHTML = '';
-                        var iframe = document.createElement('iframe');
-                        iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
-                        var wrapper = document.createElement('div');
-                        wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
-                        wrapper.appendChild(iframe);
-                        container.innerHTML = '';
-                        container.appendChild(wrapper);
-                        iframe.contentDocument.open();
-                        iframe.contentDocument.write(html);
-                        iframe.contentDocument.close();
-                    })
-                    .catch(function() {
-                        if (container) container.innerHTML =
-                            '<div class="alert alert-danger m-3">Failed to load report.</div>';
-                    });
+                            headers: {
+                                'Accept': 'text/html'
+                            }
+                        })
+                        .then(function(r) {
+                            return r.text();
+                        })
+                        .then(function(html) {
+                            if (!container) return;
+                            container.innerHTML = '';
+                            var iframe = document.createElement('iframe');
+                            iframe.style.cssText = 'width:100%;height:72vh;border:none;background:#0E1630;border-radius:0 0 10px 10px;';
+                            var wrapper = document.createElement('div');
+                            wrapper.style.cssText = 'background:#0E1630;border:1px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.35);';
+                            wrapper.appendChild(iframe);
+                            container.innerHTML = '';
+                            container.appendChild(wrapper);
+                            iframe.contentDocument.open();
+                            iframe.contentDocument.write(html);
+                            iframe.contentDocument.close();
+                        })
+                        .catch(function() {
+                            if (container) container.innerHTML =
+                                '<div class="alert alert-danger m-3">Failed to load report.</div>';
+                        });
                 });
             });
         </script>
@@ -2315,15 +2762,68 @@
 </div>
 <script>
     // Auto-fill Department & Room in Add Device modal from last saved device (server-side, persists across logout)
-    (function() {
+(function() {
         var LAST_DEVICE_URL = '<?= site_url("admin/site-inspection/last-device") ?>';
         var SITE_ID_VAL = '<?= $site["id"] ?? 0 ?>';
         var modalEl = document.getElementById('addDeviceModal');
         if (!modalEl) return;
+
+        function hideModelSuggestions() {
+            var suggestions = document.getElementById('modelSuggestions');
+            if (suggestions) {
+                suggestions.classList.add('d-none');
+                suggestions.innerHTML = '';
+            }
+        }
+
+        function unlockModelField() {
+            var addModelEl = document.getElementById('addModel');
+            if (addModelEl) {
+                addModelEl.removeAttribute('readonly');
+                addModelEl.classList.remove('bg-light');
+                addModelEl.title = '';
+            }
+            hideModelSuggestions();
+        }
+
+        function resetAddDeviceModal() {
+            var form = document.getElementById('addDeviceForm');
+            if (form) {
+                form.reset();
+            }
+
+            var err = document.getElementById('addDeviceError');
+            if (err) {
+                err.classList.add('d-none');
+                err.textContent = '';
+            }
+
+            unlockModelField();
+
+            // keep expected defaults after reset
+            var addTech = document.getElementById('addTech');
+            if (addTech) addTech.value = 'Admin';
+
+            var addEST = document.getElementById('addEST');
+            if (addEST) addEST.value = 'No';
+
+            var addCAL = document.getElementById('addCAL');
+            if (addCAL) addCAL.value = 'No';
+
+            var modalBody = modalEl.querySelector('.modal-body');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+        }
+
         modalEl.addEventListener('show.bs.modal', function() {
+            // extra safety: always unlock when opening
+            unlockModelField();
+
             var deptEl = document.getElementById('addDept');
             var roomEl = document.getElementById('addRoom');
             if (!deptEl || !roomEl) return;
+
             fetch(LAST_DEVICE_URL + '?site_id=' + encodeURIComponent(SITE_ID_VAL), {
                     headers: {
                         'Accept': 'application/json',
@@ -2339,5 +2839,239 @@
                 })
                 .catch(function() {});
         });
+
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            // when user clicks Cancel, presses ESC, or closes modal
+            // completely reset and unlock field for next open
+            resetAddDeviceModal();
+        });
     })();
+
+
+
+    // ── Column sorting for inspection sub-tabs ───────────────────────────────────
+    // Adds clickable sort to <th> headers in notInspectedTable and inspectedTable
+    // without replacing the existing manual search / export integration.
+    (function() {
+        var _sortState = {}; // { tableId: { col: N, asc: true/false } }
+
+        function cellText(cell) {
+            return (cell ? cell.innerText || cell.textContent || '' : '').trim().toLowerCase();
+        }
+
+        function sortTable(tableId, colIdx) {
+            var tbl = document.getElementById(tableId);
+            if (!tbl) return;
+            var tbody = tbl.querySelector('tbody');
+            if (!tbody) return;
+
+            var state = _sortState[tableId] || {
+                col: -1,
+                asc: true
+            };
+            var asc = (state.col === colIdx) ? !state.asc : true;
+            _sortState[tableId] = {
+                col: colIdx,
+                asc: asc
+            };
+
+            // Sort visible rows only (hidden rows from group-filter stay hidden)
+            var rows = Array.from(tbody.querySelectorAll('tr[data-asset], tr[data-row-id]'));
+            rows.sort(function(a, b) {
+                var ta = cellText(a.cells[colIdx]);
+                var tb = cellText(b.cells[colIdx]);
+                // Numeric sort if both look numeric
+                var na = parseFloat(ta),
+                    nb = parseFloat(tb);
+                if (!isNaN(na) && !isNaN(nb)) return asc ? na - nb : nb - na;
+                return asc ? ta.localeCompare(tb) : tb.localeCompare(ta);
+            });
+            rows.forEach(function(r) {
+                tbody.appendChild(r);
+            });
+
+            // Update sort indicator on all headers
+            var ths = tbl.querySelectorAll('thead th');
+            ths.forEach(function(th, i) {
+                th.classList.remove('sort-asc', 'sort-desc');
+                if (i === colIdx) th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+            });
+        }
+
+        function makeSortable(tableId, skipCols) {
+            skipCols = skipCols || [0]; // default: skip first (Action) column
+            var tbl = document.getElementById(tableId);
+            if (!tbl) return;
+            var ths = tbl.querySelectorAll('thead th');
+            ths.forEach(function(th, i) {
+                if (skipCols.indexOf(i) !== -1) return;
+                th.style.cursor = 'pointer';
+                th.style.userSelect = 'none';
+                th.setAttribute('title', 'Click to sort');
+                th.addEventListener('click', function() {
+                    sortTable(tableId, i);
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            makeSortable('notInspectedTable', [0]);
+            makeSortable('inspectedTable', [0]);
+            makeSortable('archivedTable', []);
+            makeSortable('inventoryTable', []);
+            makeSortable('workOrdersTable', [0]);
+        });
+
+        /**
+         * Save inspection status to database via AJAX and update the UI button.
+         */
+        window.updateStatus = function(newStatus) {
+            setInspectionStatusUI(newStatus);
+            var inspView = document.getElementById('view-inspection');
+            if (inspView) {
+                inspView.setAttribute('data-current-status', newStatus);
+            }
+
+            var groupId = window.CURRENT_INSPECTION_GROUP_ID;
+            if (groupId) {
+                var rows = document.querySelectorAll('#inspectionsTable tbody tr');
+                rows.forEach(function(row) {
+                    var viewBtn = row.querySelector('.btn-view-insp');
+                    if (!viewBtn || viewBtn.dataset.group !== groupId) return;
+
+                    var statusTd = row.querySelector('td:nth-child(5)');
+                    if (!statusTd) return;
+
+                    viewBtn.dataset.status = newStatus;
+
+                    if (String(newStatus).trim().toLowerCase() === 'closed/complete') {
+                        statusTd.innerHTML = '<span class="badge bg-success"><i class="fa-solid fa-circle-check me-1"></i>Closed</span>';
+                    } else {
+                        statusTd.innerHTML = '<span class="badge bg-warning text-dark"><i class="fa-solid fa-rotate me-1"></i>In Progress</span>';
+                    }
+                });
+
+                var fd = new FormData();
+                fd.append('group_id', groupId);
+                fd.append('status', newStatus);
+                fd.append('<?= csrf_token() ?>', '<?= csrf_hash() ?>');
+
+                fetch('<?= site_url("admin/inspections/updateGroupStatus") ?>', {
+                        method: 'POST',
+                        body: fd,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(res) {
+                        if (typeof showToast === 'function') {
+                            showToast(res.success ? 'Status updated.' : 'Failed to save status.', res.success ? 'success' : 'danger');
+                        }
+                    })
+                    .catch(function() {
+                        if (typeof showToast === 'function') {
+                            showToast('Network error saving status.', 'danger');
+                        }
+                    });
+            }
+        };
+
+    })();
+
+
+    // ── Result filter for Inspected Items table ───────────────────────────────
+    window.filterInspectedResult = function(result) {
+        var currentGroup = window.CURRENT_INSPECTION_GROUP_ID || '';
+        var rows = document.querySelectorAll('#inspectionTableBody tr[data-row-id]');
+        rows.forEach(function(row) {
+            var rowGroup = row.getAttribute('data-group-id') || '';
+            if (rowGroup !== currentGroup) {
+                row.style.display = 'none';
+                return;
+            }
+            if (!result) {
+                row.style.display = '';
+                return;
+            }
+            // Result is in col 9 (1-based) after Brand column added
+            var resultCell = row.querySelector('td:nth-child(9)');
+            var cellText = resultCell ? resultCell.textContent.trim() : '';
+            row.style.display = cellText.toLowerCase().includes(result.toLowerCase()) ? '' : 'none';
+        });
+    };
+
+    // ================================================================
+    // FIX 6: Inspection list filter (Open / All / Closed)
+    // ================================================================
+    var _inspCurrentFilter = 'open'; // default: show open only
+
+    window.filterInspectionsByStatus = function filterInspectionsByStatus(mode) {
+        _inspCurrentFilter = mode;
+
+        // Update button active classes
+        var btnOpen   = document.getElementById('inspFilterOpen');
+        var btnAll    = document.getElementById('inspFilterAll');
+        var btnClosed = document.getElementById('inspFilterClosed');
+        [btnOpen, btnAll, btnClosed].forEach(function(b) {
+            if (!b) return;
+            b.classList.remove('btn-primary', 'btn-outline-secondary', 'active');
+            b.classList.add('btn-outline-secondary');
+        });
+        var activeBtn = mode === 'open' ? btnOpen : (mode === 'closed' ? btnClosed : btnAll);
+        if (activeBtn) {
+            activeBtn.classList.remove('btn-outline-secondary');
+            activeBtn.classList.add('btn-primary', 'active');
+        }
+
+        var rows = document.querySelectorAll('#inspectionsTable tbody tr[data-insp-status]');
+        var visible = 0;
+        rows.forEach(function(row) {
+            var st = row.getAttribute('data-insp-status') || 'open';
+            var show = (mode === 'all')
+                    || (mode === 'open'   && st === 'open')
+                    || (mode === 'closed' && st === 'closed');
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        // Show empty state row if nothing matches
+        var emptyRow = document.querySelector('#inspectionsTable tbody tr:not([data-insp-status])');
+        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+
+        // Reset search when filter tab changes
+        var searchEl = document.getElementById('inspSearchInput');
+        if (searchEl) searchEl.value = '';
+    };
+
+    window.applyInspectionSearch = function applyInspectionSearch(q) {
+        q = (q || '').toLowerCase().trim();
+        var rows = document.querySelectorAll('#inspectionsTable tbody tr[data-insp-status]');
+        var visible = 0;
+        rows.forEach(function(row) {
+            // Respect current filter tab first
+            var st = row.getAttribute('data-insp-status') || 'open';
+            var passFilter = (_inspCurrentFilter === 'all')
+                          || (_inspCurrentFilter === 'open'   && st === 'open')
+                          || (_inspCurrentFilter === 'closed' && st === 'closed');
+            if (!passFilter) { row.style.display = 'none'; return; }
+
+            // Then apply search query against all cell text
+            if (!q) { row.style.display = ''; visible++; return; }
+            var text = row.textContent || row.innerText || '';
+            var show = text.toLowerCase().includes(q);
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        var emptyRow = document.querySelector('#inspectionsTable tbody tr:not([data-insp-status])');
+        if (emptyRow) emptyRow.style.display = (visible === 0) ? '' : 'none';
+    };
+
+    // Auto-apply 'open' filter on page load so only open inspections show
+    document.addEventListener('DOMContentLoaded', function() {
+        filterInspectionsByStatus('open');
+    });
 </script>

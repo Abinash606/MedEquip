@@ -22,13 +22,27 @@ class SitesController extends BaseController
         $customerModel = new CustomerModel();
         $companyId     = $this->session->get('company_id');
 
-        // Read customer filter from session (set by filterSites) then clear it
+        // Read customer filter from session (set by filterSites or new customer creation)
         $activeCustomerId = session()->get('admin_site_customer_filter');
         session()->remove('admin_site_customer_filter');
 
-        $data['sites']            = $siteModel->where('company_id', $companyId)->findAll();
-        $data['customers']        = $customerModel->where('company_id', $companyId)->findAll();
-        $data['active_customer_id'] = $activeCustomerId;
+        // Read modal auto-open flashdata (set after new customer creation)
+        // This tells the JS to open the Add Site modal with this customer pre-selected
+        $autoOpenModalCustomerId = session()->getFlashdata('auto_open_site_modal_customer');
+
+        // Also support ?customer_id= query param for direct URL linking
+        $queryCustomerId = (int) $this->request->getGet('customer_id');
+        if ($queryCustomerId && !$activeCustomerId) {
+            $activeCustomerId = $queryCustomerId;
+        }
+        if ($queryCustomerId && !$autoOpenModalCustomerId) {
+            $autoOpenModalCustomerId = $queryCustomerId;
+        }
+
+        $data['sites']                    = $siteModel->where('company_id', $companyId)->findAll();
+        $data['customers']                = $customerModel->where('company_id', $companyId)->findAll();
+        $data['active_customer_id']       = $activeCustomerId;
+        $data['auto_open_modal_customer'] = $autoOpenModalCustomerId;
 
         return view('admin/sites/index', $data);
     }
@@ -104,11 +118,22 @@ class SitesController extends BaseController
             return redirect()->back()->withInput()->with('errors', ['name' => $msg]);
         }
 
+        // Capture the newly-created site ID so we can redirect there
+        $newSiteId = $siteModel->getInsertID();
+
         if ($isAjax) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Site added successfully.']);
+            // FIX 2: return site_id + redirect_url so the AJAX caller can navigate
+            // directly to the new site detail page instead of reloading the list.
+            return $this->response->setJSON([
+                'success'      => true,
+                'message'      => 'Site added successfully.',
+                'site_id'      => (int) $newSiteId,
+                'redirect_url' => site_url('admin/sites/' . $newSiteId),
+            ]);
         }
 
-        return redirect()->to('admin/sites')->with('success', 'Site added successfully');
+        // FIX 2: redirect to the newly-created site detail page
+        return redirect()->to('admin/sites/' . $newSiteId)->with('success', 'Site created successfully. You are now viewing the new site.');
     }
 
     /**
@@ -271,6 +296,12 @@ class SitesController extends BaseController
         }
 
         $inspectionList = array_map(function ($inspection) {
+            // group_status is stored in `status` after the VARCHAR migration.
+            // Device-level results (Pass/Fail/Repair) are stored in `result`.
+            // If status is one of the old device-level ENUM values treat it as In Progress.
+            $rawStatus = $inspection['status'] ?? '';
+            $deviceStatuses = ['Pass', 'Fail', 'Repair', 'pass', 'fail', 'repair'];
+            $groupStatus = in_array($rawStatus, $deviceStatuses) ? 'In Progress' : ($rawStatus ?: 'In Progress');
             return [
                 'group_id'        => $inspection['group_id'],
                 'scheduled_at'    => $inspection['scheduled_at'] ?? $inspection['created_at'] ?? date('Y-m-d H:i:s'),
@@ -278,7 +309,7 @@ class SitesController extends BaseController
                 'title'           => $inspection['title'] ?? '',
                 'technician_name' => $inspection['technician_name'] ?? 'N/A',
                 'next_due_date'   => $inspection['next_due_date'] ?? null,
-                'status'          => $inspection['status'] ?? '',
+                'status'          => $groupStatus,
                 'completed_at'    => $inspection['completed_at'] ?? null,
             ];
         }, $inspections);
@@ -299,6 +330,13 @@ class SitesController extends BaseController
             $statusLower = strtolower($record['status'] ?? '');
             $isDone = !empty($record['completed_at']) || in_array($statusLower, ['completed', 'pass', 'fail', 'repair'], true);
             if (!$isDone) {
+                continue;
+            }
+            // FIX #20260408: skip ghost rows that have no asset_tag AND no device_type
+            // These are phantom entries (e.g. blank lines) that inflate the count.
+            $hasAsset      = !empty(trim($record['asset_tag'] ?? ''));
+            $hasDeviceType = !empty(trim($record['device_type'] ?? ''));
+            if (!$hasAsset && !$hasDeviceType) {
                 continue;
             }
             // Track by master equipment_id AND by asset_tag so site-only
@@ -396,7 +434,7 @@ class SitesController extends BaseController
 
         return view('admin/sites/details', $data);
     }
-}
+
     /**
      * AJAX endpoint: return equipment list for a site as JSON.
      * GET admin/sites/equipment-data/:id
@@ -489,3 +527,5 @@ class SitesController extends BaseController
     }
 
 
+
+}
